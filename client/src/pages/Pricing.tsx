@@ -181,6 +181,7 @@ export default function Pricing() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
 
       {/* Hero header */}
@@ -331,6 +332,7 @@ export default function Pricing() {
     </div>
 
     {/* ── Email modal ── */}
+
     {emailModal.open && (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -392,5 +394,6 @@ export default function Pricing() {
         </div>
       </div>
     )}
+    </>
   );
 }
