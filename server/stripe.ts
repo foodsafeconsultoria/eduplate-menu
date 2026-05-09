@@ -95,17 +95,15 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode: 'subscription',
-      payment_method_types: ['card', 'boleto', 'pix'],
+      automatic_payment_methods: { enabled: true },
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
       metadata: { orgId, plan, setupToken },
       subscription_data: { metadata: { orgId, plan } },
       locale: 'pt-BR',
-      currency: 'brl',
       billing_address_collection: 'required',
       allow_promotion_codes: true,
-      payment_method_options: { boleto: { expires_after_days: 3 } },
       customer_update: { address: 'auto', name: 'auto' },
     });
 
@@ -216,21 +214,16 @@ router.post('/checkout', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      payment_method_types: ['card', 'boleto', 'pix'],
+      automatic_payment_methods: { enabled: true },
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${appUrl}/planos?canceled=1`,
       metadata: { orgId, userId, plan },
       subscription_data: {
         metadata: { orgId, userId, plan },
-        trial_period_days: 0, // Trial is handled by us, not Stripe
+        trial_period_days: 0,
       },
       locale: 'pt-BR',
-      currency: 'brl',
-      // Brazilian payment method specific options
-      payment_method_options: {
-        boleto: { expires_after_days: 3 },
-      },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       customer_update: {
