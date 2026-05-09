@@ -11,13 +11,13 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // ── Stripe webhook MUST come BEFORE express.json() ───────────────────────
-  // The webhook verifier needs the raw body buffer.
-  // express.raw() is applied inside the webhook route itself.
-  app.use('/api/stripe', stripeRouter);
-
-  // ── Parse JSON for all other API routes ──────────────────────────────────
+  // ── Parse JSON for all API routes ────────────────────────────────────────
+  // The webhook route uses express.raw() internally (applied per-route),
+  // so it's safe to have express.json() here globally.
   app.use(express.json());
+
+  // ── Stripe routes ─────────────────────────────────────────────────────────
+  app.use('/api/stripe', stripeRouter);
 
   // ── Static files (production build) ──────────────────────────────────────
   const staticPath =
