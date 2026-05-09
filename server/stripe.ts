@@ -95,7 +95,7 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode: 'subscription',
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
@@ -214,7 +214,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${appUrl}/planos?canceled=1`,
