@@ -128,12 +128,13 @@ const DEMO_SCHEDULES: Schedule[] = [
 ];
 
 function normalizeSchools(raw: unknown): School[] {
-  if (!Array.isArray(raw)) return DEMO_SCHOOLS;
+  if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const school = item as Partial<School>;
     return {
       id: school.id || `school-imported-${index}`,
       name: school.name || 'Escola sem nome',
+      email: school.email || '',
       createdAt: school.createdAt ? new Date(school.createdAt) : new Date(),
       updatedAt: school.updatedAt ? new Date(school.updatedAt) : new Date(),
     };
@@ -141,7 +142,7 @@ function normalizeSchools(raw: unknown): School[] {
 }
 
 function normalizeInspections(raw: unknown): Inspection[] {
-  if (!Array.isArray(raw)) return DEMO_INSPECTIONS;
+  if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const inspection = item as Partial<Inspection>;
     return {
@@ -181,7 +182,7 @@ function normalizeInspections(raw: unknown): Inspection[] {
 }
 
 function normalizeEpis(raw: unknown): EPI[] {
-  if (!Array.isArray(raw)) return DEMO_EPIS;
+  if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const epi = item as Partial<EPI>;
     return {
@@ -222,7 +223,7 @@ function toDate(value: unknown): Date {
 }
 
 function normalizeSchedules(raw: unknown): Schedule[] {
-  if (!Array.isArray(raw)) return DEMO_SCHEDULES;
+  if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const schedule = item as Partial<Schedule>;
     return {
@@ -255,7 +256,7 @@ export const useSchools = () => {
       collectionName: 'schools',
       storageKey: 'pnae_schools',
       normalize: normalizeSchools,
-      fallbackData: DEMO_SCHOOLS,
+      fallbackData: [],
     })
       .then((items) => {
         if (mounted) setSchoolsState(items);
@@ -292,7 +293,7 @@ export const useInspections = () => {
       collectionName: 'inspections',
       storageKey: 'pnae_inspections',
       normalize: normalizeInspections,
-      fallbackData: DEMO_INSPECTIONS,
+      fallbackData: [],
     })
       .then((items) => {
         if (mounted) setInspectionsState(items);
@@ -331,7 +332,7 @@ export const useEPIs = () => {
       collectionName: 'epis',
       storageKey: 'pnae_epis',
       normalize: normalizeEpis,
-      fallbackData: DEMO_EPIS,
+      fallbackData: [],
     })
       .then((items) => {
         if (mounted) setEpisState(items);
@@ -368,7 +369,7 @@ export const useSchedules = () => {
       collectionName: 'agendamentos',
       storageKey: 'pnae_schedules',
       normalize: normalizeSchedules,
-      fallbackData: DEMO_SCHEDULES,
+      fallbackData: [],
     })
       .then((items) => {
         if (mounted) setSchedulesState(items);

@@ -17,7 +17,7 @@ import { DIET_LABEL_MAP } from '@/data/dietLabels';
 import type { Food, Menu, MenuInsumo, MenuSlot, NutritionNutrientSet, Recipe } from '@/types/nutrition';
 import {
   AlertTriangle, BookOpen, ChevronDown, ClipboardList, ClipboardPaste, Copy,
-  Leaf, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
+  Leaf, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
@@ -446,6 +446,61 @@ export default function Menus() {
 
   // Which card has the meal-picker popover open
   const [copyPickerMenuId, setCopyPickerMenuId] = useState<string | null>(null);
+
+  // ── Email sending state ───────────────────────────────────────────────────────
+  const [emailModal, setEmailModal] = useState<{ open: boolean; menu: Menu | null }>({ open: false, menu: null });
+  const [emailSelectedSchools, setEmailSelectedSchools] = useState<string[]>([]);
+  const [emailSending, setEmailSending] = useState(false);
+
+  const handleSendMenuEmail = async () => {
+    if (!emailModal.menu || emailSelectedSchools.length === 0) return;
+    const menu = emailModal.menu;
+    const selectedSchoolObjects = schools.filter(s => emailSelectedSchools.includes(s.id) && s.email);
+    const noEmail = schools.filter(s => emailSelectedSchools.includes(s.id) && !s.email);
+    if (noEmail.length > 0 && selectedSchoolObjects.length === 0) {
+      toast.error('Nenhuma escola selecionada tem e-mail cadastrado.');
+      return;
+    }
+    if (noEmail.length > 0) {
+      toast.warning(`${noEmail.length} escola(s) sem e-mail serão ignoradas.`);
+    }
+    setEmailSending(true);
+    try {
+      const menuHtml = buildMenuEmailHtml(menu);
+      const res = await fetch('/api/email/send-menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schools: selectedSchoolObjects.map(s => ({ name: s.name, email: s.email })),
+          menuTitle: menu.title,
+          menuHtml,
+          senderName: user?.displayName || 'Nutricionista',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`✅ Cardápio enviado para ${data.sent} escola(s)!`);
+      setEmailModal({ open: false, menu: null });
+      setEmailSelectedSchools([]);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar e-mails.');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const buildMenuEmailHtml = (menu: Menu): string => {
+    const slots = menu.slots?.length ? menu.slots : migrateItemsToSlots(menu.items);
+    const rows = weekdays.map(day => {
+      const daySlots = slots.filter(s => s.day === day && s.composicao.length > 0);
+      if (daySlots.length === 0) return '';
+      const meals = daySlots.map(s =>
+        `<tr><td style="padding:4px 8px;color:#6b7280;font-size:13px;">${s.mealLabel}</td><td style="padding:4px 8px;font-size:13px;">${s.composicao.map(c => c.label).join(', ')}</td></tr>`
+      ).join('');
+      return `<tr><td colspan="2" style="padding:8px 8px 2px;font-weight:700;font-size:13px;color:#1B2A4A;border-top:1px solid #e5e7eb;">${day}</td></tr>${meals}`;
+    }).filter(Boolean).join('');
+    return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>`;
+  };
 
   // Target meal label for meal-based paste (set by the user in the editor)
   const [pasteMealTarget, setPasteMealTarget] = useState('');
@@ -934,6 +989,7 @@ export default function Menus() {
   // ── JSX ───────────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="min-h-screen flex-1 p-4 md:p-8">
       <div className="w-full space-y-6">
 
@@ -1673,6 +1729,17 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
+                        className="border-green-200 text-green-700 hover:bg-green-50 gap-1"
+                        title="Enviar cardápio por e-mail para as escolas"
+                        onClick={() => {
+                          setEmailModal({ open: true, menu });
+                          setEmailSelectedSchools(menu.schoolIds ?? []);
+                        }}
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
                         className={`border-blue-200 text-blue-600 hover:bg-blue-50 ${copyPickerMenuId === menu.id ? 'bg-blue-50' : ''}`}
                         title="Copiar refeições deste cardápio"
                         onClick={() => setCopyPickerMenuId(copyPickerMenuId === menu.id ? null : menu.id)}
@@ -1751,5 +1818,107 @@ export default function Menus() {
         )}
       </div>
     </div>
+
+    {/* ── Email modal ── */}
+
+    {emailModal.open && emailModal.menu && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.45)' }}
+        onClick={() => setEmailModal({ open: false, menu: null })}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setEmailModal({ open: false, menu: null })}
+            className="absolute top-4 right-4 text-gray-300 hover:text-gray-500"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
+              <Mail className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">Enviar cardápio por e-mail</h3>
+              <p className="text-xs text-gray-400">{emailModal.menu.title}</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-3">Selecione as escolas que receberão este cardápio:</p>
+
+          <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+            {schools.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Nenhuma escola cadastrada.</p>
+            ) : (
+              schools.map(school => (
+                <label
+                  key={school.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    emailSelectedSchools.includes(school.id)
+                      ? 'border-green-300 bg-green-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={emailSelectedSchools.includes(school.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setEmailSelectedSchools(prev => [...prev, school.id]);
+                      } else {
+                        setEmailSelectedSchools(prev => prev.filter(id => id !== school.id));
+                      }
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{school.name}</p>
+                    {school.email
+                      ? <p className="text-xs text-green-600">{school.email}</p>
+                      : <p className="text-xs text-amber-500">⚠ Sem e-mail cadastrado</p>
+                    }
+                  </div>
+                </label>
+              ))
+            )}
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
+            <button
+              type="button"
+              onClick={() => setEmailSelectedSchools(schools.map(s => s.id))}
+              className="underline hover:text-gray-600"
+            >
+              Selecionar todas
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmailSelectedSchools([])}
+              className="underline hover:text-gray-600"
+            >
+              Limpar seleção
+            </button>
+          </div>
+
+          <button
+            onClick={handleSendMenuEmail}
+            disabled={emailSending || emailSelectedSchools.length === 0}
+            className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
+            style={{ background: '#4CAF50', opacity: (emailSending || emailSelectedSchools.length === 0) ? 0.5 : 1 }}
+          >
+            {emailSending ? (
+              <><span className="animate-spin">⏳</span> Enviando…</>
+            ) : (
+              <><Mail className="w-4 h-4" /> Enviar para {emailSelectedSchools.length} escola(s)</>
+            )}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

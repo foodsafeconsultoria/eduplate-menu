@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus, Mail } from 'lucide-react';
 import { School } from '@/types';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ export default function Schools() {
   const { schools, loading, setSchools } = useSchools();
   const { inspections } = useInspections();
   const [newSchoolName, setNewSchoolName] = useState('');
+  const [newSchoolEmail, setNewSchoolEmail] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [evolutionPhotos] = useState<EvolutionPhoto[]>([]);
@@ -74,6 +75,7 @@ export default function Schools() {
       const newSchool: School = {
         id: `school-${crypto.randomUUID()}`,
         name: newSchoolName.trim(),
+        email: newSchoolEmail.trim() || undefined,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -83,6 +85,7 @@ export default function Schools() {
       localStorage.setItem('pnae_schools', JSON.stringify(updatedSchools));
 
       setNewSchoolName('');
+      setNewSchoolEmail('');
       setDialogOpen(false);
       toast.success('Escola adicionada com sucesso');
     } catch (error) {
@@ -166,12 +169,26 @@ export default function Schools() {
                 </DialogHeader>
 
                 <form onSubmit={handleAddSchool} className="space-y-4">
-                  <Input
-                    placeholder="Nome da escola"
-                    value={newSchoolName}
-                    onChange={(e) => setNewSchoolName(e.target.value)}
-                    autoFocus
-                  />
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Nome da escola *</label>
+                    <Input
+                      placeholder="Ex: EMEF Prof. João Silva"
+                      value={newSchoolName}
+                      onChange={(e) => setNewSchoolName(e.target.value)}
+                      autoFocus
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">E-mail da escola</label>
+                    <Input
+                      type="email"
+                      placeholder="escola@municipio.sp.gov.br"
+                      value={newSchoolEmail}
+                      onChange={(e) => setNewSchoolEmail(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Usado para envio de cardápios por e-mail</p>
+                  </div>
                   <div className="flex gap-3 justify-end">
                     <Button variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancelar
@@ -201,8 +218,16 @@ export default function Schools() {
                   <Card key={school.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <CardTitle className="text-lg">{school.name}</CardTitle>
-                      <CardDescription>
-                        Criado em {new Date(school.createdAt).toLocaleDateString('pt-BR')}
+                      <CardDescription className="space-y-0.5">
+                        <span>Criado em {new Date(school.createdAt).toLocaleDateString('pt-BR')}</span>
+                        {school.email && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                            <Mail className="w-3 h-3" />{school.email}
+                          </span>
+                        )}
+                        {!school.email && (
+                          <span className="text-xs text-amber-500">⚠ Sem e-mail cadastrado</span>
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">

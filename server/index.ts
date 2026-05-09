@@ -3,6 +3,7 @@ import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import stripeRouter from "./stripe.js";
+import emailRouter from "./email.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,9 @@ async function startServer() {
 
   // ── Stripe routes ─────────────────────────────────────────────────────────
   app.use('/api/stripe', stripeRouter);
+
+  // ── Email routes ──────────────────────────────────────────────────────────
+  app.use('/api/email', emailRouter);
 
   // ── Static files (production build) ──────────────────────────────────────
   const staticPath =

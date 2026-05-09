@@ -21,6 +21,7 @@ export interface UserProfile {
 export interface School {
   id: string;
   name: string;
+  email?: string;
   createdAt: Date;
   updatedAt: Date;
 }
