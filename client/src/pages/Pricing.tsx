@@ -111,14 +111,16 @@ const FAQS = [
 ];
 
 export default function Pricing() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { status, plan: currentPlan } = useSubscription();
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const handleSubscribe = async (planKey: PlanKey) => {
-    if (!user) { navigate('/login'); return; }
+    // Aguarda o Firebase terminar de verificar a sessão
+    if (authLoading) return;
+    if (!user) { navigate('/login?redirect=/planos'); return; }
     if (currentPlan === planKey && status === 'active') {
       toast.info('Você já está neste plano.');
       return;
@@ -214,7 +216,7 @@ export default function Pricing() {
 
                 <button
                   onClick={() => handleSubscribe(plan.key)}
-                  disabled={loading !== null || isCurrent}
+                  disabled={loading !== null || isCurrent || authLoading}
                   className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
                     isCurrent
                       ? 'bg-gray-100 text-gray-500 cursor-default'
