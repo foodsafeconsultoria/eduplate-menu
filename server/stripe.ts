@@ -11,6 +11,7 @@
  */
 import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
+import { randomBytes, randomUUID } from 'crypto';
 import { getAdminDb } from './firebase-admin.js';
 
 // ── Plan definitions (must match Stripe Price IDs in env) ────────────────────
@@ -69,12 +70,9 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
     // Generate a provisional org and a one-time setup token
-    const orgId = crypto.randomUUID();
-    const setupToken = Array.from(
-      (globalThis as any).crypto?.getRandomValues(new Uint8Array(24)) ??
-      Buffer.from(Array.from({ length: 24 }, () => Math.floor(Math.random() * 256)))
-    ).map((b: number) => b.toString(16).padStart(2, '0')).join('');
-    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const orgId = randomUUID();
+    const setupToken = randomBytes(24).toString('hex');
+    const inviteCode = randomBytes(3).toString('hex').toUpperCase();
 
     await db.collection('organizations').doc(orgId).set({
       id: orgId,
