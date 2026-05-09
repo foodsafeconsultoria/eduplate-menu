@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Check, Zap, Building2, Network, HelpCircle } from 'lucide-react';
+import { Check, Zap, Building2, Network, X, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { Input } from '@/components/ui/input';
 
 type PlanKey = 'essencial' | 'pro' | 'enterprise';
 
@@ -117,35 +118,64 @@ export default function Pricing() {
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  // Email modal for non-logged-in visitors
+  const [emailModal, setEmailModal] = useState<{ open: boolean; planKey: PlanKey | null }>({ open: false, planKey: null });
+  const [emailInput, setEmailInput] = useState('');
+
   const handleSubscribe = async (planKey: PlanKey) => {
-    // Aguarda o Firebase terminar de verificar a sessão
     if (authLoading) return;
-    if (!user) { navigate('/login?redirect=/planos'); return; }
-    if (currentPlan === planKey && status === 'active') {
-      toast.info('Você já está neste plano.');
+
+    // Logged-in user: upgrade / change plan
+    if (user) {
+      if (currentPlan === planKey && status === 'active') {
+        toast.info('Você já está neste plano.');
+        return;
+      }
+      try {
+        setLoading(planKey);
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orgId: user.organizationId,
+            plan: planKey,
+            userId: user.uid,
+            userEmail: user.email,
+            orgName: user.organizationId,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
+        if (data.url) window.location.href = data.url;
+      } catch (err: any) {
+        toast.error(err.message || 'Erro ao processar. Tente novamente.');
+      } finally {
+        setLoading(null);
+      }
       return;
     }
 
+    // Not logged in: ask for email first
+    setEmailModal({ open: true, planKey });
+    setEmailInput('');
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const planKey = emailModal.planKey;
+    if (!planKey || !emailInput.trim()) return;
     try {
       setLoading(planKey);
-      const res = await fetch('/api/stripe/checkout', {
+      const res = await fetch('/api/stripe/checkout-new', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgId: user.organizationId,
-          plan: planKey,
-          userId: user.uid,
-          userEmail: user.email,
-          orgName: user.organizationId,
-        }),
+        body: JSON.stringify({ email: emailInput.trim(), plan: planKey }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
       if (data.url) window.location.href = data.url;
     } catch (err: any) {
       toast.error(err.message || 'Erro ao processar. Tente novamente.');
-    } finally {
       setLoading(null);
     }
   };
@@ -299,5 +329,68 @@ export default function Pricing() {
 
       </div>
     </div>
+
+    {/* ── Email modal ── */}
+    {emailModal.open && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.45)' }}
+        onClick={() => setEmailModal({ open: false, planKey: null })}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setEmailModal({ open: false, planKey: null })}
+            className="absolute top-4 right-4 text-gray-300 hover:text-gray-500"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'rgba(76,175,80,0.1)' }}
+          >
+            <Mail className="w-5 h-5" style={{ color: '#4CAF50' }} />
+          </div>
+
+          <h3 className="text-lg font-bold text-gray-800 mb-1">Qual é o seu e-mail?</h3>
+          <p className="text-sm text-gray-400 mb-5">
+            Você será redirecionado ao Stripe para finalizar o pagamento. Depois cria sua senha.
+          </p>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div className="relative">
+              <Mail className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                type="email"
+                placeholder="seu@email.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                required
+                autoFocus
+                disabled={loading !== null}
+                className="pl-9 border-gray-200"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading !== null}
+              className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
+              style={{ background: '#4CAF50', opacity: loading !== null ? 0.7 : 1 }}
+            >
+              {loading !== null
+                ? <><Loader2 className="w-4 h-4 animate-spin" />Aguarde…</>
+                : 'Ir para o pagamento →'}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-gray-300 mt-4">
+            Pagamento seguro via Stripe · Sem compromisso
+          </p>
+        </div>
+      </div>
+    )}
   );
 }

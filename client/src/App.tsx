@@ -26,6 +26,7 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfUse from '@/pages/TermsOfUse';
 import Pricing from '@/pages/Pricing';
 import Billing from '@/pages/Billing';
+import Cadastro from '@/pages/Cadastro';
 import TrialBanner from '@/components/TrialBanner';
 import Foods from '@/pages/nutrition/Foods';
 import Menus from '@/pages/nutrition/Menus';
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/privacidade" component={PrivacyPolicy} />
       <Route path="/termos" component={TermsOfUse} />
       <Route path="/planos" component={Pricing} />
+      <Route path="/cadastro" component={Cadastro} />
       <Route path="/training/attend/:token" component={TrainingAttend} />
 
       <Route path="*">

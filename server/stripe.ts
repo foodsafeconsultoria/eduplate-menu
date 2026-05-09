@@ -50,8 +50,123 @@ function getStripe(): Stripe {
 
 const router = express.Router();
 
+// ── POST /api/stripe/checkout-new ────────────────────────────────────────────
+// Creates a Stripe Checkout session for a NEW subscriber (no login required).
+// Body: { email, plan }
+router.post('/checkout-new', async (req: Request, res: Response) => {
+  try {
+    const { email, plan } = req.body as { email: string; plan: PlanKey };
+    if (!email || !plan) {
+      return res.status(400).json({ error: 'email e plan são obrigatórios.' });
+    }
+    const planConfig = PLANS[plan];
+    if (!planConfig) return res.status(400).json({ error: `Plano inválido: ${plan}` });
+    const priceId = planConfig.priceId();
+    if (!priceId) return res.status(500).json({ error: `STRIPE_PRICE_${plan.toUpperCase()} não configurado.` });
+
+    const stripe = getStripe();
+    const db = getAdminDb();
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+
+    // Generate a provisional org and a one-time setup token
+    const orgId = crypto.randomUUID();
+    const setupToken = Array.from(
+      (globalThis as any).crypto?.getRandomValues(new Uint8Array(24)) ??
+      Buffer.from(Array.from({ length: 24 }, () => Math.floor(Math.random() * 256)))
+    ).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    await db.collection('organizations').doc(orgId).set({
+      id: orgId,
+      ownerEmail: email,
+      subscriptionStatus: 'pending_payment',
+      plan: null,
+      setupToken,
+      inviteCode,
+      createdAt: new Date(),
+      trialEndsAt: null,
+    });
+
+    // Create Stripe customer linked to the org
+    const customer = await stripe.customers.create({
+      email,
+      metadata: { orgId, firebaseProjectId: 'gestaoescola-e5f3d' },
+    });
+    await db.collection('organizations').doc(orgId).update({ stripeCustomerId: customer.id });
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
+      mode: 'subscription',
+      payment_method_types: ['card', 'boleto', 'pix'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
+      cancel_url: `${appUrl}/planos?canceled=1`,
+      metadata: { orgId, plan, setupToken },
+      subscription_data: { metadata: { orgId, plan } },
+      locale: 'pt-BR',
+      currency: 'brl',
+      billing_address_collection: 'required',
+      allow_promotion_codes: true,
+      payment_method_options: { boleto: { expires_after_days: 3 } },
+      customer_update: { address: 'auto', name: 'auto' },
+    });
+
+    res.json({ url: session.url });
+  } catch (err: any) {
+    console.error('[Stripe /checkout-new error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/stripe/setup?token=XXX&orgId=YYY ────────────────────────────────
+// Verifies a post-payment setup token and returns org info.
+router.get('/setup', async (req: Request, res: Response) => {
+  try {
+    const { token, orgId } = req.query as { token: string; orgId: string };
+    if (!token || !orgId) return res.status(400).json({ error: 'token e orgId são obrigatórios.' });
+
+    const db = getAdminDb();
+    const orgDoc = await db.collection('organizations').doc(orgId).get();
+    if (!orgDoc.exists) return res.status(404).json({ error: 'Organização não encontrada.' });
+
+    const org = orgDoc.data()!;
+    if (org.setupToken !== token) return res.status(403).json({ error: 'Token inválido.' });
+
+    res.json({
+      email: org.ownerEmail,
+      orgId,
+      subscriptionStatus: org.subscriptionStatus,
+      plan: org.plan,
+    });
+  } catch (err: any) {
+    console.error('[Stripe /setup error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/stripe/setup/complete ──────────────────────────────────────────
+// Called after account creation. Clears the setupToken from the org.
+// Body: { token, orgId }
+router.post('/setup/complete', async (req: Request, res: Response) => {
+  try {
+    const { token, orgId } = req.body as { token: string; orgId: string };
+    if (!token || !orgId) return res.status(400).json({ error: 'token e orgId obrigatórios.' });
+
+    const db = getAdminDb();
+    const orgDoc = await db.collection('organizations').doc(orgId).get();
+    if (!orgDoc.exists) return res.status(404).json({ error: 'Org não encontrada.' });
+    if (orgDoc.data()?.setupToken !== token) return res.status(403).json({ error: 'Token inválido.' });
+
+    await db.collection('organizations').doc(orgId).update({ setupToken: null });
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error('[Stripe /setup/complete error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /api/stripe/checkout ─────────────────────────────────────────────────
-// Creates a Stripe Checkout session for an org subscription.
+// Creates a Stripe Checkout session for an EXISTING org (logged-in user).
 // Body: { orgId, plan, userId, userEmail, orgName }
 router.post('/checkout', async (req: Request, res: Response) => {
   try {
@@ -202,6 +317,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
           activatedAt: new Date(),
+          // Keep setupToken — cleared after account creation in /cadastro
         });
         console.log(`[Stripe] Org ${orgId} activated on plan ${plan}`);
         break;
