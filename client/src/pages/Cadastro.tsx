@@ -78,6 +78,13 @@ export default function Cadastro() {
         body: JSON.stringify({ token, orgId }),
       });
 
+      // 4. Send welcome email (fire-and-forget — não bloqueia o fluxo)
+      fetch('/api/email/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email, plan }),
+      }).catch(() => {}); // falha silenciosa
+
       setStatus('done');
       setTimeout(() => navigate('/'), 2000);
     } catch (err: any) {

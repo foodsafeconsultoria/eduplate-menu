@@ -3,16 +3,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useSearch } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Loader2, Lock, Mail, User, KeyRound, HelpCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Lock, Mail, User, KeyRound, HelpCircle } from 'lucide-react';
 import EduPlateLogo from '@/components/EduPlateLogo';
 
 export default function Login() {
-  const { login, register, error } = useAuth();
+  const { login, register, resetPassword, error } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const redirectTo = new URLSearchParams(search).get('redirect') || '/';
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -22,6 +26,20 @@ export default function Login() {
   const [registerRole, setRegisterRole] = useState<'admin' | 'nutritionist' | 'viewer'>('nutritionist');
   const [inviteCode, setInviteCode] = useState('');
   const [joinMode, setJoinMode] = useState<'new' | 'join'>('new');
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      setResetSent(true);
+    } catch (_) {
+      // error shown by AuthContext
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +194,7 @@ export default function Login() {
           )}
 
           {/* ── Login form ── */}
-          {activeTab === 'login' && (
+          {activeTab === 'login' && !showReset && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Email</label>
@@ -195,7 +213,17 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Senha</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">Senha</label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReset(true); setResetEmail(loginEmail); setResetSent(false); }}
+                    className="text-xs font-medium transition-colors"
+                    style={{ color: '#4CAF50' }}
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
@@ -216,11 +244,59 @@ export default function Login() {
                 className="w-full py-2.5 rounded-xl font-semibold text-white mt-2 flex items-center justify-center gap-2 transition-opacity"
                 style={{ background: '#4CAF50', opacity: loading ? 0.7 : 1 }}
               >
-                {loading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Entrando…</>
-                  : 'Entrar'}
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Entrando…</> : 'Entrar'}
               </button>
             </form>
+          )}
+
+          {/* ── Recuperar senha ── */}
+          {activeTab === 'login' && showReset && (
+            <div className="space-y-4">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(false); setResetSent(false); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 mb-3 flex items-center gap-1"
+                >
+                  ← Voltar ao login
+                </button>
+                <h3 className="font-semibold text-gray-800">Recuperar senha</h3>
+                <p className="text-xs text-gray-400 mt-1">Digite seu e-mail e enviaremos um link para criar uma nova senha.</p>
+              </div>
+
+              {resetSent ? (
+                <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">E-mail enviado!</p>
+                    <p className="text-xs text-green-700 mt-0.5">Verifique sua caixa de entrada (e o spam) para redefinir a senha.</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleReset} className="space-y-3">
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={resetLoading}
+                      required
+                      className="pl-9 border-gray-200"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
+                    style={{ background: '#4CAF50', opacity: resetLoading ? 0.7 : 1 }}
+                  >
+                    {resetLoading ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando…</> : 'Enviar link de recuperação'}
+                  </button>
+                </form>
+              )}
+            </div>
           )}
 
           {/* ── Register form ── */}

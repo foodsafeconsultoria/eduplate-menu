@@ -28,6 +28,7 @@ import Pricing from '@/pages/Pricing';
 import Billing from '@/pages/Billing';
 import Cadastro from '@/pages/Cadastro';
 import Documents from '@/pages/Documents';
+import LandingPage from '@/pages/LandingPage';
 import TrialBanner from '@/components/TrialBanner';
 import Foods from '@/pages/nutrition/Foods';
 import Menus from '@/pages/nutrition/Menus';
@@ -37,16 +38,21 @@ import Recipes from '@/pages/nutrition/Recipes';
 import SigpcReport from '@/pages/nutrition/SigpcReport';
 import SpecialDiets from '@/pages/nutrition/SpecialDiets';
 
-/** Redirects to /login when user is not authenticated and auth has loaded. */
+/** Redirects to /landing (or /login) when user is not authenticated and auth has loaded. */
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/login');
+      // Root path → show landing page; other paths → go to login with redirect
+      if (location === '/') {
+        navigate('/landing');
+      } else {
+        navigate(`/login?redirect=${encodeURIComponent(location)}`);
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location]);
 
   if (loading) {
     return (
@@ -72,6 +78,7 @@ function Router() {
       <Route path="/planos" component={Pricing} />
       <Route path="/cadastro" component={Cadastro} />
       <Route path="/training/attend/:token" component={TrainingAttend} />
+      <Route path="/landing" component={LandingPage} />
 
       <Route path="*">
         <AuthGuard>
