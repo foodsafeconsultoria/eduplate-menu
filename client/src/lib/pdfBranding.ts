@@ -22,21 +22,29 @@ export async function assetToDataUrl(path: string): Promise<string> {
   });
 }
 
+/** Fetch a remote URL (Firebase Storage, etc.) and return a data-URL. */
+export async function urlToDataUrl(url: string): Promise<string> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 /** Cache loaded logos so we don't re-fetch on every PDF call. */
-let _leftLogoUrl:  string | null = null;
 let _rightLogoUrl: string | null = null;
-/** Sentinel so we don't retry a 404 on every call. */
-let _leftLogoTried  = false;
 let _rightLogoTried = false;
 
 async function tryLoadLogo(path: string): Promise<string | null> {
   try { return await assetToDataUrl(path); } catch { return null; }
 }
 
-async function loadLogos(): Promise<{ brasao: string | null; nutricao: string | null }> {
-  if (!_leftLogoTried)  { _leftLogoTried  = true; _leftLogoUrl  = await tryLoadLogo('/brasao-itai.png'); }
+async function loadRightLogo(): Promise<string | null> {
   if (!_rightLogoTried) { _rightLogoTried = true; _rightLogoUrl = await tryLoadLogo('/logo-nutricao.png'); }
-  return { brasao: _leftLogoUrl, nutricao: _rightLogoUrl };
+  return _rightLogoUrl;
 }
 
 /**
@@ -57,16 +65,22 @@ export async function addPdfHeader(
     subtitle,
     municipality = '',
     color = brandColors.green,
+    orgLogoUrl,   // URL from Firebase Storage (org-specific logo)
   }: {
     title: string;
     subtitle: string;
     municipality?: string;
     color?: [number, number, number];
+    orgLogoUrl?: string;
   },
 ): Promise<number> {
   const pw = doc.internal.pageSize.getWidth();
 
-  const { brasao, nutricao } = await loadLogos();
+  // Try to load org logo (left side) and default right logo
+  const [orgLogo, nutricaoLogo] = await Promise.all([
+    orgLogoUrl ? urlToDataUrl(orgLogoUrl).catch(() => null) : Promise.resolve(null),
+    loadRightLogo(),
+  ]);
 
   // ── white header band ─────────────────────────────────────────────────────
   doc.setFillColor(255, 255, 255);
@@ -79,8 +93,8 @@ export async function addPdfHeader(
   // ── logos (same size: 22×22 mm, centred vertically at y=5) ───────────────
   const logoSize = 22;
   const logoY    = 4;
-  if (brasao)   doc.addImage(brasao,   'PNG', 6,                 logoY, logoSize, logoSize);
-  if (nutricao) doc.addImage(nutricao, 'PNG', pw - 6 - logoSize, logoY, logoSize, logoSize);
+  if (orgLogo)      doc.addImage(orgLogo,      'PNG', 6,                 logoY, logoSize, logoSize);
+  if (nutricaoLogo) doc.addImage(nutricaoLogo, 'PNG', pw - 6 - logoSize, logoY, logoSize, logoSize);
 
   // ── title ─────────────────────────────────────────────────────────────────
   doc.setTextColor(...color);

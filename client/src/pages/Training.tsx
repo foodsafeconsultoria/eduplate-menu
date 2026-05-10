@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   GraduationCap, QrCode, Award, Users, Plus, Download,
   Clock, Calendar, Trash2, Eye, CheckCircle, Upload, UserPlus,
-  RefreshCw, X,
+  RefreshCw, X, ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -21,6 +21,7 @@ import {
   collection, doc, setDoc, onSnapshot, query, where, getDocs, deleteDoc,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 const LEGACY_ORG_ID = 'pnae-default-org';
 
@@ -171,12 +172,19 @@ interface CertSigner {
   city: string;
 }
 
+interface CertOptions {
+  signatureDataUrl?: string;  // RT nutritionist signature
+  instructorSignatureDataUrl?: string; // instructor signature (optional separate)
+  signer?: CertSigner;        // RT nutritionist info
+  orgLogoUrl?: string;        // org/municipality logo from Firebase Storage
+}
+
 async function generateCertificatePDF(
   attendee: Attendee,
   training: Training,
-  signatureDataUrl?: string,
-  signer?: CertSigner,
+  options: CertOptions = {},
 ) {
+  const { signatureDataUrl, instructorSignatureDataUrl, signer, orgLogoUrl } = options;
   const doc = new jsPDF('landscape', 'mm', 'a4');
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -212,14 +220,22 @@ async function generateCertificatePDF(
   doc.roundedRect(13, 12, 24, 24, 5, 5, 'F');   // fundo brasão
   doc.roundedRect(pw - 37, 12, 24, 24, 5, 5, 'F'); // fundo nutricao
 
+  // ── Logos — left: org logo (Firebase); right: default nutricao logo ──
+  const loadImgUrl = (url: string) =>
+    fetch(url).then(r => r.blob()).then(b => new Promise<string>((res, rej) => {
+      const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b);
+    }));
+
   try {
-    const [brasaoUrl, nutricaoUrl] = await Promise.all([
-      fetch('/brasao-itai.png').then(r => r.blob()).then(b => new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b); })),
-      fetch('/logo-nutricao.png').then(r => r.blob()).then(b => new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b); })),
-    ]);
-    doc.addImage(brasaoUrl,   'PNG', 15,       14, 20, 20);
-    doc.addImage(nutricaoUrl, 'PNG', pw - 35,  14, 20, 20);
-  } catch (_) { /* logos optional */ }
+    if (orgLogoUrl) {
+      const logoData = await loadImgUrl(orgLogoUrl).catch(() => null);
+      if (logoData) doc.addImage(logoData, 'PNG', 15, 14, 20, 20);
+    }
+  } catch (_) {}
+  try {
+    const nutricaoData = await loadImgUrl('/logo-nutricao.png').catch(() => null);
+    if (nutricaoData) doc.addImage(nutricaoData, 'PNG', pw - 35, 14, 20, 20);
+  } catch (_) {}
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7.5);
@@ -295,47 +311,70 @@ async function generateCertificatePDF(
   doc.text(locLines, pw * 0.75, detailsY, { align: 'center' });
 
   // ── Linha divisória acima das assinaturas ──
-  const sigLineY = ph - 44;
+  const sigLineY = ph - 48;
   doc.setDrawColor(22, 163, 74);
   doc.setLineWidth(0.4);
   doc.line(25, sigLineY, pw - 25, sigLineY);
 
   // ── Assinaturas ──
-  const sigY = ph - 36;
+  const sigY = ph - 32;
 
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
   const signerCity = signer?.city || '';
+  const instructorName = training.instructor || '';
 
-  // Esquerda: Data de emissão
+  // ── Bloco esquerdo: Data de emissão ──
   doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   doc.text(
     `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
-    pw * 0.22, sigY, { align: 'center' }
+    pw * 0.18, sigY - 14, { align: 'center' }
   );
 
-  // Direita: Assinatura da nutricionista
-  if (signatureDataUrl) {
-    try {
-      doc.addImage(signatureDataUrl, 'PNG', pw * 0.58, sigY - 18, 60, 18, '', 'NONE');
-    } catch (_) {}
+  // ── Bloco central: Instrutor ──
+  const instrX = signerName ? pw * 0.42 : pw * 0.5;
+  const instrSigUrl = instructorSignatureDataUrl || signatureDataUrl; // fallback: usa a única assinatura se só houver uma
+  if (instrSigUrl && !signatureDataUrl) {
+    // só instrutor tem assinatura
+    try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
+  } else if (instrSigUrl && instructorSignatureDataUrl) {
+    // assinatura específica do instrutor
+    try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
   }
   doc.setLineWidth(0.4);
   doc.setDrawColor(100, 100, 100);
-  doc.line(pw * 0.55, sigY + 5, pw * 0.85, sigY + 5);
+  doc.line(instrX - 28, sigY - 4, instrX + 28, sigY - 4);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(34, 101, 52);
+  doc.text(instructorName, instrX, sigY + 1, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Instrutor(a) Responsável', instrX, sigY + 7, { align: 'center' });
+
+  // ── Bloco direito: Nutricionista RT (se preenchida) ──
   if (signerName) {
+    const rtX = pw * 0.75;
+    if (signatureDataUrl) {
+      try { doc.addImage(signatureDataUrl, 'PNG', rtX - 28, sigY - 20, 56, 15, '', 'NONE'); } catch (_) {}
+    }
+    doc.setLineWidth(0.4);
+    doc.setDrawColor(100, 100, 100);
+    doc.line(rtX - 30, sigY - 4, rtX + 30, sigY - 4);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(34, 101, 52);
-    doc.text(signerName, pw * 0.7, sigY + 10, { align: 'center' });
+    doc.text(signerName, rtX, sigY + 1, { align: 'center' });
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     doc.setTextColor(60, 60, 60);
-    if (signerCrn) {
-      doc.text(`Nutricionista RT PNAE — ${signerCrn}`, pw * 0.7, sigY + 16, { align: 'center' });
-    } else {
-      doc.text('Nutricionista Responsável Técnica — PNAE', pw * 0.7, sigY + 16, { align: 'center' });
-    }
+    doc.text(
+      signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
+      rtX, sigY + 7, { align: 'center' }
+    );
   }
 
   // ── Rodapé ──
@@ -470,6 +509,7 @@ function QRDisplay({
 export default function TrainingPage() {
   const { user } = useAuth();
   const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const { settings: orgSettings, saving: orgSaving, saveSettings, uploadImage } = useOrgSettings();
 
   const trainingsKey = `pnae_trainings_${orgId}`;
   const attendeesKey = `pnae_training_attendees_${orgId}`;
@@ -492,13 +532,19 @@ export default function TrainingPage() {
   const [activeTab, setActiveTab] = useState('list');
   const [qrTraining, setQrTraining] = useState<Training | null>(null);
   const [viewTraining, setViewTraining] = useState<Training | null>(null);
-  const [signatureUrl, setSignatureUrl] = useState<string | undefined>(() => {
-    return localStorage.getItem('pnae_signature') || undefined;
-  });
   const [syncing, setSyncing] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [sigUploading, setSigUploading] = useState(false);
 
-  // Signer info — loaded from SigpcReport entity config if available
+  // Signer info — from org settings (Firebase), fallback to SIGPC config
   const signer = useMemo<CertSigner>(() => {
+    if (orgSettings.nutritionistName) {
+      return {
+        name: orgSettings.nutritionistName,
+        crn:  orgSettings.nutritionistCrn  || '',
+        city: orgSettings.municipio ? `${orgSettings.municipio}/${orgSettings.uf || 'SP'}` : '',
+      };
+    }
     try {
       const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
         || localStorage.getItem('pnae_sigpc_entity_config');
@@ -507,18 +553,19 @@ export default function TrainingPage() {
         return {
           name: cfg.nutricionista || '',
           crn:  cfg.crn           || '',
-          city: cfg.municipio     ? `${cfg.municipio}/${cfg.uf || 'SP'}` : '',
+          city: cfg.municipio ? `${cfg.municipio}/${cfg.uf || 'SP'}` : '',
         };
       }
     } catch (_) {}
     return { name: '', crn: '', city: '' };
-  }, [orgId]);
+  }, [orgSettings, orgId]);
 
   // Modal de adição manual de participante
   const [manualDialog, setManualDialog] = useState(false);
   const [manualForm, setManualForm] = useState({ name: '', cpf: '', email: '', phone: '' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     type: TRAINING_TYPES[0],
@@ -669,18 +716,40 @@ export default function TrainingPage() {
     try { await setDoc(doc(db, 'organizations', orgId, 'training_attendees', newA.id), newA); } catch (_) {}
   };
 
-  // ── Upload de assinatura ──
-  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Upload de logo da organização ──
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      setSignatureUrl(dataUrl);
-      localStorage.setItem('pnae_signature', dataUrl);
+    setLogoUploading(true);
+    try {
+      const url = await uploadImage(file, 'logo');
+      await saveSettings({ logoUrl: url });
+      toast.success('Logo salva! Será usada em todos os PDFs.');
+    } catch (err) {
+      toast.error('Erro ao salvar a logo.');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  // ── Upload de assinatura ──
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSigUploading(true);
+    try {
+      const url = await uploadImage(file, 'signature');
+      await saveSettings({ signatureUrl: url });
+      // Also keep localStorage as cache for offline
+      const reader = new FileReader();
+      reader.onload = ev => localStorage.setItem('pnae_signature', ev.target?.result as string);
+      reader.readAsDataURL(file);
       toast.success('Assinatura salva!');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      toast.error('Erro ao salvar a assinatura.');
+    } finally {
+      setSigUploading(false);
+    }
   };
 
   const getAttendees = (trainingId: string) =>
@@ -735,28 +804,52 @@ export default function TrainingPage() {
           </div>
         </section>
 
-        {/* ── Assinatura + Sincronizar ── */}
+        {/* ── Configurações do certificado ── */}
         <Card className="border-dashed">
-          <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-medium">Assinatura Digitalizada — Nutricionista RT</p>
-              <p className="text-xs text-muted-foreground">
-                Faça upload da assinatura (PNG com fundo transparente). Salva automaticamente para todos os certificados.
-              </p>
+          <CardContent className="pt-5 pb-5 space-y-4">
+            <p className="text-sm font-semibold text-gray-800">Configurações do Certificado</p>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Logo da prefeitura/secretaria */}
+              <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3">
+                <div className="w-12 h-12 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden">
+                  {orgSettings.logoUrl
+                    ? <img src={orgSettings.logoUrl} alt="Logo" className="w-full h-full object-contain p-0.5" />
+                    : <ImagePlus className="h-5 w-5 text-gray-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700">Logo da Secretaria/Município</p>
+                  <p className="text-xs text-muted-foreground">Aparece no canto esquerdo de todos os PDFs</p>
+                </div>
+                <Button variant="outline" size="sm" disabled={logoUploading} onClick={() => logoInputRef.current?.click()}>
+                  {logoUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                </Button>
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              </div>
+
+              {/* Assinatura */}
+              <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3">
+                <div className="w-12 h-12 rounded-lg border border-dashed border-gray-300 bg-white flex items-center justify-center shrink-0 overflow-hidden">
+                  {orgSettings.signatureUrl
+                    ? <img src={orgSettings.signatureUrl} alt="Assinatura" className="w-full h-full object-contain" />
+                    : <Upload className="h-5 w-5 text-gray-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700">Assinatura — Nutricionista RT</p>
+                  <p className="text-xs text-muted-foreground">PNG com fundo transparente</p>
+                </div>
+                <Button variant="outline" size="sm" disabled={sigUploading} onClick={() => fileInputRef.current?.click()}>
+                  {sigUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                </Button>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+              </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {signatureUrl && (
-                <img src={signatureUrl} alt="Assinatura" className="h-10 object-contain border rounded bg-white/50 px-2" />
-              )}
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="w-4 h-4 mr-2" />
-                {signatureUrl ? 'Trocar' : 'Upload assinatura'}
-              </Button>
+
+            <div className="flex justify-end">
               <Button variant="outline" size="sm" onClick={syncFromFirestore} disabled={syncing}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
                 Sincronizar presenças
               </Button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
             </div>
           </CardContent>
         </Card>
@@ -989,7 +1082,7 @@ export default function TrainingPage() {
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 shrink-0"
-                        onClick={() => viewTraining && generateCertificatePDF(att, viewTraining, signatureUrl, signer)}
+                        onClick={() => viewTraining && generateCertificatePDF(att, viewTraining, { signatureDataUrl: orgSettings.signatureUrl, signer, orgLogoUrl: orgSettings.logoUrl })}
                       >
                         <Award className="w-4 h-4 mr-1" />Certificado
                       </Button>
@@ -1005,7 +1098,7 @@ export default function TrainingPage() {
                     if (!viewTraining) return;
                     toast.info('Gerando certificados...');
                     for (const att of viewAttendees) {
-                      await generateCertificatePDF(att, viewTraining, signatureUrl, signer);
+                      await generateCertificatePDF(att, viewTraining, { signatureDataUrl: orgSettings.signatureUrl, signer, orgLogoUrl: orgSettings.logoUrl });
                       await new Promise(r => setTimeout(r, 400));
                     }
                     toast.success(`${viewAttendees.length} certificado(s) gerados!`);
