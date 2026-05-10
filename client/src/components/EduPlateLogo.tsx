@@ -9,12 +9,16 @@
 interface Props {
   markOnly?: boolean;
   className?: string;
+  style?: React.CSSProperties;
   variant?: 'dark' | 'light';
 }
+
+import React from 'react';
 
 export default function EduPlateLogo({
   markOnly = false,
   className = '',
+  style,
   variant = 'dark',
 }: Props) {
   const ringColor  = variant === 'dark' ? 'white'    : '#1B2A4A';
@@ -63,6 +67,7 @@ export default function EduPlateLogo({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={className}
+        style={style}
         aria-label="EduPlate Menu"
       >
         {Mark}
@@ -77,6 +82,7 @@ export default function EduPlateLogo({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={style}
       aria-label="EduPlate Menu"
     >
       {Mark}

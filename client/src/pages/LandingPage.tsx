@@ -1,509 +1,657 @@
-import { useState, useEffect } from 'react';
+/**
+ * LandingPage.tsx — EduPlate Menu
+ * Design: institutional modern, sem emojis, Poppins + Inter
+ */
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
-  Apple, BarChart3, Bell, BookOpen, CheckCircle2, ChevronDown,
-  ClipboardCheck, FileText, GraduationCap, Mail, Menu,
-  QrCode, Shield, Sparkles, Trophy, Utensils, Wrench, X, Zap,
+  BookOpen,
+  ClipboardList,
+  GraduationCap,
+  FolderOpen,
+  BarChart2,
+  Users,
+  QrCode,
+  Mail,
+  Menu,
+  X,
+  Play,
+  Check,
+  Minus,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  ShieldCheck,
+  Wifi,
+  Clock,
+  Award,
 } from 'lucide-react';
+import './LandingPage.css';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Feature data (sem emojis) ────────────────────────────────────────────────
 
 const FEATURES = [
   {
-    icon: <Apple className="h-6 w-6" />,
-    title: 'Cardápios Digitais',
-    desc: 'Elabore, aprove e publique cardápios com controle nutricional e conformidade PNAE automatizada.',
-    color: '#4CAF50',
+    icon: <BookOpen size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #4CAF50, #66BB6A)',
+    title: 'Cardápios digitais',
+    desc: 'Elabore, revise e publique cardápios com organização, padronização e visibilidade por escola, etapa e período.',
   },
   {
-    icon: <ClipboardCheck className="h-6 w-6" />,
-    title: 'Fiscalização de Escolas',
-    desc: 'Checklists digitais de inspeção com fotos, geração de relatórios e histórico por unidade escolar.',
-    color: '#1A73E8',
+    icon: <ClipboardList size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #1A73E8, #3D8FFF)',
+    title: 'Fiscalização de escolas',
+    desc: 'Checklists digitais com fotos, observações e histórico por unidade escolar para acompanhar conformidade e pendências.',
   },
   {
-    icon: <GraduationCap className="h-6 w-6" />,
-    title: 'Treinamentos e Certificados',
-    desc: 'QR Code para registro de presença em telão. Certificados PDF com assinatura digital em segundos.',
-    color: '#FF9800',
+    icon: <GraduationCap size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #FF9800, #FFB74D)',
+    title: 'Treinamentos e certificados',
+    desc: 'Registre presença por QR Code em telão e gere certificados em PDF com muito menos trabalho operacional.',
   },
   {
-    icon: <FileText className="h-6 w-6" />,
-    title: 'Documentos com Validade',
-    desc: 'Controle de alvarás, RDC 216, PNAE e outros — com alertas automáticos antes do vencimento.',
-    color: '#9C27B0',
+    icon: <FolderOpen size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #9C27B0, #BA68C8)',
+    title: 'Documentos com validade',
+    desc: 'Controle alvarás, RDC 216, PNAE e outros documentos com alertas automáticos antes do vencimento.',
   },
   {
-    icon: <BarChart3 className="h-6 w-6" />,
-    title: 'Relatórios para o FNDE',
+    icon: <BarChart2 size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #E91E63, #F06292)',
+    title: 'Relatórios e evidências',
     desc: 'Exportação no formato SIGPC/FNDE com poucos cliques. Resto-ingesta, aceitabilidade e produção.',
-    color: '#E91E63',
   },
   {
-    icon: <Shield className="h-6 w-6" />,
-    title: 'Dietas Especiais',
-    desc: 'Cadastro de alunos com restrições alimentares visível para todas as escolas do município.',
-    color: '#00BCD4',
-  },
-  {
-    icon: <QrCode className="h-6 w-6" />,
-    title: 'QR Code de Presença',
-    desc: 'Projete no telão durante o treinamento. Participantes escaneiam e se registram pelo celular.',
-    color: '#FF5722',
-  },
-  {
-    icon: <Mail className="h-6 w-6" />,
-    title: 'Cardápio por E-mail',
-    desc: 'Envie o cardápio semanal direto para as escolas com um clique. Sem WhatsApp, sem papel.',
-    color: '#4CAF50',
+    icon: <Users size={22} color="#fff" />,
+    bg: 'linear-gradient(135deg, #00BCD4, #4DD0E1)',
+    title: 'Dietas especiais',
+    desc: 'Centralize restrições alimentares e dados de alunos para que toda a rede trabalhe com mais segurança.',
   },
 ];
 
-const STEPS = [
-  {
-    n: '01',
-    title: 'Assine o plano',
-    desc: 'Escolha o plano ideal para o porte do seu município. Sem fidelidade, sem taxa de setup.',
-  },
-  {
-    n: '02',
-    title: 'Configure em minutos',
-    desc: 'Cadastre suas escolas, faça upload da logo da secretaria e adicione sua equipe.',
-  },
-  {
-    n: '03',
-    title: 'Use de qualquer lugar',
-    desc: 'Acesse pelo computador, tablet ou celular. Tudo salvo na nuvem, com segurança LGPD.',
-  },
-];
+// ─── FAQ data ─────────────────────────────────────────────────────────────────
 
 const FAQS = [
   {
     q: 'O EduPlate Menu funciona para qualquer município?',
-    a: 'Sim. O sistema é multi-tenant — cada município tem seus dados completamente isolados. Funciona para prefeituras de qualquer porte.',
+    a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes, com planos adequados para redes menores, maiores e operações regionais em consórcio.',
   },
   {
     q: 'Preciso instalar algum software?',
-    a: 'Não. O EduPlate é 100% online. Acesse pelo navegador em qualquer dispositivo — sem instalação, sem manutenção.',
+    a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.',
   },
   {
     q: 'Como funciona o período de 14 dias grátis?',
-    a: 'Você tem acesso completo a todas as funcionalidades por 14 dias, sem precisar informar cartão de crédito. Só cobra se continuar.',
+    a: 'Você acessa todas as funcionalidades do plano escolhido por 14 dias sem custo. Não solicitamos cartão de crédito para iniciar o teste.',
   },
   {
-    q: 'Quem pode usar o sistema além da nutricionista?',
-    a: 'Cada organização pode ter a Nutricionista RT (admin) e o Agente Escolar. Cada um com seu próprio acesso e permissões.',
+    q: 'Quem pode usar o sistema além da nutricionista RT?',
+    a: 'Cada organização conta com perfis de nutricionista e agente escolar. Os dados são isolados por município, com segurança e conformidade LGPD.',
   },
   {
-    q: 'Os dados estão seguros? O sistema é LGPD?',
-    a: 'Sim. Os dados ficam no Google Firebase (ISO 27001), com criptografia TLS e em repouso. Temos Política de Privacidade completa conforme a LGPD.',
+    q: 'Os dados estão seguros? O sistema segue a LGPD?',
+    a: 'Sim. O sistema opera em nuvem com autenticação segura, isolamento de dados por organização e práticas alinhadas à Lei Geral de Proteção de Dados.',
   },
   {
     q: 'E se eu precisar cancelar?',
-    a: 'Cancele a qualquer momento. Seus dados ficam disponíveis para exportação por 30 dias após o cancelamento.',
+    a: 'Você pode cancelar a qualquer momento, sem burocracia e sem multa. Os dados ficam disponíveis para exportação conforme nossa política de retenção.',
   },
 ];
 
-const PLANS = [
-  {
-    id: 'essencial',
-    name: 'Básico',
-    price: 'R$ 197',
-    period: '/mês',
-    desc: 'Ideal para municípios de até 10 escolas',
-    color: '#4CAF50',
-    highlight: false,
-    features: [
-      'Cardápios e fichas técnicas',
-      'Fiscalização de escolas',
-      'Treinamentos + QR Code',
-      'Certificados PDF',
-      'Documentos com validade',
-      'Suporte por e-mail',
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Profissional',
-    price: 'R$ 347',
-    period: '/mês',
-    desc: 'Para municípios com até 30 escolas',
-    color: '#1A73E8',
-    highlight: true,
-    features: [
-      'Tudo do Básico',
-      'Relatórios SIGPC/FNDE',
-      'Envio de cardápio por e-mail',
-      'Controle de EPIs',
-      'Dietas especiais de alunos',
-      'Suporte prioritário',
-    ],
-  },
-  {
-    id: 'enterprise',
-    name: 'Consórcio',
-    price: 'Sob consulta',
-    period: '',
-    desc: 'Para consórcios e redes regionais',
-    color: '#FF9800',
-    highlight: false,
-    features: [
-      'Tudo do Profissional',
-      'Múltiplos municípios',
-      'Logo personalizada',
-      'Treinamento presencial',
-      'SLA garantido',
-      'Suporte dedicado',
-    ],
-  },
-];
-
-// ─── Components ───────────────────────────────────────────────────────────────
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-gray-100 last:border-0">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-4 py-5 text-left"
-      >
-        <span className="text-sm font-semibold text-gray-800">{q}</span>
-        <ChevronDown className={`h-4 w-4 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <p className="pb-5 text-sm text-gray-500 leading-relaxed">{a}</p>
-      )}
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [, navigate] = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handler);
-    return () => window.removeEventListener('scroll', handler);
-  }, []);
+  const goToPlans = () => navigate('/planos');
+  const goToLogin = () => navigate('/login');
 
   return (
-    <div className="min-h-screen bg-white font-sans antialiased">
+    <div className="lp-root">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <header className="lp-header">
+        <div className="lp-container">
+          <nav className="lp-nav">
+            <a className="lp-brand" href="#inicio" aria-label="EduPlate Menu">
+              <EduPlateLogo variant="light" style={{ height: 44 }} />
+            </a>
 
-      {/* ── Navbar ── */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
-        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <a href="/">
-            <EduPlateLogo className="h-8 w-auto" />
-          </a>
+            <div className="lp-nav-links">
+              <a href="#funcionalidades">Funcionalidades</a>
+              <a href="#como-funciona">Como funciona</a>
+              <a href="#planos">Planos</a>
+              <a href="#faq">FAQ</a>
+            </div>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-7">
-            {[['#funcionalidades', 'Funcionalidades'], ['#como-funciona', 'Como funciona'], ['#planos', 'Planos'], ['#faq', 'FAQ']].map(([href, label]) => (
-              <a key={href} href={href} className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">{label}</a>
-            ))}
+            <div className="lp-nav-actions">
+              <button className="lp-link-plain" onClick={goToLogin}>Entrar</button>
+              <button className="lp-btn lp-btn-primary" onClick={goToPlans}
+                style={{ padding: '10px 20px', fontSize: 14 }}>
+                Teste grátis
+              </button>
+              <button
+                className="lp-hamburger"
+                onClick={() => setMobileOpen(v => !v)}
+                aria-label="Menu"
+              >
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
-            <a href="/login" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors px-4 py-2">
-              Entrar
-            </a>
-            <a
-              href="/planos"
-              className="text-sm font-bold text-white rounded-xl px-5 py-2.5 transition-all hover:opacity-90 shadow-sm"
-              style={{ background: '#4CAF50' }}
-            >
-              Teste grátis por 14 dias
-            </a>
+          {/* Mobile menu */}
+          <div className={`lp-mobile-menu ${mobileOpen ? 'open' : ''}`}>
+            <a href="#funcionalidades" onClick={() => setMobileOpen(false)}>Funcionalidades</a>
+            <a href="#como-funciona" onClick={() => setMobileOpen(false)}>Como funciona</a>
+            <a href="#planos" onClick={() => setMobileOpen(false)}>Planos</a>
+            <a href="#faq" onClick={() => setMobileOpen(false)}>FAQ</a>
+            <a href="/login" style={{ color: '#1B2A4A', fontWeight: 700 }}>Entrar</a>
           </div>
-
-          {/* Mobile */}
-          <button className="md:hidden p-2 rounded-lg text-gray-600" onClick={() => setMobileMenu(o => !o)}>
-            {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
         </div>
-
-        {/* Mobile dropdown */}
-        {mobileMenu && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-5 py-4 space-y-3">
-            {[['#funcionalidades', 'Funcionalidades'], ['#como-funciona', 'Como funciona'], ['#planos', 'Planos'], ['#faq', 'FAQ']].map(([href, label]) => (
-              <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-sm font-medium text-gray-700 py-1">{label}</a>
-            ))}
-            <div className="pt-2 flex flex-col gap-2">
-              <a href="/login" className="text-center text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl py-2.5">Entrar</a>
-              <a href="/planos" className="text-center text-sm font-bold text-white rounded-xl py-2.5" style={{ background: '#4CAF50' }}>Teste grátis 14 dias</a>
-            </div>
-          </div>
-        )}
       </header>
 
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-28" style={{ background: '#1B2A4A' }}>
-        {/* Background circles */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-10" style={{ background: '#4CAF50' }} />
-        <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full opacity-5" style={{ background: '#1A73E8' }} />
+      <main id="inicio">
+        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        <section className="lp-hero">
+          <div className="lp-container lp-hero-grid">
+            {/* Copy */}
+            <div className="lp-hero-copy">
+              <span className="lp-eyebrow">Plataforma especialista em PNAE · 100% online</span>
+              <h1 style={{ marginTop: 20 }}>
+                Gestão do PNAE em{' '}
+                <span style={{ color: 'var(--lp-green)' }}>uma plataforma só</span>
+              </h1>
+              <p className="lp-lead" style={{ marginTop: 22 }}>
+                O EduPlate Menu centraliza cardápios, fiscalização, treinamentos,
+                certificados, dietas especiais e documentos da alimentação escolar
+                do município — com mais controle, rastreabilidade e menos retrabalho.
+              </p>
 
-        <div className="relative max-w-5xl mx-auto px-5 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8 text-xs font-semibold" style={{ background: 'rgba(76,175,80,0.15)', color: '#7ee08a', border: '1px solid rgba(76,175,80,0.3)' }}>
-            <Sparkles className="h-3.5 w-3.5" />
-            Plataforma especialista em PNAE · 100% online
-          </div>
+              <div className="lp-btn-row">
+                <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
+                  Começar 14 dias grátis
+                  <ArrowRight size={18} />
+                </button>
+                <a className="lp-btn lp-btn-secondary" href="#funcionalidades">
+                  Ver funcionalidades
+                </a>
+              </div>
 
-          <h1 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tight">
-            Gestão do PNAE<br />
-            <span style={{ color: '#4CAF50' }}>sem planilha,</span><br />
-            sem papel.
-          </h1>
-
-          <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            O <strong className="text-white">EduPlate Menu</strong> digitaliza toda a alimentação escolar do seu município —
-            cardápios, fiscalização, treinamentos, certificados e documentos — em um só lugar.
-          </p>
-
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="/planos"
-              className="w-full sm:w-auto font-bold text-white rounded-2xl px-8 py-4 text-base shadow-xl transition-all hover:scale-105"
-              style={{ background: '#4CAF50', boxShadow: '0 8px 32px rgba(76,175,80,0.4)' }}
-            >
-              Começar 14 dias grátis →
-            </a>
-            <a
-              href="#funcionalidades"
-              className="w-full sm:w-auto font-semibold rounded-2xl px-8 py-4 text-base transition-all"
-              style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)' }}
-            >
-              Ver funcionalidades
-            </a>
-          </div>
-
-          {/* Trust line */}
-          <p className="mt-8 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Sem cartão de crédito · Cancele a qualquer momento · Dados seguros (LGPD + Firebase)
-          </p>
-        </div>
-
-        {/* Hero stats */}
-        <div className="relative max-w-3xl mx-auto px-5 mt-16 grid grid-cols-3 gap-4">
-          {[
-            ['14 dias', 'de acesso grátis'],
-            ['100%', 'na nuvem'],
-            ['LGPD', 'em conformidade'],
-          ].map(([val, label]) => (
-            <div key={val} className="text-center rounded-2xl py-5 px-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <p className="text-2xl md:text-3xl font-black" style={{ color: '#4CAF50' }}>{val}</p>
-              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</p>
+              <div className="lp-hero-meta">
+                <span className="lp-pill">Sem cartão de crédito</span>
+                <span className="lp-pill">Cancele a qualquer momento</span>
+                <span className="lp-pill">Dados seguros na nuvem</span>
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ── Problema ── */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-5 text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">O problema que a gente resolve</p>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight">
-            A gestão do PNAE ainda é feita em planilha, papel e WhatsApp?
-          </h2>
-          <p className="mt-5 text-lg text-gray-500 leading-relaxed max-w-2xl mx-auto">
-            Nutricionistas perdem horas com documentação manual, certificados impressos, checklists em papel e relatórios que têm que ser refeitos todo mês para o FNDE.
-          </p>
+            {/* Dashboard mockup */}
+            <div className="lp-hero-card" aria-label="Prévia da plataforma">
+              <div className="lp-mock-browser">
+                <div className="lp-browser-top">
+                  <span className="lp-dot lp-dot-red" />
+                  <span className="lp-dot lp-dot-yellow" />
+                  <span className="lp-dot lp-dot-green" />
+                  <div className="lp-url-bar">app.eduplate.com.br</div>
+                </div>
+                <div className="lp-dashboard">
+                  {/* Weekly menu calendar */}
+                  <div className="lp-panel">
+                    <h4>Cardápio semanal</h4>
+                    <div className="lp-calendar">
+                      {[
+                        { d: 'Seg', a: 'Arroz + Feijão', b: 'Fruta', ca: 'green', cb: 'blue' },
+                        { d: 'Ter', a: 'Macarrão', b: 'Salada', ca: 'green', cb: 'orange' },
+                        { d: 'Qua', a: 'Sopa nutritiva', b: 'Suco', ca: 'green', cb: 'blue' },
+                        { d: 'Qui', a: 'Carne + Legumes', b: 'Sobremesa', ca: 'green', cb: 'orange' },
+                        { d: 'Sex', a: 'Merenda regional', b: 'Leite', ca: 'green', cb: 'blue' },
+                      ].map(item => (
+                        <div key={item.d} className="lp-day">
+                          <span className="lp-day-label">{item.d}</span>
+                          <div className={`lp-tag lp-tag-${item.ca}`}>{item.a}</div>
+                          <div className={`lp-tag lp-tag-${item.cb}`}>{item.b}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-3 text-left">
+                  {/* Side cards */}
+                  <div className="lp-stack">
+                    <div className="lp-mini-card">
+                      <h4>Alertas do dia</h4>
+                      <div className="lp-metric"><span>Documento vencendo</span><strong>3</strong></div>
+                      <div className="lp-metric"><span>Fiscalizações pendentes</span><strong>12</strong></div>
+                      <div className="lp-metric"><span>Dietas especiais</span><strong>8</strong></div>
+                    </div>
+                    <div className="lp-mini-card">
+                      <h4>Treinamentos</h4>
+                      <div className="lp-metric"><span>QR Code de presença</span><span className="lp-badge-num">QR</span></div>
+                      <div className="lp-metric"><span>Certificados gerados</span><strong>124</strong></div>
+                    </div>
+                    <div className="lp-mini-card">
+                      <h4>Relatórios SIGPC</h4>
+                      <div className="lp-metric"><span>Histórico por escola</span><strong style={{ color: '#4CAF50' }}>OK</strong></div>
+                      <div className="lp-metric"><span>Exportação FNDE</span><strong style={{ color: '#4CAF50' }}>Pronto</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="lp-container lp-stats">
             {[
-              ['😤', 'Cardápios aprovados no WhatsApp', 'Sem controle de versão, sem assinatura, sem histórico.'],
-              ['📋', 'Fiscalização com papel e caneta', 'Relatórios perdidos, sem foto, sem rastreabilidade.'],
-              ['🗂️', 'Documentos vencendo sem aviso', 'Alvará vencido, Dedetização esquecida, multa na inspeção.'],
-            ].map(([emoji, title, desc]) => (
-              <div key={title} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <span className="text-3xl">{emoji}</span>
-                <p className="mt-3 font-bold text-gray-800 text-sm">{title}</p>
-                <p className="mt-1 text-xs text-gray-400 leading-relaxed">{desc}</p>
+              { icon: <Clock size={20} color="#4CAF50" />, big: '14 dias', label: 'de acesso grátis' },
+              { icon: <Wifi size={20} color="#1A73E8" />, big: '100%', label: 'online e na nuvem' },
+              { icon: <ShieldCheck size={20} color="#9C27B0" />, big: 'LGPD', label: 'dados com mais segurança' },
+              { icon: <Award size={20} color="#FF9800" />, big: '1 dia', label: 'para começar a operar' },
+            ].map(s => (
+              <div key={s.big} className="lp-stat">
+                <div style={{ marginBottom: 8 }}>{s.icon}</div>
+                <div className="lp-stat-big">{s.big}</div>
+                <div className="lp-stat-label">{s.label}</div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Features ── */}
-      <section id="funcionalidades" className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-5">
-          <div className="text-center mb-14">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#4CAF50' }}>Tudo em um só lugar</p>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900">Funcionalidades do EduPlate Menu</h2>
-            <p className="mt-3 text-gray-500 max-w-xl mx-auto">Desenvolvido especificamente para nutricionistas e secretarias de educação que gerenciam o PNAE.</p>
-          </div>
+        {/* ── Features ─────────────────────────────────────────────────── */}
+        <section className="lp-section" id="funcionalidades">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Tudo em um só lugar</span>
+            <h2 style={{ marginTop: 18, maxWidth: 700 }}>
+              Funcionalidades pensadas para a rotina real da alimentação escolar
+            </h2>
+            <p className="lp-lead" style={{ marginTop: 18 }}>
+              O EduPlate Menu foi desenhado para nutricionistas e secretarias de educação
+              que precisam organizar a operação do PNAE com clareza, padronização e rapidez.
+            </p>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="group rounded-2xl border border-gray-100 bg-white p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ background: f.color + '18', color: f.color }}>
-                  {f.icon}
+            <div className="lp-grid-3" style={{ marginTop: 34 }}>
+              {FEATURES.map(f => (
+                <article key={f.title} className="lp-card">
+                  <div className="lp-icon" style={{ background: f.bg }}>
+                    {f.icon}
+                  </div>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </article>
+              ))}
+            </div>
+
+            {/* Extra two features inline */}
+            <div className="lp-grid-2" style={{ marginTop: 18 }}>
+              <article className="lp-card" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
+                <div className="lp-icon" style={{ background: 'linear-gradient(135deg, #FF5722, #FF8A65)', flexShrink: 0 }}>
+                  <QrCode size={22} color="#fff" />
                 </div>
-                <p className="font-bold text-gray-900 text-sm mb-1.5">{f.title}</p>
-                <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
+                <div>
+                  <h3>QR Code de presença</h3>
+                  <p>Projete no telão durante o treinamento. Participantes escaneiam e se registram diretamente pelo celular.</p>
+                </div>
+              </article>
+              <article className="lp-card" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
+                <div className="lp-icon" style={{ background: 'linear-gradient(135deg, #4CAF50, #66BB6A)', flexShrink: 0 }}>
+                  <Mail size={22} color="#fff" />
+                </div>
+                <div>
+                  <h3>Cardápio por e-mail</h3>
+                  <p>Envie o cardápio semanal direto para as escolas com um clique. Sem WhatsApp, sem papel, sem retrabalho.</p>
+                </div>
+              </article>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Como funciona ── */}
-      <section id="como-funciona" className="py-20" style={{ background: '#1B2A4A' }}>
-        <div className="max-w-4xl mx-auto px-5 text-center">
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#4CAF50' }}>Simples e rápido</p>
-          <h2 className="text-3xl md:text-4xl font-black text-white">Começa a funcionar em um dia</h2>
-          <p className="mt-3 max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>Sem implantação demorada, sem treinamento presencial obrigatório.</p>
+        {/* ── Problem / Pain ──────────────────────────────────────────── */}
+        <section className="lp-section lp-band">
+          <div className="lp-container lp-problem-wrap">
+            <div className="lp-problem-panel">
+              <span className="lp-eyebrow">O problema que a gente resolve</span>
+              <h2 style={{ marginTop: 18 }}>
+                Se o PNAE ainda depende de planilha, papel e WhatsApp, o município perde tempo e controle
+              </h2>
+              <p className="lp-lead" style={{ marginTop: 18, maxWidth: '100%' }}>
+                A nutricionista responsável técnica acaba absorvendo retrabalho que poderia estar
+                automatizado: documentação manual, checklists em papel, certificados demorados,
+                documentos vencendo sem aviso e informações espalhadas por escola.
+              </p>
+            </div>
 
-          <div className="mt-14 grid gap-8 md:grid-cols-3 text-left">
-            {STEPS.map((s, i) => (
-              <div key={s.n} className="relative">
-                {i < STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-6 left-[calc(100%+8px)] w-[calc(100%-40px)] h-px" style={{ background: 'rgba(76,175,80,0.2)' }} />
-                )}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black" style={{ background: '#4CAF50', color: 'white' }}>
-                    {s.n}
+            <div className="lp-pain-list">
+              {[
+                { title: 'Cardápios soltos em conversas e anexos', sub: 'Sem histórico, sem rastreabilidade e sem controle de versão.' },
+                { title: 'Fiscalização com papel e caneta', sub: 'Relatórios demorados e pouca evidência para acompanhamento por unidade.' },
+                { title: 'Documentos vencendo sem alerta', sub: 'Risco de pendências em inspeções e perda de prazo por falta de visibilidade.' },
+                { title: 'Treinamentos sem presença padronizada', sub: 'Registro manual, certificados demorados e pouca organização do histórico.' },
+                { title: 'Relatórios refeitos todo mês', sub: 'Muito esforço operacional para consolidar dados do município.' },
+              ].map(item => (
+                <div key={item.title} className="lp-pain-item">
+                  <span className="lp-pain-bullet" />
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.sub}</span>
                   </div>
                 </div>
-                <p className="font-bold text-white mb-2">{s.title}</p>
-                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{s.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        </section>
 
-          <div className="mt-14">
-            <a
-              href="/planos"
-              className="inline-block font-bold text-white rounded-2xl px-8 py-4 text-base transition-all hover:scale-105"
-              style={{ background: '#4CAF50', boxShadow: '0 8px 32px rgba(76,175,80,0.3)' }}
-            >
-              Quero começar agora →
-            </a>
-          </div>
-        </div>
-      </section>
+        {/* ── Before / After ──────────────────────────────────────────── */}
+        <section className="lp-section">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Por que escolher o EduPlate Menu</span>
+            <h2 style={{ marginTop: 18 }}>
+              Menos retrabalho para a equipe. Mais controle para o município.
+            </h2>
 
-      {/* ── Planos ── */}
-      <section id="planos" className="py-20 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-5">
-          <div className="text-center mb-14">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#4CAF50' }}>Planos e preços</p>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900">Simples e transparente</h2>
-            <p className="mt-3 text-gray-500">14 dias grátis em qualquer plano. Sem cartão de crédito.</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {PLANS.map((p) => (
-              <div
-                key={p.id}
-                className={`rounded-2xl p-6 flex flex-col transition-all ${p.highlight ? 'shadow-2xl scale-105' : 'shadow-sm hover:shadow-md'}`}
-                style={{
-                  background: p.highlight ? '#1B2A4A' : 'white',
-                  border: p.highlight ? '2px solid #4CAF50' : '1px solid #f3f4f6',
-                }}
-              >
-                {p.highlight && (
-                  <div className="mb-4 inline-block self-start rounded-full px-3 py-1 text-xs font-bold" style={{ background: '#4CAF50', color: 'white' }}>
-                    Mais popular
-                  </div>
-                )}
-                <p className={`font-bold text-lg ${p.highlight ? 'text-white' : 'text-gray-900'}`}>{p.name}</p>
-                <p className={`text-xs mt-1 mb-5 ${p.highlight ? 'text-white/50' : 'text-gray-400'}`}>{p.desc}</p>
-                <div className="flex items-end gap-1 mb-6">
-                  <span className={`text-4xl font-black ${p.highlight ? 'text-white' : 'text-gray-900'}`}>{p.price}</span>
-                  {p.period && <span className={`text-sm mb-1 ${p.highlight ? 'text-white/50' : 'text-gray-400'}`}>{p.period}</span>}
-                </div>
-                <ul className="space-y-2.5 flex-1 mb-6">
-                  {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" style={{ color: p.highlight ? '#4CAF50' : p.color }} />
-                      <span className={p.highlight ? 'text-white/80' : 'text-gray-600'}>{f}</span>
+            <div className="lp-compare">
+              <div className="lp-compare-col" style={{ borderColor: '#FECACA', background: '#FFFAFA' }}>
+                <h3 style={{ color: '#DC2626' }}>Antes</h3>
+                <ul className="lp-compare-list">
+                  {[
+                    'Processos espalhados em planilhas, papel e mensagens.',
+                    'Pouca padronização entre escolas e equipes.',
+                    'Documentos e evidências difíceis de localizar.',
+                    'Mais risco de esquecimento e retrabalho constante.',
+                  ].map(t => (
+                    <li key={t}>
+                      <Minus size={16} className="lp-x" style={{ color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
+                      {t}
                     </li>
                   ))}
                 </ul>
-                <a
-                  href={p.id === 'enterprise' ? 'mailto:contato@eduplate.com.br' : '/planos'}
-                  className="block text-center font-bold rounded-xl py-3 text-sm transition-all hover:opacity-90"
-                  style={
-                    p.highlight
-                      ? { background: '#4CAF50', color: 'white' }
-                      : { background: p.color + '12', color: p.color }
-                  }
-                >
-                  {p.id === 'enterprise' ? 'Falar com especialista' : 'Começar 14 dias grátis'}
-                </a>
               </div>
-            ))}
+              <div className="lp-compare-col" style={{ borderColor: 'rgba(76,175,80,0.28)', background: '#F7FBF7' }}>
+                <h3 style={{ color: '#2E7D32' }}>Com o EduPlate Menu</h3>
+                <ul className="lp-compare-list">
+                  {[
+                    'Operação centralizada em uma plataforma especialista em PNAE.',
+                    'Fluxos digitais para cardápios, fiscalização e treinamentos.',
+                    'Histórico organizado por unidade escolar e rotina.',
+                    'Mais clareza para acompanhar o município e agir com antecedência.',
+                  ].map(t => (
+                    <li key={t}>
+                      <Check size={16} className="lp-check" style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── FAQ ── */}
-      <section id="faq" className="py-20 bg-white">
-        <div className="max-w-2xl mx-auto px-5">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#4CAF50' }}>Dúvidas frequentes</p>
-            <h2 className="text-3xl font-black text-gray-900">Perguntas e respostas</h2>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6">
-            {FAQS.map((faq) => <FaqItem key={faq.q} {...faq} />)}
-          </div>
-        </div>
-      </section>
+        {/* ── Video section ───────────────────────────────────────────── */}
+        <section className="lp-section lp-band">
+          <div className="lp-container" style={{ textAlign: 'center' }}>
+            <span className="lp-eyebrow">Veja o sistema em ação</span>
+            <h2 style={{ marginTop: 18, textAlign: 'center' }}>
+              Uma demonstração vale mais do que mil palavras
+            </h2>
+            <p className="lp-lead" style={{ margin: '16px auto 0', textAlign: 'center' }}>
+              Acompanhe como um município de qualquer porte pode profissionalizar a gestão
+              do PNAE em poucos passos.
+            </p>
 
-      {/* ── CTA Final ── */}
-      <section className="py-20" style={{ background: 'linear-gradient(135deg, #1B2A4A 0%, #0f1e36 100%)' }}>
-        <div className="max-w-3xl mx-auto px-5 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8 text-xs font-semibold mb-6" style={{ background: 'rgba(76,175,80,0.15)', color: '#7ee08a', border: '1px solid rgba(76,175,80,0.3)' }}>
-            <Zap className="h-3.5 w-3.5" />
-            Sem burocracia para começar
+            {/* Video placeholder */}
+            <div className="lp-video-wrap">
+              <div className="lp-video-bg-dots" />
+              {/* Central content */}
+              <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+                <div className="lp-play-btn" style={{ margin: '0 auto 16px' }}>
+                  <Play size={28} color="#fff" fill="#fff" />
+                </div>
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 600 }}>
+                  Demonstração do EduPlate Menu
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 4 }}>
+                  Vídeo em breve · Disponível no YouTube
+                </p>
+              </div>
+              {/* Decorative glows */}
+              <div style={{
+                position: 'absolute', width: 200, height: 200,
+                borderRadius: '50%', background: 'rgba(76,175,80,0.12)',
+                filter: 'blur(40px)', bottom: -60, right: -40, pointerEvents: 'none',
+              }} />
+              <div style={{
+                position: 'absolute', width: 160, height: 160,
+                borderRadius: '50%', background: 'rgba(26,115,232,0.10)',
+                filter: 'blur(40px)', top: -40, left: -40, pointerEvents: 'none',
+              }} />
+            </div>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white leading-tight">
-            Seu município merece uma gestão do PNAE à altura.
-          </h2>
-          <p className="mt-5 text-lg max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            14 dias grátis. Sem cartão. Sem burocracia. Se não gostar, cancela sem perguntas.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="/planos"
-              className="w-full sm:w-auto font-bold text-white rounded-2xl px-10 py-4 text-base transition-all hover:scale-105"
-              style={{ background: '#4CAF50', boxShadow: '0 8px 32px rgba(76,175,80,0.4)' }}
-            >
-              Começar grátis agora →
-            </a>
-            <a
-              href="mailto:contato@eduplate.com.br"
-              className="w-full sm:w-auto font-semibold rounded-2xl px-10 py-4 text-base transition-all"
-              style={{ color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}
-            >
-              Falar com a Simone
-            </a>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Footer ── */}
-      <footer className="bg-gray-50 border-t border-gray-100 py-10">
-        <div className="max-w-5xl mx-auto px-5 flex flex-col md:flex-row items-center justify-between gap-6">
-          <EduPlateLogo className="h-7 w-auto" />
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
-            <a href="/planos" className="hover:text-gray-600 transition-colors">Planos</a>
-            <a href="/privacidade" className="hover:text-gray-600 transition-colors">Privacidade</a>
-            <a href="/termos" className="hover:text-gray-600 transition-colors">Termos de Uso</a>
-            <a href="mailto:contato@eduplate.com.br" className="hover:text-gray-600 transition-colors">contato@eduplate.com.br</a>
+        {/* ── How it works ────────────────────────────────────────────── */}
+        <section className="lp-section" id="como-funciona">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Simples e rápido</span>
+            <h2 style={{ marginTop: 18 }}>Comece a funcionar em um dia</h2>
+            <p className="lp-lead" style={{ marginTop: 18 }}>
+              Sem implantação longa, sem instalação complexa, com acesso em computador, tablet ou celular.
+            </p>
+
+            <div className="lp-steps">
+              {[
+                {
+                  n: '01',
+                  title: 'Assine o plano',
+                  desc: 'Escolha o plano ideal para o porte do município e ative o período de teste grátis sem cartão de crédito.',
+                },
+                {
+                  n: '02',
+                  title: 'Configure em minutos',
+                  desc: 'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.',
+                },
+                {
+                  n: '03',
+                  title: 'Use de qualquer lugar',
+                  desc: 'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.',
+                },
+              ].map(s => (
+                <article key={s.n} className="lp-step">
+                  <div className="lp-step-num">{s.n}</div>
+                  <h3>{s.title}</h3>
+                  <p>{s.desc}</p>
+                </article>
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-gray-300">
-            © {new Date().getFullYear()} EduPlate Menu · Avaré — SP
-          </p>
+        </section>
+
+        {/* ── Pricing ─────────────────────────────────────────────────── */}
+        <section className="lp-section lp-band" id="planos">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Planos e preços</span>
+            <h2 style={{ marginTop: 18 }}>Planos pensados para o porte da sua rede</h2>
+            <p className="lp-lead" style={{ marginTop: 18 }}>
+              14 dias grátis em qualquer plano. Sem cartão de crédito. Sem taxa de setup.
+            </p>
+
+            <div className="lp-pricing">
+              {/* Básico */}
+              <article className="lp-price-card">
+                <h3>Básico</h3>
+                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
+                  Ideal para municípios com até 10 escolas.
+                </p>
+                <div className="lp-price">R$ 197 <small>/mês</small></div>
+                <ul className="lp-price-list">
+                  {[
+                    'Cardápios e fichas técnicas',
+                    'Fiscalização de escolas',
+                    'Treinamentos + QR Code',
+                    'Certificados em PDF',
+                    'Documentos com validade',
+                    'Suporte por e-mail',
+                  ].map(i => (
+                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  ))}
+                </ul>
+                <div className="lp-spacer" />
+                <div className="lp-btn-row" style={{ marginTop: 22 }}>
+                  <button className="lp-btn lp-btn-secondary" style={{ width: '100%' }} onClick={goToPlans}>
+                    Começar 14 dias grátis
+                  </button>
+                </div>
+              </article>
+
+              {/* Profissional */}
+              <article className="lp-price-card popular">
+                <span className="lp-popular-badge">Mais popular</span>
+                <h3>Profissional</h3>
+                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
+                  Para municípios com até 30 escolas e mais demanda operacional.
+                </p>
+                <div className="lp-price">R$ 347 <small>/mês</small></div>
+                <ul className="lp-price-list">
+                  {[
+                    'Tudo do plano Básico',
+                    'Relatórios SIGPC/FNDE',
+                    'Dietas especiais de alunos',
+                    'Envio de cardápio por e-mail',
+                    'Controle de EPIs',
+                    'Suporte prioritário',
+                  ].map(i => (
+                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  ))}
+                </ul>
+                <div className="lp-spacer" />
+                <div className="lp-btn-row" style={{ marginTop: 22 }}>
+                  <button className="lp-btn lp-btn-primary" style={{ width: '100%' }} onClick={goToPlans}>
+                    Começar 14 dias grátis
+                  </button>
+                </div>
+              </article>
+
+              {/* Consórcio */}
+              <article className="lp-price-card">
+                <h3>Consórcio</h3>
+                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
+                  Para consórcios e redes regionais com múltiplos municípios.
+                </p>
+                <div className="lp-price" style={{ fontSize: '1.6rem' }}>Sob consulta</div>
+                <ul className="lp-price-list">
+                  {[
+                    'Tudo do plano Profissional',
+                    'Múltiplos municípios',
+                    'Logo personalizada',
+                    'Treinamento presencial',
+                    'SLA garantido',
+                    'Suporte dedicado',
+                  ].map(i => (
+                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  ))}
+                </ul>
+                <div className="lp-spacer" />
+                <div className="lp-btn-row" style={{ marginTop: 22 }}>
+                  <a
+                    className="lp-btn lp-btn-outline"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    href="mailto:contato@eduplate.com.br"
+                  >
+                    Falar com especialista
+                  </a>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ─────────────────────────────────────────────────────── */}
+        <section className="lp-section" id="faq">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Dúvidas frequentes</span>
+            <h2 style={{ marginTop: 18 }}>Perguntas e respostas</h2>
+
+            <div className="lp-faq">
+              {FAQS.map((f, i) => (
+                <div key={i} className="lp-faq-item">
+                  <button
+                    className="lp-faq-q"
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    aria-expanded={openFaq === i}
+                  >
+                    {f.q}
+                    <span className="lp-faq-icon">
+                      {openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="lp-faq-a">{f.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA ─────────────────────────────────────────────────────── */}
+        <section className="lp-section-sm">
+          <div className="lp-container">
+            <div className="lp-cta-box">
+              <div className="lp-cta-content">
+                <span className="lp-cta-eyebrow">
+                  Pronto para profissionalizar a gestão do PNAE
+                </span>
+                <h2>
+                  Seu município merece uma gestão do PNAE mais organizada, segura e profissional
+                </h2>
+                <p>
+                  Experimente o EduPlate Menu por 14 dias e veja como a rotina da alimentação
+                  escolar pode funcionar com mais controle, visibilidade e padronização.
+                </p>
+                <div className="lp-btn-row" style={{ marginTop: 30 }}>
+                  <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
+                    Começar grátis agora
+                    <ArrowRight size={18} />
+                  </button>
+                  <a
+                    className="lp-btn"
+                    href="mailto:contato@eduplate.com.br"
+                    style={{
+                      background: 'rgba(255,255,255,0.12)',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.22)',
+                    }}
+                  >
+                    Falar com especialista
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ── Footer ──────────────────────────────────────────────────── */}
+      <footer className="lp-footer">
+        <div className="lp-container">
+          <div className="lp-footer-inner">
+            <div>
+              <EduPlateLogo variant="light" style={{ height: 32, marginBottom: 8 }} />
+              <p className="lp-footer-copy" style={{ marginTop: 8 }}>
+                Plataforma especialista em PNAE · 100% online<br />
+                CNPJ: — · Avaré — SP · contato@eduplate.com.br
+              </p>
+            </div>
+            <div className="lp-footer-links">
+              <a href="#funcionalidades">Funcionalidades</a>
+              <a href="#como-funciona">Como funciona</a>
+              <a href="#planos">Planos</a>
+              <a href="#faq">FAQ</a>
+              <a href="/privacidade">Privacidade</a>
+              <a href="/termos">Termos de uso</a>
+            </div>
+          </div>
         </div>
       </footer>
-
     </div>
   );
 }
