@@ -182,6 +182,28 @@ export interface Certificate {
   issuedBy: string;
 }
 
+// Documentos obrigatórios
+export type DocumentCategory =
+  | 'RDC 216'
+  | 'RDC 275'
+  | 'PNAE'
+  | 'CVS'
+  | 'ANVISA'
+  | 'Municipal'
+  | 'Outros';
+
+export interface OrgDocument {
+  id: string;
+  name: string;
+  category: DocumentCategory;
+  description?: string;
+  expiryDate?: string;       // ISO date string YYYY-MM-DD
+  fileUrl?: string;
+  fileName?: string;
+  uploadedAt?: Date;
+  updatedAt?: Date;
+}
+
 // Usuário
 export interface User {
   uid: string;

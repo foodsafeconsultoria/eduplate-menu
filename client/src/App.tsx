@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
-import Sidebar from "./components/Sidebar";
+import TopNav from "./components/TopNav";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Acceptability from '@/pages/Acceptability';
@@ -27,6 +27,7 @@ import TermsOfUse from '@/pages/TermsOfUse';
 import Pricing from '@/pages/Pricing';
 import Billing from '@/pages/Billing';
 import Cadastro from '@/pages/Cadastro';
+import Documents from '@/pages/Documents';
 import TrialBanner from '@/components/TrialBanner';
 import Foods from '@/pages/nutrition/Foods';
 import Menus from '@/pages/nutrition/Menus';
@@ -75,10 +76,9 @@ function Router() {
       <Route path="*">
         <AuthGuard>
         <div className="flex flex-col min-h-screen">
+          <TopNav />
           <TrialBanner />
-          <div className="flex flex-1">
-          <Sidebar />
-          <main className="flex-1">
+          <main className="flex-1 bg-gray-50">
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/nutrition" component={NutritionHub} />
@@ -101,10 +101,10 @@ function Router() {
               <Route path="/notifications" component={Notifications} />
               <Route path="/profile" component={Profile} />
               <Route path="/billing" component={Billing} />
+              <Route path="/documents" component={Documents} />
               <Route component={NotFound} />
             </Switch>
           </main>
-          </div>
         </div>
         </AuthGuard>
       </Route>

@@ -8,11 +8,11 @@ export default function PrivacyPolicy() {
             LGPD — Lei nº 13.709/2018
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Política de Privacidade</h1>
-          <p className="text-gray-500 text-sm">Sistema PNAE — Versão 1.0 · Vigência a partir de 1º de junho de 2026</p>
+          <p className="text-gray-500 text-sm">EduPlate Menu — Versão 1.0 · Vigência a partir de 1º de junho de 2026</p>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <span className="font-semibold text-gray-700">Encarregado (DPO): </span>
-              <span className="text-gray-600">contato@sistema-pnae.com.br</span>
+              <span className="text-gray-600">contato@eduplate.com.br</span>
             </div>
             <div className="bg-gray-50 rounded-xl px-4 py-3">
               <span className="font-semibold text-gray-700">Infraestrutura: </span>
@@ -24,11 +24,18 @@ export default function PrivacyPolicy() {
         <hr className="border-gray-100 mb-8" />
 
         <Section title="1. Quem somos e o papel de cada parte">
-          <p>O <strong>Sistema PNAE</strong> é uma plataforma SaaS para gestão da alimentação escolar no âmbito do Programa Nacional de Alimentação Escolar.</p>
-          <p className="mt-3">Nos termos da LGPD, as responsabilidades são divididas da seguinte forma:</p>
+          <p>O <strong>EduPlate Menu</strong> é uma plataforma SaaS (Software como Serviço) para gestão digital da alimentação escolar no âmbito do Programa Nacional de Alimentação Escolar (PNAE — Lei nº 11.947/2009).</p>
+          <div className="mt-3 bg-gray-50 rounded-xl p-4 text-sm space-y-1">
+            <p><strong>Responsável:</strong> Simone Torres Duarte</p>
+            <p><strong>CPF:</strong> 412.765.308-62</p>
+            <p><strong>Cidade:</strong> Avaré — SP</p>
+            <p><strong>E-mail:</strong> contato@eduplate.com.br</p>
+            <p><strong>Site:</strong> app.eduplate.com.br</p>
+          </div>
+          <p className="mt-4">Nos termos da LGPD, as responsabilidades são divididas da seguinte forma:</p>
           <ul className="mt-2 space-y-1 list-disc list-inside text-gray-600">
-            <li><strong>Controlador dos dados:</strong> a Secretaria Municipal de Educação contratante, que define as finalidades e meios de tratamento.</li>
-            <li><strong>Operador dos dados:</strong> a empresa responsável pelo Sistema PNAE, que trata dados exclusivamente conforme as instruções do Controlador.</li>
+            <li><strong>Controlador dos dados:</strong> a Secretaria Municipal de Educação ou entidade executora contratante, que define as finalidades e meios de tratamento dos dados do seu município.</li>
+            <li><strong>Operador dos dados:</strong> a empresa responsável pelo EduPlate Menu, que trata dados exclusivamente conforme as instruções do Controlador e a legislação vigente.</li>
           </ul>
         </Section>
 
@@ -109,7 +116,7 @@ export default function PrivacyPolicy() {
             'Revogação: quando o tratamento se basear em consentimento',
             'Oposição: quando discordar do tratamento por legítimo interesse',
           ]} />
-          <p className="mt-3 text-sm text-gray-500">Para exercer seus direitos, entre em contato com o DPO: <strong>contato@sistema-pnae.com.br</strong> (resposta em até 15 dias úteis).</p>
+          <p className="mt-3 text-sm text-gray-500">Para exercer seus direitos, entre em contato com o DPO: <strong>contato@eduplate.com.br</strong> (resposta em até 15 dias úteis).</p>
         </Section>
 
         <Section title="9. Retenção dos dados">
@@ -123,7 +130,7 @@ export default function PrivacyPolicy() {
 
         <Section title="10. Contato e Encarregado (DPO)">
           <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-            <p><strong>E-mail:</strong> contato@sistema-pnae.com.br</p>
+            <p><strong>E-mail:</strong> contato@eduplate.com.br</p>
             <p><strong>Prazo de resposta:</strong> até 15 dias úteis</p>
             <p><strong>ANPD:</strong> <a href="https://www.gov.br/anpd" target="_blank" rel="noopener noreferrer" className="text-green-700 underline">www.gov.br/anpd</a></p>
           </div>
@@ -134,7 +141,7 @@ export default function PrivacyPolicy() {
         </Section>
 
         <div className="mt-10 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
-          Sistema PNAE · Política de Privacidade v1.0 · {new Date().getFullYear()}
+          EduPlate Menu · Política de Privacidade v1.0 · {new Date().getFullYear()}
         </div>
       </div>
     </div>

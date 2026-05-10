@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Loader2, Lock, Mail, User, KeyRound, HelpCircle } from 'lucide-react';
@@ -9,6 +9,8 @@ import EduPlateLogo from '@/components/EduPlateLogo';
 export default function Login() {
   const { login, register, error } = useAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const redirectTo = new URLSearchParams(search).get('redirect') || '/';
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
@@ -26,7 +28,7 @@ export default function Login() {
     try {
       setLoading(true);
       await login(loginEmail, loginPassword);
-      setLocation('/');
+      setLocation(redirectTo);
     } catch (err) {
       console.error('Erro no login:', err);
     } finally {
@@ -45,7 +47,7 @@ export default function Login() {
         registerRole,
         joinMode === 'join' ? inviteCode : undefined
       );
-      setLocation('/');
+      setLocation(redirectTo);
     } catch (err) {
       console.error('Erro no registro:', err);
     } finally {
