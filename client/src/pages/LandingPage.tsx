@@ -1,185 +1,387 @@
 /**
  * LandingPage.tsx — EduPlate Menu
  * Design: institutional modern, sem emojis, Poppins + Inter
+ * Mockups baseados no sistema real (dados reais do município de Itaí/SP)
  */
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
-  BookOpen,
-  ClipboardList,
-  GraduationCap,
-  FolderOpen,
-  BarChart2,
-  Users,
-  QrCode,
-  Mail,
-  Menu,
-  X,
-  Play,
-  Check,
-  Minus,
-  ChevronDown,
-  ChevronUp,
-  ArrowRight,
-  ShieldCheck,
-  Wifi,
-  Clock,
-  Award,
+  BookOpen, ClipboardList, GraduationCap, FolderOpen,
+  BarChart2, Users, QrCode, Mail, Menu, X, Play,
+  Check, Minus, ChevronDown, ChevronUp, ArrowRight,
+  ShieldCheck, Wifi, Clock, Award, Bell, AlertTriangle,
 } from 'lucide-react';
 import './LandingPage.css';
 
-// ─── Feature data (sem emojis) ────────────────────────────────────────────────
-
+// ─── Features ─────────────────────────────────────────────────────────────────
 const FEATURES = [
-  {
-    icon: <BookOpen size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #4CAF50, #66BB6A)',
-    title: 'Cardápios digitais',
-    desc: 'Elabore, revise e publique cardápios com organização, padronização e visibilidade por escola, etapa e período.',
-  },
-  {
-    icon: <ClipboardList size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #1A73E8, #3D8FFF)',
-    title: 'Fiscalização de escolas',
-    desc: 'Checklists digitais com fotos, observações e histórico por unidade escolar para acompanhar conformidade e pendências.',
-  },
-  {
-    icon: <GraduationCap size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #FF9800, #FFB74D)',
-    title: 'Treinamentos e certificados',
-    desc: 'Registre presença por QR Code em telão e gere certificados em PDF com muito menos trabalho operacional.',
-  },
-  {
-    icon: <FolderOpen size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #9C27B0, #BA68C8)',
-    title: 'Documentos com validade',
-    desc: 'Controle alvarás, RDC 216, PNAE e outros documentos com alertas automáticos antes do vencimento.',
-  },
-  {
-    icon: <BarChart2 size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #E91E63, #F06292)',
-    title: 'Relatórios e evidências',
-    desc: 'Exportação no formato SIGPC/FNDE com poucos cliques. Resto-ingesta, aceitabilidade e produção.',
-  },
-  {
-    icon: <Users size={22} color="#fff" />,
-    bg: 'linear-gradient(135deg, #00BCD4, #4DD0E1)',
-    title: 'Dietas especiais',
-    desc: 'Centralize restrições alimentares e dados de alunos para que toda a rede trabalhe com mais segurança.',
-  },
+  { icon: <BookOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#4CAF50,#66BB6A)', title: 'Cardápios digitais', desc: 'Elabore, revise e publique cardápios com organização, padronização e visibilidade por escola, etapa e período.' },
+  { icon: <ClipboardList size={22} color="#fff" />, bg: 'linear-gradient(135deg,#1A73E8,#3D8FFF)', title: 'Fiscalização de escolas', desc: 'Checklists digitais com fotos, observações e histórico por unidade escolar — com índice de conformidade por visita.' },
+  { icon: <GraduationCap size={22} color="#fff" />, bg: 'linear-gradient(135deg,#FF9800,#FFB74D)', title: 'Treinamentos e certificados', desc: 'Registre presença por QR Code no telão e gere certificados PDF com assinatura digital em segundos.' },
+  { icon: <FolderOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#9C27B0,#BA68C8)', title: 'Documentos com validade', desc: 'Controle alvarás, RDC 216, PNAE e outros — alertas automáticos antes do vencimento.' },
+  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#E91E63,#F06292)', title: 'Relatório SIGPC/FNDE', desc: 'Dados preenchidos automaticamente do sistema. Gere o PDF do SIGPC com um clique, por quadrimestre.' },
+  { icon: <Users size={22} color="#fff" />, bg: 'linear-gradient(135deg,#00BCD4,#4DD0E1)', title: 'Dietas especiais', desc: 'Centralize restrições alimentares de alunos com etiquetas, prescrições e acompanhamento por escola.' },
 ];
 
-// ─── FAQ data ─────────────────────────────────────────────────────────────────
-
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
 const FAQS = [
-  {
-    q: 'O EduPlate Menu funciona para qualquer município?',
-    a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes, com planos adequados para redes menores, maiores e operações regionais em consórcio.',
-  },
-  {
-    q: 'Preciso instalar algum software?',
-    a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.',
-  },
-  {
-    q: 'Como funciona o período de 14 dias grátis?',
-    a: 'Você acessa todas as funcionalidades do plano escolhido por 14 dias sem custo. Não solicitamos cartão de crédito para iniciar o teste.',
-  },
-  {
-    q: 'Quem pode usar o sistema além da nutricionista RT?',
-    a: 'Cada organização conta com perfis de nutricionista e agente escolar. Os dados são isolados por município, com segurança e conformidade LGPD.',
-  },
-  {
-    q: 'Os dados estão seguros? O sistema segue a LGPD?',
-    a: 'Sim. O sistema opera em nuvem com autenticação segura, isolamento de dados por organização e práticas alinhadas à Lei Geral de Proteção de Dados.',
-  },
-  {
-    q: 'E se eu precisar cancelar?',
-    a: 'Você pode cancelar a qualquer momento, sem burocracia e sem multa. Os dados ficam disponíveis para exportação conforme nossa política de retenção.',
-  },
+  { q: 'O EduPlate Menu funciona para qualquer município?', a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes, com planos adequados para redes menores, maiores e operações em consórcio.' },
+  { q: 'Preciso instalar algum software?', a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.' },
+  { q: 'Como funciona o período de 14 dias grátis?', a: 'Você acessa todas as funcionalidades do plano escolhido por 14 dias sem custo. Não solicitamos cartão de crédito para iniciar o teste.' },
+  { q: 'Quem pode usar o sistema além da nutricionista RT?', a: 'Cada organização conta com perfis de nutricionista RT e agente escolar. Os dados são isolados por município, com segurança LGPD.' },
+  { q: 'Os dados estão seguros? O sistema segue a LGPD?', a: 'Sim. O sistema opera em nuvem com autenticação segura, isolamento de dados por organização e práticas alinhadas à LGPD.' },
+  { q: 'E se eu precisar cancelar?', a: 'Você pode cancelar a qualquer momento, sem burocracia e sem multa. Os dados ficam disponíveis para exportação conforme nossa política de retenção.' },
 ];
+
+// ─── Mockup: TopNav real do sistema ──────────────────────────────────────────
+function MockNav() {
+  return (
+    <div style={{ background:'#1B2A4A', display:'flex', alignItems:'center', gap:2, padding:'0 14px', height:36, borderRadius:'12px 12px 0 0' }}>
+      <div style={{ width:22, height:22, borderRadius:6, background:'#4CAF50', marginRight:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ width:10, height:10, borderRadius:'50%', background:'rgba(255,255,255,0.9)' }} />
+      </div>
+      {['Dashboard','Alimentação','Fiscalização','Documentos','Treinamentos','Certificados'].map((n,i) => (
+        <div key={n} style={{ padding:'0 8px', fontSize:10, fontWeight:700, color: i===0 ? '#4CAF50' : 'rgba(255,255,255,0.55)', whiteSpace:'nowrap', position:'relative' }}>
+          {n}
+          {n==='Fiscalização' && <span style={{ marginLeft:3, background:'#FF9800', color:'#fff', borderRadius:8, padding:'0 4px', fontSize:8, fontWeight:800 }}>36</span>}
+        </div>
+      ))}
+      <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10 }}>
+        <Bell size={12} color="rgba(255,255,255,0.5)" />
+        <div style={{ fontSize:9, color:'rgba(255,255,255,0.45)', fontWeight:600 }}>Usuário</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mockup: Dashboard real ───────────────────────────────────────────────────
+function MockDashboard() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14, display:'grid', gap:10 }}>
+      {/* Title */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:9, color:'#64748B', fontWeight:600, textTransform:'uppercase', letterSpacing:0.5 }}>VISÃO GERAL</div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1B2A4A' }}>Dashboard</div>
+        </div>
+        <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'4px 10px', fontSize:9, fontWeight:700, color:'#DC2626' }}>
+          • 36 alertas
+        </div>
+      </div>
+      {/* Stats row */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+        {[
+          { label:'ESCOLAS', val:'13', sub:'Unidades cadastradas', color:'#1B2A4A' },
+          { label:'CARDÁPIOS', val:'9', sub:'14 alertas', color:'#1B2A4A' },
+          { label:'DIETAS ESPECIAIS', val:'58', sub:'Alunos ativos', color:'#4CAF50' },
+          { label:'FICHAS TÉCNICAS', val:'15', sub:'Cadastradas', color:'#1A73E8' },
+        ].map(s => (
+          <div key={s.label} style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, padding:'10px 10px 8px' }}>
+            <div style={{ fontSize:8, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>{s.label}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:s.color, lineHeight:1 }}>{s.val}</div>
+            <div style={{ fontSize:8, color:'#94A3B8', marginTop:3 }}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      {/* Bottom row */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+        <div style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, padding:10, gridColumn:'span 2' }}>
+          <div style={{ fontSize:8, fontWeight:700, color:'#64748B', textTransform:'uppercase', marginBottom:8 }}>CONFORMIDADE DAS VISITAS</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#FF9800' }}>59,5% <span style={{ fontSize:10, fontWeight:600, color:'#94A3B8' }}>média</span></div>
+          <div style={{ background:'#F1F5F9', borderRadius:99, height:6, marginTop:8 }}>
+            <div style={{ width:'59.5%', background:'linear-gradient(90deg,#FF9800,#FFB74D)', borderRadius:99, height:6 }} />
+          </div>
+          <div style={{ fontSize:8, color:'#94A3B8', marginTop:5 }}>12 escolas visitadas · Meta: 80%</div>
+        </div>
+        <div style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, padding:10 }}>
+          <div style={{ fontSize:8, fontWeight:700, color:'#64748B', textTransform:'uppercase', marginBottom:8 }}>AGRICULTURA FAMILIAR</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#E91E63' }}>23% <span style={{ fontSize:10, fontWeight:600, color:'#94A3B8' }}>média</span></div>
+          <div style={{ background:'#F1F5F9', borderRadius:99, height:6, marginTop:8 }}>
+            <div style={{ width:'23%', background:'linear-gradient(90deg,#E91E63,#F06292)', borderRadius:99, height:6 }} />
+          </div>
+          <div style={{ fontSize:8, color:'#94A3B8', marginTop:5 }}>Meta mínima: 30% (Lei 11.947)</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mockup: Cardápios ────────────────────────────────────────────────────────
+function MockMenus() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+        <div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1B2A4A' }}>Cardápios</div>
+          <div style={{ fontSize:9, color:'#64748B' }}>Planejamento semanal por categoria e escola.</div>
+        </div>
+        <div style={{ background:'#4CAF50', color:'#fff', borderRadius:8, padding:'5px 10px', fontSize:9, fontWeight:700 }}>+ Novo Cardápio</div>
+      </div>
+      {/* Sugestões de safra */}
+      <div style={{ background:'rgba(76,175,80,0.07)', border:'1px solid rgba(76,175,80,0.2)', borderRadius:10, padding:'8px 10px', marginBottom:10 }}>
+        <div style={{ fontSize:8, fontWeight:700, color:'#2E7D32', marginBottom:6 }}>Sugestões de Safra para Maio</div>
+        <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+          {['Sopa de Abóbora','Caldo Verde','Salada de Beterraba','Creme de Cenoura','Suco de Laranja'].map(t => (
+            <span key={t} style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:99, padding:'2px 7px', fontSize:8, fontWeight:600, color:'#1B2A4A' }}>{t}</span>
+          ))}
+        </div>
+      </div>
+      {/* Cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+        {[
+          { title:'Semana 2 — Creche', sub:'Maio 2026', tags:['Creche','Fundamental 1'], insumos:58 },
+          { title:'Semana 1 — Fundamental', sub:'Maio 2026', tags:['Fundamental 2','Médio'], insumos:40 },
+          { title:'Semana 1 — Creche', sub:'Maio 2026', tags:['Creche'], insumos:55 },
+        ].map(c => (
+          <div key={c.title} style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, padding:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#1B2A4A', lineHeight:1.3 }}>{c.title}</div>
+            <div style={{ fontSize:8, color:'#94A3B8', marginTop:2 }}>{c.sub}</div>
+            <div style={{ display:'flex', gap:4, marginTop:6, flexWrap:'wrap' }}>
+              {c.tags.map(t => <span key={t} style={{ background:'rgba(26,115,232,0.1)', color:'#1A73E8', borderRadius:99, padding:'2px 6px', fontSize:8, fontWeight:700 }}>{t}</span>)}
+            </div>
+            <div style={{ marginTop:6, fontSize:8, fontWeight:700, color:'#4CAF50' }}>{c.insumos} insumos</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mockup: Fiscalização ─────────────────────────────────────────────────────
+function MockFiscalizacao() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+        <div>
+          <div style={{ fontSize:8, color:'#64748B', textTransform:'uppercase', fontWeight:600, marginBottom:2 }}>PNAE · Controle de Qualidade</div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1B2A4A' }}>Fiscalização</div>
+        </div>
+        <div style={{ fontSize:10, fontWeight:800, color:'#1B2A4A' }}>Score atual: <span style={{ color:'#4CAF50' }}>72%</span></div>
+      </div>
+      <div style={{ display:'grid', gap:8 }}>
+        {[
+          { escola:'EMEI Profa. Angelina Maria de Almeida Tannus', data:'09/02/2026', perc:85, color:'#4CAF50', bg:'rgba(76,175,80,0.05)', border:'rgba(76,175,80,0.2)' },
+          { escola:'EMEF Prof. Antonio de Freitas Filho', data:'07/02/2026', perc:78, color:'#FF9800', bg:'rgba(255,152,0,0.05)', border:'rgba(255,152,0,0.2)' },
+          { escola:'CEI Prof. Carmen Silvia Beltrame', data:'05/02/2026', perc:91, color:'#4CAF50', bg:'rgba(76,175,80,0.05)', border:'rgba(76,175,80,0.2)' },
+        ].map(v => (
+          <div key={v.escola} style={{ background:v.bg, border:`1px solid ${v.border}`, borderRadius:10, padding:'10px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, color:'#1B2A4A' }}>{v.escola}</div>
+              <div style={{ fontSize:8, color:'#94A3B8', marginTop:2 }}>{v.data}</div>
+            </div>
+            <div style={{ fontSize:18, fontWeight:800, color:v.color, textAlign:'right' }}>
+              {v.perc}%
+              <div style={{ fontSize:8, fontWeight:600, color:'#94A3B8' }}>Conformidade</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mockup: Dietas Especiais ─────────────────────────────────────────────────
+function MockDietas() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+        <div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1B2A4A' }}>Dietas Especiais</div>
+          <div style={{ fontSize:9, color:'#64748B' }}>Controle de restrições alimentares por aluno e escola.</div>
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          <div style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:8, padding:'5px 8px', fontSize:8, fontWeight:700, color:'#1B2A4A' }}>Imprimir Etiquetas (58)</div>
+          <div style={{ background:'#1A73E8', color:'#fff', borderRadius:8, padding:'5px 8px', fontSize:8, fontWeight:700 }}>+ Incluir Aluno</div>
+        </div>
+      </div>
+      {/* Table header */}
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr', gap:8, padding:'6px 8px', background:'#F1F5F9', borderRadius:8, marginBottom:6 }}>
+        {['Aluno','Escola','Restrições','Status'].map(h => (
+          <div key={h} style={{ fontSize:8, fontWeight:700, color:'#64748B', textTransform:'uppercase' }}>{h}</div>
+        ))}
+      </div>
+      {[
+        { aluno:'Chloe Almeida Farias', escola:'CEI Prof. Carmen Silvia Beltrame', rest:'Sem Lactose', status:'Ativa' },
+        { aluno:'Maria Cecília Alvez', escola:'CEI Prof. Carmen Silvia Beltrame', rest:'Sem Lactose', status:'Ativa' },
+        { aluno:'Vicente Palmeira de Oliveira', escola:'EMEF Prof. Antonio de Freitas', rest:'Sem Glúten', status:'Ativa' },
+        { aluno:'Ana Beatriz Souza Lima', escola:'EMEI Profa. Angelina Tannus', rest:'Sem Lactose', status:'Ativa' },
+      ].map((d, i) => (
+        <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr', gap:8, padding:'7px 8px', background:'#fff', borderRadius:8, border:'1px solid #F1F5F9', marginBottom:4, alignItems:'center' }}>
+          <div style={{ fontSize:9, fontWeight:600, color:'#1B2A4A' }}>{d.aluno}</div>
+          <div style={{ fontSize:8, color:'#64748B' }}>{d.escola}</div>
+          <span style={{ background:'rgba(26,115,232,0.1)', color:'#1A73E8', borderRadius:99, padding:'2px 7px', fontSize:8, fontWeight:700, display:'inline-block' }}>{d.rest}</span>
+          <span style={{ background:'rgba(76,175,80,0.12)', color:'#2E7D32', borderRadius:99, padding:'2px 7px', fontSize:8, fontWeight:700, display:'inline-block' }}>{d.status}</span>
+        </div>
+      ))}
+      <div style={{ textAlign:'center', fontSize:8, color:'#94A3B8', marginTop:6 }}>+ 54 outros alunos</div>
+    </div>
+  );
+}
+
+// ─── Mockup: Treinamentos ─────────────────────────────────────────────────────
+function MockTreinamentos() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14 }}>
+      <div style={{ background:'linear-gradient(135deg,#1B2A4A,#243A66)', borderRadius:12, padding:'14px 16px', marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', fontWeight:600, marginBottom:4 }}>Capacitação de Pessoal</div>
+          <div style={{ fontSize:13, fontWeight:800, color:'#fff' }}>Módulo de Treinamentos.</div>
+          <div style={{ fontSize:8, color:'rgba(255,255,255,0.55)', marginTop:3 }}>QR Code · PDF com assinatura digital</div>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          {[{l:'TREINAMENTOS',v:'3'},{l:'ABERTOS',v:'1'},{l:'PRESENÇAS',v:'47'}].map(s => (
+            <div key={s.l} style={{ background:'rgba(255,255,255,0.1)', borderRadius:8, padding:'6px 10px', textAlign:'center' }}>
+              <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', fontWeight:600 }}>{s.l}</div>
+              <div style={{ fontSize:16, fontWeight:800, color:'#fff' }}>{s.v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* QR Code card */}
+      <div style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, padding:'12px 14px', display:'flex', gap:12, alignItems:'center' }}>
+        <div style={{ width:56, height:56, border:'2px solid #1B2A4A', borderRadius:8, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2, padding:4, flexShrink:0 }}>
+          {Array.from({length:9}).map((_,i) => (
+            <div key={i} style={{ background: [0,2,6,8].includes(i) ? '#1B2A4A' : [4].includes(i) ? '#4CAF50' : 'transparent', borderRadius:2 }} />
+          ))}
+        </div>
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:'#1B2A4A' }}>Boas Práticas de Manipulação — Maio/2026</div>
+          <div style={{ fontSize:8, color:'#64748B', marginTop:3 }}>Projete o QR Code no telão · Participantes se registram pelo celular</div>
+          <div style={{ display:'flex', gap:6, marginTop:6 }}>
+            <span style={{ background:'rgba(76,175,80,0.1)', color:'#2E7D32', borderRadius:99, padding:'2px 8px', fontSize:8, fontWeight:700 }}>47 presenças</span>
+            <span style={{ background:'rgba(255,152,0,0.1)', color:'#D97706', borderRadius:99, padding:'2px 8px', fontSize:8, fontWeight:700 }}>Aberto</span>
+          </div>
+        </div>
+        <div style={{ marginLeft:'auto' }}>
+          <div style={{ background:'#4CAF50', color:'#fff', borderRadius:8, padding:'5px 10px', fontSize:8, fontWeight:700 }}>Gerar Certificados</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mockup: Documentos ───────────────────────────────────────────────────────
+function MockDocumentos() {
+  return (
+    <div style={{ background:'#F5F7FA', padding:14 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <div>
+          <div style={{ fontSize:14, fontWeight:800, color:'#1B2A4A' }}>Documentos Obrigatórios</div>
+          <div style={{ fontSize:9, color:'#64748B' }}>Clique em Anexar para subir o arquivo · Clique na data para editar</div>
+        </div>
+        <div style={{ background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:8, padding:'4px 10px', fontSize:8, fontWeight:700, color:'#92400E', display:'flex', alignItems:'center', gap:4 }}>
+          <AlertTriangle size={10} color="#92400E" /> 3 vencendo em breve
+        </div>
+      </div>
+      <div style={{ background:'#fff', border:'1px solid #E6EBF2', borderRadius:10, overflow:'hidden' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'3fr 1fr 1fr 1fr', gap:0, background:'#F8FAFD', padding:'6px 12px', borderBottom:'1px solid #E6EBF2' }}>
+          {['Documento','Categoria','Arquivo','Validade'].map(h => <div key={h} style={{ fontSize:8, fontWeight:700, color:'#64748B', textTransform:'uppercase' }}>{h}</div>)}
+        </div>
+        {[
+          { name:'Manual de Boas Práticas (MBP)', cat:'RDC 216', file:true, val:'12/2026', ok:true },
+          { name:'POP — Higienização de Instalações', cat:'RDC 216', file:true, val:'08/2026', warn:true },
+          { name:'POP — Controle de Pragas e Vetores', cat:'RDC 216', file:true, val:'06/2026', warn:true },
+          { name:'Alvará Sanitário', cat:'CVS', file:false, val:'—', ok:false },
+          { name:'RT/ART no CFN', cat:'PNAE', file:true, val:'12/2026', ok:true },
+        ].map((d,i) => (
+          <div key={i} style={{ display:'grid', gridTemplateColumns:'3fr 1fr 1fr 1fr', gap:0, padding:'8px 12px', borderBottom:'1px solid #F1F5F9', alignItems:'center', background: d.warn ? 'rgba(251,191,36,0.04)' : '#fff' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ width:8, height:8, borderRadius:'50%', background: d.ok ? '#4CAF50' : d.warn ? '#FF9800' : '#E5E7EB', flexShrink:0 }} />
+              <span style={{ fontSize:9, color:'#1B2A4A', fontWeight:600 }}>{d.name}</span>
+            </div>
+            <span style={{ fontSize:8, background:'rgba(26,115,232,0.1)', color:'#1A73E8', borderRadius:99, padding:'2px 6px', fontWeight:700, display:'inline-block' }}>{d.cat}</span>
+            <span style={{ fontSize:8, color: d.file ? '#4CAF50' : '#94A3B8', fontWeight:600 }}>{d.file ? 'Anexado' : 'Anexar'}</span>
+            <span style={{ fontSize:8, color: d.warn ? '#FF9800' : '#64748B', fontWeight: d.warn ? 700 : 400 }}>{d.val}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ textAlign:'right', fontSize:8, color:'#94A3B8', marginTop:6 }}>+ 10 outros documentos</div>
+    </div>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
-
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   const goToPlans = () => navigate('/planos');
   const goToLogin = () => navigate('/login');
 
+  const SCREENS = [
+    { label: 'Dashboard', component: <MockDashboard /> },
+    { label: 'Cardápios', component: <MockMenus /> },
+    { label: 'Fiscalização', component: <MockFiscalizacao /> },
+    { label: 'Dietas Especiais', component: <MockDietas /> },
+    { label: 'Treinamentos', component: <MockTreinamentos /> },
+    { label: 'Documentos', component: <MockDocumentos /> },
+  ];
+
   return (
     <div className="lp-root">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+
+      {/* ── Header ─────────────────────────────────────────────── */}
       <header className="lp-header">
         <div className="lp-container">
           <nav className="lp-nav">
             <a className="lp-brand" href="#inicio" aria-label="EduPlate Menu">
               <EduPlateLogo variant="light" style={{ height: 44 }} />
             </a>
-
             <div className="lp-nav-links">
               <a href="#funcionalidades">Funcionalidades</a>
+              <a href="#sistema">O sistema</a>
               <a href="#como-funciona">Como funciona</a>
               <a href="#planos">Planos</a>
               <a href="#faq">FAQ</a>
             </div>
-
             <div className="lp-nav-actions">
               <button className="lp-link-plain" onClick={goToLogin}>Entrar</button>
-              <button className="lp-btn lp-btn-primary" onClick={goToPlans}
-                style={{ padding: '10px 20px', fontSize: 14 }}>
+              <button className="lp-btn lp-btn-primary" onClick={goToPlans} style={{ padding:'10px 20px', fontSize:14 }}>
                 Teste grátis
               </button>
-              <button
-                className="lp-hamburger"
-                onClick={() => setMobileOpen(v => !v)}
-                aria-label="Menu"
-              >
+              <button className="lp-hamburger" onClick={() => setMobileOpen(v => !v)} aria-label="Menu">
                 {mobileOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </nav>
-
-          {/* Mobile menu */}
           <div className={`lp-mobile-menu ${mobileOpen ? 'open' : ''}`}>
             <a href="#funcionalidades" onClick={() => setMobileOpen(false)}>Funcionalidades</a>
+            <a href="#sistema" onClick={() => setMobileOpen(false)}>O sistema</a>
             <a href="#como-funciona" onClick={() => setMobileOpen(false)}>Como funciona</a>
             <a href="#planos" onClick={() => setMobileOpen(false)}>Planos</a>
             <a href="#faq" onClick={() => setMobileOpen(false)}>FAQ</a>
-            <a href="/login" style={{ color: '#1B2A4A', fontWeight: 700 }}>Entrar</a>
+            <button onClick={goToLogin} style={{ textAlign:'left', padding:'10px 16px', fontWeight:700, color:'#1B2A4A', background:'none', border:'none', cursor:'pointer' }}>Entrar</button>
           </div>
         </div>
       </header>
 
       <main id="inicio">
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
+
+        {/* ── Hero ───────────────────────────────────────────────── */}
         <section className="lp-hero">
           <div className="lp-container lp-hero-grid">
             {/* Copy */}
             <div className="lp-hero-copy">
               <span className="lp-eyebrow">Plataforma especialista em PNAE · 100% online</span>
-              <h1 style={{ marginTop: 20 }}>
-                Gestão do PNAE em{' '}
-                <span style={{ color: 'var(--lp-green)' }}>uma plataforma só</span>
+              <h1 style={{ marginTop:20 }}>
+                A plataforma que organiza o{' '}
+                <span style={{ color:'var(--lp-green)' }}>PNAE do seu município</span>{' '}
+                de ponta a ponta
               </h1>
-              <p className="lp-lead" style={{ marginTop: 22 }}>
+              <p className="lp-lead" style={{ marginTop:22 }}>
                 O EduPlate Menu centraliza cardápios, fiscalização, treinamentos,
-                certificados, dietas especiais e documentos da alimentação escolar
-                do município — com mais controle, rastreabilidade e menos retrabalho.
+                certificados, dietas especiais e documentos — com mais controle,
+                rastreabilidade e muito menos retrabalho para a nutricionista RT.
               </p>
-
               <div className="lp-btn-row">
                 <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
-                  Começar 14 dias grátis
-                  <ArrowRight size={18} />
+                  Começar 14 dias grátis <ArrowRight size={18} />
                 </button>
-                <a className="lp-btn lp-btn-secondary" href="#funcionalidades">
-                  Ver funcionalidades
-                </a>
+                <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
               </div>
-
               <div className="lp-hero-meta">
                 <span className="lp-pill">Sem cartão de crédito</span>
                 <span className="lp-pill">Cancele a qualquer momento</span>
@@ -187,56 +389,17 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Dashboard mockup */}
-            <div className="lp-hero-card" aria-label="Prévia da plataforma">
+            {/* Hero mockup — Dashboard real */}
+            <div className="lp-hero-card" aria-label="Prévia do sistema">
               <div className="lp-mock-browser">
                 <div className="lp-browser-top">
                   <span className="lp-dot lp-dot-red" />
                   <span className="lp-dot lp-dot-yellow" />
                   <span className="lp-dot lp-dot-green" />
-                  <div className="lp-url-bar">app.eduplate.com.br</div>
+                  <div className="lp-url-bar">www.eduplate.com.br</div>
                 </div>
-                <div className="lp-dashboard">
-                  {/* Weekly menu calendar */}
-                  <div className="lp-panel">
-                    <h4>Cardápio semanal</h4>
-                    <div className="lp-calendar">
-                      {[
-                        { d: 'Seg', a: 'Arroz + Feijão', b: 'Fruta', ca: 'green', cb: 'blue' },
-                        { d: 'Ter', a: 'Macarrão', b: 'Salada', ca: 'green', cb: 'orange' },
-                        { d: 'Qua', a: 'Sopa nutritiva', b: 'Suco', ca: 'green', cb: 'blue' },
-                        { d: 'Qui', a: 'Carne + Legumes', b: 'Sobremesa', ca: 'green', cb: 'orange' },
-                        { d: 'Sex', a: 'Merenda regional', b: 'Leite', ca: 'green', cb: 'blue' },
-                      ].map(item => (
-                        <div key={item.d} className="lp-day">
-                          <span className="lp-day-label">{item.d}</span>
-                          <div className={`lp-tag lp-tag-${item.ca}`}>{item.a}</div>
-                          <div className={`lp-tag lp-tag-${item.cb}`}>{item.b}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Side cards */}
-                  <div className="lp-stack">
-                    <div className="lp-mini-card">
-                      <h4>Alertas do dia</h4>
-                      <div className="lp-metric"><span>Documento vencendo</span><strong>3</strong></div>
-                      <div className="lp-metric"><span>Fiscalizações pendentes</span><strong>12</strong></div>
-                      <div className="lp-metric"><span>Dietas especiais</span><strong>8</strong></div>
-                    </div>
-                    <div className="lp-mini-card">
-                      <h4>Treinamentos</h4>
-                      <div className="lp-metric"><span>QR Code de presença</span><span className="lp-badge-num">QR</span></div>
-                      <div className="lp-metric"><span>Certificados gerados</span><strong>124</strong></div>
-                    </div>
-                    <div className="lp-mini-card">
-                      <h4>Relatórios SIGPC</h4>
-                      <div className="lp-metric"><span>Histórico por escola</span><strong style={{ color: '#4CAF50' }}>OK</strong></div>
-                      <div className="lp-metric"><span>Exportação FNDE</span><strong style={{ color: '#4CAF50' }}>Pronto</strong></div>
-                    </div>
-                  </div>
-                </div>
+                <MockNav />
+                <MockDashboard />
               </div>
             </div>
           </div>
@@ -244,13 +407,13 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="lp-container lp-stats">
             {[
-              { icon: <Clock size={20} color="#4CAF50" />, big: '14 dias', label: 'de acesso grátis' },
-              { icon: <Wifi size={20} color="#1A73E8" />, big: '100%', label: 'online e na nuvem' },
-              { icon: <ShieldCheck size={20} color="#9C27B0" />, big: 'LGPD', label: 'dados com mais segurança' },
-              { icon: <Award size={20} color="#FF9800" />, big: '1 dia', label: 'para começar a operar' },
+              { icon: <Clock size={20} color="#4CAF50" />, big:'14 dias', label:'de acesso grátis' },
+              { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
+              { icon: <ShieldCheck size={20} color="#9C27B0" />, big:'LGPD', label:'dados com mais segurança' },
+              { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
             ].map(s => (
               <div key={s.big} className="lp-stat">
-                <div style={{ marginBottom: 8 }}>{s.icon}</div>
+                <div style={{ marginBottom:8 }}>{s.icon}</div>
                 <div className="lp-stat-big">{s.big}</div>
                 <div className="lp-stat-label">{s.label}</div>
               </div>
@@ -258,127 +421,169 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Features ─────────────────────────────────────────────────── */}
+        {/* ── Features ───────────────────────────────────────────── */}
         <section className="lp-section" id="funcionalidades">
           <div className="lp-container">
             <span className="lp-eyebrow">Tudo em um só lugar</span>
-            <h2 style={{ marginTop: 18, maxWidth: 700 }}>
+            <h2 style={{ marginTop:18, maxWidth:700 }}>
               Funcionalidades pensadas para a rotina real da alimentação escolar
             </h2>
-            <p className="lp-lead" style={{ marginTop: 18 }}>
+            <p className="lp-lead" style={{ marginTop:18 }}>
               O EduPlate Menu foi desenhado para nutricionistas e secretarias de educação
               que precisam organizar a operação do PNAE com clareza, padronização e rapidez.
             </p>
-
-            <div className="lp-grid-3" style={{ marginTop: 34 }}>
+            <div className="lp-grid-3" style={{ marginTop:34 }}>
               {FEATURES.map(f => (
                 <article key={f.title} className="lp-card">
-                  <div className="lp-icon" style={{ background: f.bg }}>
-                    {f.icon}
-                  </div>
+                  <div className="lp-icon" style={{ background:f.bg }}>{f.icon}</div>
                   <h3>{f.title}</h3>
                   <p>{f.desc}</p>
                 </article>
               ))}
             </div>
-
-            {/* Extra two features inline */}
-            <div className="lp-grid-2" style={{ marginTop: 18 }}>
-              <article className="lp-card" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
-                <div className="lp-icon" style={{ background: 'linear-gradient(135deg, #FF5722, #FF8A65)', flexShrink: 0 }}>
-                  <QrCode size={22} color="#fff" />
-                </div>
+            <div className="lp-grid-2" style={{ marginTop:18 }}>
+              <article className="lp-card" style={{ display:'flex', gap:18, alignItems:'flex-start' }}>
+                <div className="lp-icon" style={{ background:'linear-gradient(135deg,#FF5722,#FF8A65)', flexShrink:0 }}><QrCode size={22} color="#fff" /></div>
                 <div>
                   <h3>QR Code de presença</h3>
-                  <p>Projete no telão durante o treinamento. Participantes escaneiam e se registram diretamente pelo celular.</p>
+                  <p>Projete no telão durante o treinamento. Participantes escaneiam e se registram diretamente pelo celular — sem papel, sem lista manual.</p>
                 </div>
               </article>
-              <article className="lp-card" style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
-                <div className="lp-icon" style={{ background: 'linear-gradient(135deg, #4CAF50, #66BB6A)', flexShrink: 0 }}>
-                  <Mail size={22} color="#fff" />
-                </div>
+              <article className="lp-card" style={{ display:'flex', gap:18, alignItems:'flex-start' }}>
+                <div className="lp-icon" style={{ background:'linear-gradient(135deg,#4CAF50,#66BB6A)', flexShrink:0 }}><Mail size={22} color="#fff" /></div>
                 <div>
                   <h3>Cardápio por e-mail</h3>
-                  <p>Envie o cardápio semanal direto para as escolas com um clique. Sem WhatsApp, sem papel, sem retrabalho.</p>
+                  <p>Envie o cardápio semanal direto para as escolas com um clique. Sem WhatsApp, sem papel, sem retrabalho — rastreável e organizado.</p>
                 </div>
               </article>
             </div>
           </div>
         </section>
 
-        {/* ── Problem / Pain ──────────────────────────────────────────── */}
+        {/* ── Sistema em ação (tab switcher com mockups reais) ──── */}
+        <section className="lp-section lp-band" id="sistema">
+          <div className="lp-container">
+            <span className="lp-eyebrow">O sistema por dentro</span>
+            <h2 style={{ marginTop:18 }}>Cada módulo pensado para a sua rotina</h2>
+            <p className="lp-lead" style={{ marginTop:18 }}>
+              Navegue pelos módulos e veja como o EduPlate Menu funciona na prática,
+              com dados reais de municípios que já usam a plataforma.
+            </p>
+
+            {/* Tab bar */}
+            <div style={{ display:'flex', gap:8, marginTop:28, flexWrap:'wrap' }}>
+              {SCREENS.map((s, i) => (
+                <button
+                  key={s.label}
+                  onClick={() => setActiveTab(i)}
+                  style={{
+                    padding:'9px 18px', borderRadius:99, fontSize:13, fontWeight:700,
+                    border:'1px solid', cursor:'pointer', transition:'all 0.18s',
+                    background: activeTab === i ? '#1B2A4A' : '#fff',
+                    color: activeTab === i ? '#fff' : '#64748B',
+                    borderColor: activeTab === i ? '#1B2A4A' : '#E6EBF2',
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Screen */}
+            <div style={{ marginTop:16, borderRadius:20, overflow:'hidden', border:'1px solid #E6EBF2', boxShadow:'0 20px 60px rgba(27,42,74,0.12)' }}>
+              {/* Browser chrome */}
+              <div style={{ background:'#F8FAFD', borderBottom:'1px solid #E6EBF2', padding:'10px 14px', display:'flex', alignItems:'center', gap:7 }}>
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#FF6057', display:'inline-block' }} />
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#FEBC2E', display:'inline-block' }} />
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#2BC840', display:'inline-block' }} />
+                <div style={{ flex:1, background:'#EDF2FA', borderRadius:6, height:22, margin:'0 12px', display:'flex', alignItems:'center', padding:'0 12px', fontSize:11, color:'#8896AA', fontWeight:500 }}>
+                  www.eduplate.com.br/{SCREENS[activeTab].label.toLowerCase().replace(' ','-')}
+                </div>
+              </div>
+              <MockNav />
+              {SCREENS[activeTab].component}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Vídeo Demo ─────────────────────────────────────────── */}
+        <section className="lp-section">
+          <div className="lp-container" style={{ textAlign:'center' }}>
+            <span className="lp-eyebrow">Veja o sistema em ação</span>
+            <h2 style={{ marginTop:18 }}>Uma demonstração vale mais do que mil palavras</h2>
+            <p className="lp-lead" style={{ margin:'16px auto 0', textAlign:'center' }}>
+              Acompanhe como um município de qualquer porte pode profissionalizar
+              a gestão do PNAE em poucos passos.
+            </p>
+            <div className="lp-video-wrap">
+              <div className="lp-video-bg-dots" />
+              <div style={{ position:'relative', zIndex:2, textAlign:'center' }}>
+                <div className="lp-play-btn" style={{ margin:'0 auto 16px' }}>
+                  <Play size={28} color="#fff" fill="#fff" />
+                </div>
+                <p style={{ color:'rgba(255,255,255,0.75)', fontSize:14, fontWeight:600 }}>
+                  Demonstração do EduPlate Menu
+                </p>
+                <p style={{ color:'rgba(255,255,255,0.40)', fontSize:12, marginTop:4 }}>
+                  Em breve no YouTube · Solicite uma demo ao vivo por e-mail
+                </p>
+              </div>
+              <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'rgba(76,175,80,0.12)', filter:'blur(40px)', bottom:-60, right:-40, pointerEvents:'none' }} />
+              <div style={{ position:'absolute', width:160, height:160, borderRadius:'50%', background:'rgba(26,115,232,0.10)', filter:'blur(40px)', top:-40, left:-40, pointerEvents:'none' }} />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Problema / Dores ────────────────────────────────────── */}
         <section className="lp-section lp-band">
           <div className="lp-container lp-problem-wrap">
             <div className="lp-problem-panel">
               <span className="lp-eyebrow">O problema que a gente resolve</span>
-              <h2 style={{ marginTop: 18 }}>
+              <h2 style={{ marginTop:18 }}>
                 Se o PNAE ainda depende de planilha, papel e WhatsApp, o município perde tempo e controle
               </h2>
-              <p className="lp-lead" style={{ marginTop: 18, maxWidth: '100%' }}>
+              <p className="lp-lead" style={{ marginTop:18, maxWidth:'100%' }}>
                 A nutricionista responsável técnica acaba absorvendo retrabalho que poderia estar
                 automatizado: documentação manual, checklists em papel, certificados demorados,
                 documentos vencendo sem aviso e informações espalhadas por escola.
               </p>
             </div>
-
             <div className="lp-pain-list">
               {[
-                { title: 'Cardápios soltos em conversas e anexos', sub: 'Sem histórico, sem rastreabilidade e sem controle de versão.' },
-                { title: 'Fiscalização com papel e caneta', sub: 'Relatórios demorados e pouca evidência para acompanhamento por unidade.' },
-                { title: 'Documentos vencendo sem alerta', sub: 'Risco de pendências em inspeções e perda de prazo por falta de visibilidade.' },
-                { title: 'Treinamentos sem presença padronizada', sub: 'Registro manual, certificados demorados e pouca organização do histórico.' },
-                { title: 'Relatórios refeitos todo mês', sub: 'Muito esforço operacional para consolidar dados do município.' },
+                { t:'Cardápios soltos em conversas e anexos', s:'Sem histórico, sem rastreabilidade e sem controle de versão.' },
+                { t:'Fiscalização com papel e caneta', s:'Relatórios demorados e pouca evidência para acompanhamento por unidade.' },
+                { t:'Documentos vencendo sem alerta', s:'Risco de pendências em inspeções e perda de prazo por falta de visibilidade.' },
+                { t:'Treinamentos sem presença padronizada', s:'Registro manual, certificados demorados e pouca organização do histórico.' },
+                { t:'Relatórios refeitos todo mês', s:'Muito esforço operacional para consolidar dados do município.' },
               ].map(item => (
-                <div key={item.title} className="lp-pain-item">
+                <div key={item.t} className="lp-pain-item">
                   <span className="lp-pain-bullet" />
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.sub}</span>
-                  </div>
+                  <div><strong>{item.t}</strong><span>{item.s}</span></div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Before / After ──────────────────────────────────────────── */}
+        {/* ── Antes / Depois ─────────────────────────────────────── */}
         <section className="lp-section">
           <div className="lp-container">
             <span className="lp-eyebrow">Por que escolher o EduPlate Menu</span>
-            <h2 style={{ marginTop: 18 }}>
-              Menos retrabalho para a equipe. Mais controle para o município.
-            </h2>
-
+            <h2 style={{ marginTop:18 }}>Menos retrabalho para a equipe. Mais controle para o município.</h2>
             <div className="lp-compare">
-              <div className="lp-compare-col" style={{ borderColor: '#FECACA', background: '#FFFAFA' }}>
-                <h3 style={{ color: '#DC2626' }}>Antes</h3>
+              <div className="lp-compare-col" style={{ borderColor:'#FECACA', background:'#FFFAFA' }}>
+                <h3 style={{ color:'#DC2626' }}>Antes</h3>
                 <ul className="lp-compare-list">
-                  {[
-                    'Processos espalhados em planilhas, papel e mensagens.',
-                    'Pouca padronização entre escolas e equipes.',
-                    'Documentos e evidências difíceis de localizar.',
-                    'Mais risco de esquecimento e retrabalho constante.',
-                  ].map(t => (
-                    <li key={t}>
-                      <Minus size={16} className="lp-x" style={{ color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
-                      {t}
-                    </li>
+                  {['Processos espalhados em planilhas, papel e mensagens.','Pouca padronização entre escolas e equipes.','Documentos e evidências difíceis de localizar.','Mais risco de esquecimento e retrabalho constante.'].map(t => (
+                    <li key={t}><Minus size={16} style={{ color:'#EF4444', flexShrink:0, marginTop:2 }} />{t}</li>
                   ))}
                 </ul>
               </div>
-              <div className="lp-compare-col" style={{ borderColor: 'rgba(76,175,80,0.28)', background: '#F7FBF7' }}>
-                <h3 style={{ color: '#2E7D32' }}>Com o EduPlate Menu</h3>
+              <div className="lp-compare-col" style={{ borderColor:'rgba(76,175,80,0.28)', background:'#F7FBF7' }}>
+                <h3 style={{ color:'#2E7D32' }}>Com o EduPlate Menu</h3>
                 <ul className="lp-compare-list">
-                  {[
-                    'Operação centralizada em uma plataforma especialista em PNAE.',
-                    'Fluxos digitais para cardápios, fiscalização e treinamentos.',
-                    'Histórico organizado por unidade escolar e rotina.',
-                    'Mais clareza para acompanhar o município e agir com antecedência.',
-                  ].map(t => (
-                    <li key={t}>
-                      <Check size={16} className="lp-check" style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />
-                      {t}
-                    </li>
+                  {['Operação centralizada em uma plataforma especialista em PNAE.','Fluxos digitais para cardápios, fiscalização e treinamentos.','Histórico organizado por unidade escolar e rotina.','Mais clareza para acompanhar o município e agir com antecedência.'].map(t => (
+                    <li key={t}><Check size={16} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{t}</li>
                   ))}
                 </ul>
               </div>
@@ -386,74 +591,19 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Video section ───────────────────────────────────────────── */}
-        <section className="lp-section lp-band">
-          <div className="lp-container" style={{ textAlign: 'center' }}>
-            <span className="lp-eyebrow">Veja o sistema em ação</span>
-            <h2 style={{ marginTop: 18, textAlign: 'center' }}>
-              Uma demonstração vale mais do que mil palavras
-            </h2>
-            <p className="lp-lead" style={{ margin: '16px auto 0', textAlign: 'center' }}>
-              Acompanhe como um município de qualquer porte pode profissionalizar a gestão
-              do PNAE em poucos passos.
-            </p>
-
-            {/* Video placeholder */}
-            <div className="lp-video-wrap">
-              <div className="lp-video-bg-dots" />
-              {/* Central content */}
-              <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-                <div className="lp-play-btn" style={{ margin: '0 auto 16px' }}>
-                  <Play size={28} color="#fff" fill="#fff" />
-                </div>
-                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: 600 }}>
-                  Demonstração do EduPlate Menu
-                </p>
-                <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 4 }}>
-                  Vídeo em breve · Disponível no YouTube
-                </p>
-              </div>
-              {/* Decorative glows */}
-              <div style={{
-                position: 'absolute', width: 200, height: 200,
-                borderRadius: '50%', background: 'rgba(76,175,80,0.12)',
-                filter: 'blur(40px)', bottom: -60, right: -40, pointerEvents: 'none',
-              }} />
-              <div style={{
-                position: 'absolute', width: 160, height: 160,
-                borderRadius: '50%', background: 'rgba(26,115,232,0.10)',
-                filter: 'blur(40px)', top: -40, left: -40, pointerEvents: 'none',
-              }} />
-            </div>
-          </div>
-        </section>
-
-        {/* ── How it works ────────────────────────────────────────────── */}
-        <section className="lp-section" id="como-funciona">
+        {/* ── Como funciona ───────────────────────────────────────── */}
+        <section className="lp-section lp-band" id="como-funciona">
           <div className="lp-container">
             <span className="lp-eyebrow">Simples e rápido</span>
-            <h2 style={{ marginTop: 18 }}>Comece a funcionar em um dia</h2>
-            <p className="lp-lead" style={{ marginTop: 18 }}>
+            <h2 style={{ marginTop:18 }}>Comece a funcionar em um dia</h2>
+            <p className="lp-lead" style={{ marginTop:18 }}>
               Sem implantação longa, sem instalação complexa, com acesso em computador, tablet ou celular.
             </p>
-
             <div className="lp-steps">
               {[
-                {
-                  n: '01',
-                  title: 'Assine o plano',
-                  desc: 'Escolha o plano ideal para o porte do município e ative o período de teste grátis sem cartão de crédito.',
-                },
-                {
-                  n: '02',
-                  title: 'Configure em minutos',
-                  desc: 'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.',
-                },
-                {
-                  n: '03',
-                  title: 'Use de qualquer lugar',
-                  desc: 'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.',
-                },
+                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis sem cartão de crédito.' },
+                { n:'02', title:'Configure em minutos', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
+                { n:'03', title:'Use de qualquer lugar', desc:'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.' },
               ].map(s => (
                 <article key={s.n} className="lp-step">
                   <div className="lp-step-num">{s.n}</div>
@@ -465,97 +615,59 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Pricing ─────────────────────────────────────────────────── */}
-        <section className="lp-section lp-band" id="planos">
+        {/* ── Planos ─────────────────────────────────────────────── */}
+        <section className="lp-section" id="planos">
           <div className="lp-container">
             <span className="lp-eyebrow">Planos e preços</span>
-            <h2 style={{ marginTop: 18 }}>Planos pensados para o porte da sua rede</h2>
-            <p className="lp-lead" style={{ marginTop: 18 }}>
+            <h2 style={{ marginTop:18 }}>Planos pensados para o porte da sua rede</h2>
+            <p className="lp-lead" style={{ marginTop:18 }}>
               14 dias grátis em qualquer plano. Sem cartão de crédito. Sem taxa de setup.
             </p>
-
             <div className="lp-pricing">
               {/* Básico */}
               <article className="lp-price-card">
                 <h3>Básico</h3>
-                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
-                  Ideal para municípios com até 10 escolas.
-                </p>
+                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Ideal para municípios com até 10 escolas.</p>
                 <div className="lp-price">R$ 197 <small>/mês</small></div>
                 <ul className="lp-price-list">
-                  {[
-                    'Cardápios e fichas técnicas',
-                    'Fiscalização de escolas',
-                    'Treinamentos + QR Code',
-                    'Certificados em PDF',
-                    'Documentos com validade',
-                    'Suporte por e-mail',
-                  ].map(i => (
-                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Suporte por e-mail'].map(i => (
+                    <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
                 <div className="lp-spacer" />
-                <div className="lp-btn-row" style={{ marginTop: 22 }}>
-                  <button className="lp-btn lp-btn-secondary" style={{ width: '100%' }} onClick={goToPlans}>
-                    Começar 14 dias grátis
-                  </button>
+                <div className="lp-btn-row" style={{ marginTop:22 }}>
+                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToPlans}>Começar 14 dias grátis</button>
                 </div>
               </article>
-
               {/* Profissional */}
               <article className="lp-price-card popular">
                 <span className="lp-popular-badge">Mais popular</span>
                 <h3>Profissional</h3>
-                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
-                  Para municípios com até 30 escolas e mais demanda operacional.
-                </p>
+                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para municípios com até 30 escolas.</p>
                 <div className="lp-price">R$ 347 <small>/mês</small></div>
                 <ul className="lp-price-list">
-                  {[
-                    'Tudo do plano Básico',
-                    'Relatórios SIGPC/FNDE',
-                    'Dietas especiais de alunos',
-                    'Envio de cardápio por e-mail',
-                    'Controle de EPIs',
-                    'Suporte prioritário',
-                  ].map(i => (
-                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  {['Tudo do plano Básico','Relatórios SIGPC/FNDE','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
+                    <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
                 <div className="lp-spacer" />
-                <div className="lp-btn-row" style={{ marginTop: 22 }}>
-                  <button className="lp-btn lp-btn-primary" style={{ width: '100%' }} onClick={goToPlans}>
-                    Começar 14 dias grátis
-                  </button>
+                <div className="lp-btn-row" style={{ marginTop:22 }}>
+                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToPlans}>Começar 14 dias grátis</button>
                 </div>
               </article>
-
               {/* Consórcio */}
               <article className="lp-price-card">
                 <h3>Consórcio</h3>
-                <p style={{ color: 'var(--lp-muted)', fontSize: 14, marginTop: 8 }}>
-                  Para consórcios e redes regionais com múltiplos municípios.
-                </p>
-                <div className="lp-price" style={{ fontSize: '1.6rem' }}>Sob consulta</div>
+                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para redes regionais com múltiplos municípios.</p>
+                <div className="lp-price" style={{ fontSize:'1.6rem' }}>Sob consulta</div>
                 <ul className="lp-price-list">
-                  {[
-                    'Tudo do plano Profissional',
-                    'Múltiplos municípios',
-                    'Logo personalizada',
-                    'Treinamento presencial',
-                    'SLA garantido',
-                    'Suporte dedicado',
-                  ].map(i => (
-                    <li key={i}><Check size={14} style={{ color: '#4CAF50', flexShrink: 0, marginTop: 2 }} />{i}</li>
+                  {['Tudo do plano Profissional','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
+                    <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
                 <div className="lp-spacer" />
-                <div className="lp-btn-row" style={{ marginTop: 22 }}>
-                  <a
-                    className="lp-btn lp-btn-outline"
-                    style={{ width: '100%', justifyContent: 'center' }}
-                    href="mailto:contato@eduplate.com.br"
-                  >
+                <div className="lp-btn-row" style={{ marginTop:22 }}>
+                  <a className="lp-btn lp-btn-outline" style={{ width:'100%', justifyContent:'center' }} href="mailto:contato@eduplate.com.br">
                     Falar com especialista
                   </a>
                 </div>
@@ -564,86 +676,66 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── FAQ ─────────────────────────────────────────────────────── */}
-        <section className="lp-section" id="faq">
+        {/* ── FAQ ─────────────────────────────────────────────────── */}
+        <section className="lp-section lp-band" id="faq">
           <div className="lp-container">
             <span className="lp-eyebrow">Dúvidas frequentes</span>
-            <h2 style={{ marginTop: 18 }}>Perguntas e respostas</h2>
-
+            <h2 style={{ marginTop:18 }}>Perguntas e respostas</h2>
             <div className="lp-faq">
               {FAQS.map((f, i) => (
                 <div key={i} className="lp-faq-item">
-                  <button
-                    className="lp-faq-q"
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    aria-expanded={openFaq === i}
-                  >
+                  <button className="lp-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i}>
                     {f.q}
-                    <span className="lp-faq-icon">
-                      {openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </span>
+                    <span className="lp-faq-icon">{openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</span>
                   </button>
-                  {openFaq === i && (
-                    <div className="lp-faq-a">{f.a}</div>
-                  )}
+                  {openFaq === i && <div className="lp-faq-a">{f.a}</div>}
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── CTA ─────────────────────────────────────────────────────── */}
+        {/* ── CTA ─────────────────────────────────────────────────── */}
         <section className="lp-section-sm">
           <div className="lp-container">
             <div className="lp-cta-box">
               <div className="lp-cta-content">
-                <span className="lp-cta-eyebrow">
-                  Pronto para profissionalizar a gestão do PNAE
-                </span>
-                <h2>
-                  Seu município merece uma gestão do PNAE mais organizada, segura e profissional
-                </h2>
+                <span className="lp-cta-eyebrow">Pronto para profissionalizar a gestão do PNAE</span>
+                <h2>Seu município merece uma gestão do PNAE mais organizada, segura e profissional</h2>
                 <p>
                   Experimente o EduPlate Menu por 14 dias e veja como a rotina da alimentação
                   escolar pode funcionar com mais controle, visibilidade e padronização.
                 </p>
-                <div className="lp-btn-row" style={{ marginTop: 30 }}>
+                <div className="lp-btn-row" style={{ marginTop:30 }}>
                   <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
-                    Começar grátis agora
-                    <ArrowRight size={18} />
+                    Começar grátis agora <ArrowRight size={18} />
                   </button>
-                  <a
-                    className="lp-btn"
-                    href="mailto:contato@eduplate.com.br"
-                    style={{
-                      background: 'rgba(255,255,255,0.12)',
-                      color: '#fff',
-                      border: '1px solid rgba(255,255,255,0.22)',
-                    }}
-                  >
-                    Falar com especialista
+                  <a className="lp-btn" href="mailto:contato@eduplate.com.br"
+                    style={{ background:'rgba(255,255,255,0.12)', color:'#fff', border:'1px solid rgba(255,255,255,0.22)' }}>
+                    Solicitar demonstração
                   </a>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────── */}
+      {/* ── Footer ─────────────────────────────────────────────── */}
       <footer className="lp-footer">
         <div className="lp-container">
           <div className="lp-footer-inner">
             <div>
-              <EduPlateLogo variant="light" style={{ height: 32, marginBottom: 8 }} />
-              <p className="lp-footer-copy" style={{ marginTop: 8 }}>
+              <EduPlateLogo variant="light" style={{ height:32, marginBottom:8 }} />
+              <p className="lp-footer-copy" style={{ marginTop:8 }}>
                 Plataforma especialista em PNAE · 100% online<br />
                 CNPJ: — · Avaré — SP · contato@eduplate.com.br
               </p>
             </div>
             <div className="lp-footer-links">
               <a href="#funcionalidades">Funcionalidades</a>
-              <a href="#como-funciona">Como funciona</a>
+              <a href="#sistema">O sistema</a>
               <a href="#planos">Planos</a>
               <a href="#faq">FAQ</a>
               <a href="/privacidade">Privacidade</a>
@@ -652,6 +744,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
