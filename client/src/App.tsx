@@ -30,6 +30,8 @@ import Cadastro from '@/pages/Cadastro';
 import Documents from '@/pages/Documents';
 import LandingPage from '@/pages/LandingPage';
 import TrialBanner from '@/components/TrialBanner';
+import TrialGate from '@/components/TrialGate';
+import OnboardingModal from '@/components/OnboardingModal';
 import Foods from '@/pages/nutrition/Foods';
 import Menus from '@/pages/nutrition/Menus';
 import NutritionHub from '@/pages/nutrition/NutritionHub';
@@ -82,9 +84,11 @@ function Router() {
 
       <Route path="*">
         <AuthGuard>
+        <TrialGate>
         <div className="flex flex-col min-h-screen">
           <TopNav />
           <TrialBanner />
+          <OnboardingModal />
           <main className="flex-1 bg-gray-50">
             <Switch>
               <Route path="/" component={Dashboard} />
@@ -113,6 +117,7 @@ function Router() {
             </Switch>
           </main>
         </div>
+        </TrialGate>
         </AuthGuard>
       </Route>
     </Switch>

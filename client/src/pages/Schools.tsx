@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus, Mail } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus, Mail, Pencil, MapPin } from 'lucide-react';
 import { School } from '@/types';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
 import { toast } from 'sonner';
@@ -31,11 +31,19 @@ export default function Schools() {
   const { inspections } = useInspections();
   const [newSchoolName, setNewSchoolName] = useState('');
   const [newSchoolEmail, setNewSchoolEmail] = useState('');
+  const [newSchoolAddress, setNewSchoolAddress] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [evolutionPhotos] = useState<EvolutionPhoto[]>([]);
   const [activeTab, setActiveTab] = useState('schools');
   const [highlightedSchool, setHighlightedSchool] = useState<string | null>(null);
+
+  // Edit state
+  const [editSchool, setEditSchool] = useState<School | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // ── Per-school inspection evolution (real data from visits) ────────────────
   const schoolEvolution = useMemo(() => {
@@ -76,6 +84,7 @@ export default function Schools() {
         id: `school-${crypto.randomUUID()}`,
         name: newSchoolName.trim(),
         email: newSchoolEmail.trim() || undefined,
+        address: newSchoolAddress.trim() || undefined,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -86,6 +95,7 @@ export default function Schools() {
 
       setNewSchoolName('');
       setNewSchoolEmail('');
+      setNewSchoolAddress('');
       setDialogOpen(false);
       toast.success('Escola adicionada com sucesso');
     } catch (error) {
@@ -109,6 +119,40 @@ export default function Schools() {
     } catch (error) {
       console.error('Erro ao deletar escola:', error);
       toast.error('Erro ao deletar escola');
+    }
+  };
+
+  const openEditDialog = (school: School) => {
+    setEditSchool(school);
+    setEditName(school.name);
+    setEditEmail(school.email || '');
+    setEditAddress(school.address || '');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSchool || !editName.trim()) {
+      toast.error('O nome da escola é obrigatório');
+      return;
+    }
+    try {
+      setEditSubmitting(true);
+      const updated: School = {
+        ...editSchool,
+        name: editName.trim(),
+        email: editEmail.trim() || undefined,
+        address: editAddress.trim() || undefined,
+        updatedAt: new Date(),
+      };
+      const updatedSchools = schools.map(s => s.id === updated.id ? updated : s);
+      setSchools(updatedSchools);
+      localStorage.setItem('pnae_schools', JSON.stringify(updatedSchools));
+      setEditSchool(null);
+      toast.success('Escola atualizada com sucesso');
+    } catch {
+      toast.error('Erro ao atualizar escola');
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -189,6 +233,14 @@ export default function Schools() {
                     />
                     <p className="text-xs text-gray-400 mt-1">Usado para envio de cardápios por e-mail</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Endereço</label>
+                    <Input
+                      placeholder="Rua das Flores, 123 — Centro"
+                      value={newSchoolAddress}
+                      onChange={(e) => setNewSchoolAddress(e.target.value)}
+                    />
+                  </div>
                   <div className="flex gap-3 justify-end">
                     <Button variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancelar
@@ -199,6 +251,58 @@ export default function Schools() {
                       className="bg-blue-600 hover:bg-blue-700"
                     >
                       {submitting ? 'Adicionando...' : 'Adicionar'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit School Dialog */}
+            <Dialog open={!!editSchool} onOpenChange={(open) => { if (!open) setEditSchool(null); }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Editar Escola</DialogTitle>
+                  <DialogDescription>Atualize os dados da escola</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSaveEdit} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Nome da escola *</label>
+                    <Input
+                      placeholder="Ex: EMEF Prof. João Silva"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      autoFocus
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">E-mail da escola</label>
+                    <Input
+                      type="email"
+                      placeholder="escola@municipio.sp.gov.br"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Usado para envio de cardápios por e-mail</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Endereço</label>
+                    <Input
+                      placeholder="Rua das Flores, 123 — Centro"
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                    <Button variant="outline" type="button" onClick={() => setEditSchool(null)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={editSubmitting}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {editSubmitting ? 'Salvando...' : 'Salvar alterações'}
                     </Button>
                   </div>
                 </form>
@@ -227,6 +331,11 @@ export default function Schools() {
                         )}
                         {!school.email && (
                           <span className="text-xs text-amber-500">⚠ Sem e-mail cadastrado</span>
+                        )}
+                        {school.address && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <MapPin className="w-3 h-3" />{school.address}
+                          </span>
                         )}
                       </CardDescription>
                     </CardHeader>
@@ -259,8 +368,18 @@ export default function Schools() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => openEditDialog(school)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Editar escola"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDeleteSchool(school.id, school.name)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Excluir escola"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
