@@ -12,7 +12,7 @@ import {
   ClipboardCheck, ClipboardList, ClipboardMinus, Factory,
   FileBarChart2, FileText, GraduationCap, LayoutDashboard,
   LogOut, Menu, School, Shield, ShieldAlert, Trophy,
-  User, Utensils, Wrench, X, ChevronDown,
+  User, Users, Utensils, Wrench, X, ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -131,6 +131,14 @@ function UserMenu({ name, onLogout }: { name: string; onLogout: () => void }) {
           >
             <User className="h-4 w-4 text-[#4caf50]" />
             Meu Perfil
+          </a>
+          <a
+            href="/team"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/8 hover:text-white transition-colors"
+          >
+            <Users className="h-4 w-4 text-[#4caf50]" />
+            Equipe / Convites
           </a>
           <a
             href="/billing"

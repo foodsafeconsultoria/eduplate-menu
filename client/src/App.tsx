@@ -28,6 +28,7 @@ import Pricing from '@/pages/Pricing';
 import Billing from '@/pages/Billing';
 import Cadastro from '@/pages/Cadastro';
 import Documents from '@/pages/Documents';
+import Team from '@/pages/Team';
 import LandingPage from '@/pages/LandingPage';
 import TrialBanner from '@/components/TrialBanner';
 import TrialGate from '@/components/TrialGate';
@@ -113,6 +114,7 @@ function Router() {
               <Route path="/profile" component={Profile} />
               <Route path="/billing" component={Billing} />
               <Route path="/documents" component={Documents} />
+              <Route path="/team" component={Team} />
               <Route component={NotFound} />
             </Switch>
           </main>
