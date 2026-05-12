@@ -42,7 +42,7 @@ const PLANS: Plan[] = [
   },
   {
     key: 'pro',
-    name: 'Profissional',
+    name: 'Essencial',
     price: 99,
     priceLabel: 'R$ 99',
     description: 'Para secretarias com operação ativa',

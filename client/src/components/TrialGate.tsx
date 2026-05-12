@@ -120,8 +120,8 @@ export default function TrialGate({ children }: Props) {
           {/* Planos resumo */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
             {[
-              { name: 'Básico', price: 'R$ 197', sub: 'até 10 escolas', color: '#1A73E8' },
-              { name: 'Profissional', price: 'R$ 347', sub: 'até 30 escolas', color: '#4CAF50', popular: true },
+              { name: 'Básico', price: 'R$ 49', sub: 'até 10 escolas', color: '#1A73E8' },
+              { name: 'Essencial', price: 'R$ 99', sub: 'até 30 escolas', color: '#4CAF50', popular: true },
             ].map(p => (
               <div key={p.name} style={{
                 border: `2px solid ${p.popular ? 'rgba(76,175,80,0.35)' : '#E6EBF2'}`,

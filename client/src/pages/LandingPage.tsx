@@ -687,7 +687,7 @@ export default function LandingPage() {
               <article className="lp-price-card">
                 <h3>Básico</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Ideal para municípios com até 10 escolas.</p>
-                <div className="lp-price">R$ 197 <small>/mês</small></div>
+                <div className="lp-price">R$ 49 <small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Suporte por e-mail'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
@@ -698,12 +698,12 @@ export default function LandingPage() {
                   <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToPlans}>Começar 14 dias grátis</button>
                 </div>
               </article>
-              {/* Profissional */}
+              {/* Essencial */}
               <article className="lp-price-card popular">
                 <span className="lp-popular-badge">Mais popular</span>
-                <h3>Profissional</h3>
+                <h3>Essencial</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para municípios com até 30 escolas.</p>
-                <div className="lp-price">R$ 347 <small>/mês</small></div>
+                <div className="lp-price">R$ 99 <small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Tudo do plano Básico','Relatórios SIGPC/FNDE','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
@@ -718,7 +718,7 @@ export default function LandingPage() {
               <article className="lp-price-card">
                 <h3>Consórcio</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para redes regionais com múltiplos municípios.</p>
-                <div className="lp-price" style={{ fontSize:'1.6rem' }}>Sob consulta</div>
+                <div className="lp-price" style={{ fontSize:'1.5rem' }}>a partir de <strong>R$ 399</strong><small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Tudo do plano Profissional','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
