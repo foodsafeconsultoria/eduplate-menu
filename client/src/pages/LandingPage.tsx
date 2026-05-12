@@ -507,29 +507,88 @@ export default function LandingPage() {
         </section>
 
         {/* ── Vídeo Demo ─────────────────────────────────────────── */}
-        <section className="lp-section">
+        <section className="lp-section" style={{ background:'linear-gradient(180deg,#F5F7FA 0%,#EEF2FF 100%)' }}>
           <div className="lp-container" style={{ textAlign:'center' }}>
             <span className="lp-eyebrow">Veja o sistema em ação</span>
             <h2 style={{ marginTop:18 }}>Uma demonstração vale mais do que mil palavras</h2>
-            <p className="lp-lead" style={{ margin:'16px auto 0', textAlign:'center' }}>
-              Acompanhe como um município de qualquer porte pode profissionalizar
-              a gestão do PNAE em poucos passos.
+            <p className="lp-lead" style={{ margin:'16px auto 32px', textAlign:'center' }}>
+              Veja como montar e publicar cardápios para todas as escolas do município em poucos cliques —
+              diretamente no EduPlate Menu.
             </p>
-            <div className="lp-video-wrap">
-              <div className="lp-video-bg-dots" />
-              <div style={{ position:'relative', zIndex:2, textAlign:'center' }}>
-                <div className="lp-play-btn" style={{ margin:'0 auto 16px' }}>
-                  <Play size={28} color="#fff" fill="#fff" />
+
+            {/* Video player */}
+            <div style={{
+              position:'relative',
+              maxWidth:860,
+              margin:'0 auto',
+              borderRadius:20,
+              overflow:'hidden',
+              boxShadow:'0 32px 80px rgba(27,42,74,0.18)',
+              background:'#000',
+              border:'1px solid rgba(27,42,74,0.10)',
+            }}>
+              {/* Browser chrome bar */}
+              <div style={{
+                background:'#F8FAFD',
+                borderBottom:'1px solid #E6EBF2',
+                padding:'10px 14px',
+                display:'flex',
+                alignItems:'center',
+                gap:7,
+              }}>
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#FF6057', display:'inline-block' }} />
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#FEBC2E', display:'inline-block' }} />
+                <span style={{ width:10, height:10, borderRadius:'50%', background:'#2BC840', display:'inline-block' }} />
+                <div style={{ flex:1, background:'#EDF2FA', borderRadius:6, height:22, margin:'0 12px', display:'flex', alignItems:'center', padding:'0 12px', fontSize:11, color:'#8896AA', fontWeight:500 }}>
+                  app.eduplate.com.br/nutrition/menus
                 </div>
-                <p style={{ color:'rgba(255,255,255,0.75)', fontSize:14, fontWeight:600 }}>
-                  Demonstração do EduPlate Menu
-                </p>
-                <p style={{ color:'rgba(255,255,255,0.40)', fontSize:12, marginTop:4 }}>
-                  Em breve no YouTube · Solicite uma demo ao vivo por e-mail
-                </p>
               </div>
-              <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'rgba(76,175,80,0.12)', filter:'blur(40px)', bottom:-60, right:-40, pointerEvents:'none' }} />
-              <div style={{ position:'absolute', width:160, height:160, borderRadius:'50%', background:'rgba(26,115,232,0.10)', filter:'blur(40px)', top:-40, left:-40, pointerEvents:'none' }} />
+              <video
+                controls
+                preload="metadata"
+                style={{ width:'100%', display:'block', maxHeight:480, background:'#000' }}
+                poster=""
+              >
+                <source src="/demo-cardapio.mp4" type="video/mp4" />
+                Seu navegador não suporta vídeo HTML5.
+              </video>
+            </div>
+
+            {/* Caption + CTA */}
+            <div style={{
+              marginTop:32,
+              display:'flex',
+              flexDirection:'column',
+              alignItems:'center',
+              gap:16,
+            }}>
+              <p style={{ fontSize:14, color:'#64748B', maxWidth:540 }}>
+                Neste vídeo: montagem de cardápio semanal, seleção de refeições por faixa etária e publicação para todas as escolas com um clique.
+              </p>
+              <a
+                href="mailto:contato@eduplate.com.br?subject=Quero agendar uma demonstração do EduPlate Menu"
+                style={{
+                  display:'inline-flex',
+                  alignItems:'center',
+                  gap:10,
+                  background:'linear-gradient(135deg,#1B2A4A,#243A66)',
+                  color:'#fff',
+                  textDecoration:'none',
+                  borderRadius:14,
+                  padding:'14px 28px',
+                  fontSize:15,
+                  fontWeight:800,
+                  boxShadow:'0 10px 30px rgba(27,42,74,0.22)',
+                  fontFamily:"'Poppins', sans-serif",
+                  transition:'transform 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform='translateY(-2px)')}
+                onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+              >
+                <ArrowRight size={18} />
+                Agendar demonstração ao vivo
+              </a>
+              <p style={{ fontSize:12, color:'#94A3B8' }}>Sem compromisso · Resposta em até 24h</p>
             </div>
           </div>
         </section>
