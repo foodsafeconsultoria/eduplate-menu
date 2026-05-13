@@ -22,6 +22,7 @@ const FEATURES = [
   { icon: <FolderOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#9C27B0,#BA68C8)', title: 'Documentos com validade', desc: 'Controle alvarás, RDC 216, PNAE e outros — alertas automáticos antes do vencimento.' },
   { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#E91E63,#F06292)', title: 'Relatório SIGPC/FNDE', desc: 'Dados preenchidos automaticamente do sistema. Gere o PDF do SIGPC com um clique, por quadrimestre.' },
   { icon: <Users size={22} color="#fff" />, bg: 'linear-gradient(135deg,#00BCD4,#4DD0E1)', title: 'Dietas especiais', desc: 'Centralize restrições alimentares de alunos com etiquetas, prescrições e acompanhamento por escola.' },
+  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#43A047,#1B5E20)', title: 'Banco de 200+ alimentos (TACO)', desc: 'Banco de alimentos baseado na Tabela TACO/UNICAMP com cálculo nutricional automático por receita — kcal, proteínas, ferro, vitaminas e mais.' },
 ];
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
@@ -457,6 +458,45 @@ export default function LandingPage() {
                 </div>
               </article>
             </div>
+
+            {/* ── Destaque banco TACO ──────────────────────────────── */}
+            <div style={{
+              marginTop: 28,
+              background: 'linear-gradient(135deg, #1B2A4A 0%, #243A66 100%)',
+              borderRadius: 24,
+              padding: '28px 32px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 32,
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#43A047,#1B5E20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BarChart2 size={20} color="#fff" />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Diferencial exclusivo</span>
+                </div>
+                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 200+ alimentos com cálculo nutricional automático</h3>
+                <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 10, lineHeight: 1.65 }}>
+                  O EduPlate Menu inclui banco de alimentos baseado na <strong style={{ color: '#81C784' }}>Tabela TACO (UNICAMP)</strong> — o padrão de referência do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
+                </p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flexShrink: 0 }}>
+                {[
+                  { n: '200+', l: 'alimentos cadastrados' },
+                  { n: 'TACO', l: 'Tabela UNICAMP' },
+                  { n: '10+', l: 'nutrientes calculados' },
+                  { n: '1 clique', l: 'para gerar ficha técnica' },
+                ].map(s => (
+                  <div key={s.n} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>{s.n}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600 }}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -682,11 +722,33 @@ export default function LandingPage() {
             <p className="lp-lead" style={{ marginTop:18 }}>
               14 dias grátis em qualquer plano. Sem cartão de crédito. Sem taxa de setup.
             </p>
+            {/* ── Banner oferta limitada ──────────────────────────── */}
+            <div style={{
+              background: 'linear-gradient(135deg, #FF5722, #FF7043)',
+              borderRadius: 16,
+              padding: '14px 22px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 4,
+              boxShadow: '0 8px 24px rgba(255,87,34,0.25)',
+            }}>
+              <span style={{ fontSize: 22 }}>⏳</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Oferta de lançamento — vagas limitadas</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                  Preços especiais para os primeiros municípios que assinarem. Garanta agora.
+                </div>
+              </div>
+            </div>
+
             <div className="lp-pricing">
               {/* Básico */}
               <article className="lp-price-card">
                 <h3>Básico</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Ideal para municípios com até 10 escolas.</p>
+                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
+                <span className="lp-price-original">De R$ 79/mês</span>
                 <div className="lp-price">R$ 49 <small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Suporte por e-mail'].map(i => (
@@ -703,6 +765,8 @@ export default function LandingPage() {
                 <span className="lp-popular-badge">Mais popular</span>
                 <h3>Essencial</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para municípios com até 30 escolas.</p>
+                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
+                <span className="lp-price-original">De R$ 129/mês</span>
                 <div className="lp-price">R$ 99 <small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Tudo do plano Básico','Relatórios SIGPC/FNDE','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
@@ -718,6 +782,8 @@ export default function LandingPage() {
               <article className="lp-price-card">
                 <h3>Consórcio</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para redes regionais com múltiplos municípios.</p>
+                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
+                <span className="lp-price-original">De R$ 449/mês</span>
                 <div className="lp-price" style={{ fontSize:'1.5rem' }}>a partir de <strong>R$ 399</strong><small>/mês</small></div>
                 <ul className="lp-price-list">
                   {['Tudo do plano Profissional','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
