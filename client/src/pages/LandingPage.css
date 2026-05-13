@@ -781,6 +781,12 @@
   .lp-hamburger { display: flex; }
   .lp-nav-actions .lp-link-plain { display: none; }
   .lp-price-card.popular { transform: none; }
+  .lp-who-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 640px) {
+  .lp-photo-strip { display: none; }
+  .lp-who-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 640px) {
