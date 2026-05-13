@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Mail, AlertCircle, Calendar, BookOpenCheck, CheckCircle2 } from 'lucide-react';
+import { Bell, AlertCircle, Calendar, BookOpenCheck, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMenus } from '@/hooks/useMenus';
@@ -32,9 +32,6 @@ interface NotificationSettings {
   notifyLowConformity: boolean;
   notifyMenuWorkflow: boolean;
   daysBeforeVisit: number;
-  emailjsServiceId: string;
-  emailjsTemplateId: string;
-  emailjsPublicKey: string;
 }
 
 const DEFAULT_SETTINGS: NotificationSettings = {
@@ -44,40 +41,7 @@ const DEFAULT_SETTINGS: NotificationSettings = {
   notifyLowConformity: true,
   notifyMenuWorkflow: true,
   daysBeforeVisit: 3,
-  emailjsServiceId: '',
-  emailjsTemplateId: '',
-  emailjsPublicKey: '',
 };
-
-// ── EmailJS sender ─────────────────────────────────────────────────────────────
-
-async function sendEmailJS(
-  serviceId: string,
-  templateId: string,
-  publicKey: string,
-  params: Record<string, string>,
-): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        template_params: params,
-      }),
-    });
-  } catch (networkErr) {
-    throw new Error('Sem conexão com a internet ou o serviço EmailJS está inacessível.');
-  }
-  if (!res.ok) {
-    let detail = '';
-    try { detail = await res.text(); } catch { /* ignore */ }
-    throw new Error(`EmailJS respondeu com erro ${res.status}${detail ? `: ${detail}` : ''}.`);
-  }
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -91,7 +55,6 @@ export default function Notifications() {
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // ── Load settings from Firestore ────────────────────────────────────────────
   useEffect(() => {
@@ -122,14 +85,10 @@ export default function Notifications() {
   const isAdmin = user?.role === 'admin';
   const canManageMenus = user?.role === 'admin' || user?.role === 'nutritionist';
 
+  // Show ALL pending schedules — same scope the TopNav badge uses (no date window)
   const upcomingVisits = useMemo(() => {
-    const today = new Date();
-    const futureDate = new Date(today.getTime() + settings.daysBeforeVisit * 24 * 60 * 60 * 1000);
-    return schedules.filter((schedule) => {
-      const d = new Date(schedule.scheduledDate);
-      return d >= today && d <= futureDate && schedule.status === 'pending';
-    });
-  }, [schedules, settings.daysBeforeVisit]);
+    return schedules.filter((schedule) => schedule.status === 'pending');
+  }, [schedules]);
 
   const openTickets = useMemo(
     () => tickets.filter((t) => t.status === 'open' && t.priority === 'high'),
@@ -217,60 +176,6 @@ export default function Notifications() {
       toast.error('Erro ao salvar configurações. Tente novamente.');
     } finally {
       setIsSavingSettings(false);
-    }
-  };
-
-  const emailjsConfigured =
-    settings.emailjsServiceId.trim() !== '' &&
-    settings.emailjsTemplateId.trim() !== '' &&
-    settings.emailjsPublicKey.trim() !== '';
-
-  const handleSendTestEmail = async () => {
-    if (!settings.emailAddress) {
-      toast.error('Preencha o e-mail de notificações antes de enviar o teste.');
-      return;
-    }
-    if (!emailjsConfigured) {
-      toast.error('Preencha as credenciais do EmailJS (Service ID, Template ID e Public Key) para habilitar o envio.');
-      return;
-    }
-
-    setIsSendingEmail(true);
-    try {
-      // Build summary lines for the test email
-      const visitLines = upcomingVisits.length > 0
-        ? upcomingVisits.map(v => `• ${v.schoolName} — ${format(new Date(v.scheduledDate), 'dd/MM/yyyy')}`).join('\n')
-        : 'Nenhuma visita nos próximos dias.';
-
-      const ticketLines = openTickets.length > 0
-        ? openTickets.map(t => `• ${t.schoolName}: ${t.equipment}`).join('\n')
-        : 'Nenhum ticket de alta prioridade em aberto.';
-
-      const menuLines = menuWorkflowAlerts.length > 0
-        ? menuWorkflowAlerts.map(a => `• ${a.title}`).join('\n')
-        : 'Nenhum cardápio aguardando ação.';
-
-      await sendEmailJS(
-        settings.emailjsServiceId.trim(),
-        settings.emailjsTemplateId.trim(),
-        settings.emailjsPublicKey.trim(),
-        {
-          to_email: settings.emailAddress,
-          to_name: user?.displayName || 'Usuário',
-          subject: 'PNAE — Resumo de Alertas',
-          visits_summary: visitLines,
-          tickets_summary: ticketLines,
-          menus_summary: menuLines,
-          sent_at: format(new Date(), 'dd/MM/yyyy HH:mm'),
-        },
-      );
-      toast.success('E-mail de teste enviado com sucesso!');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(`Falha ao enviar e-mail: ${msg}`);
-      console.error('[Notifications] EmailJS error:', err);
-    } finally {
-      setIsSendingEmail(false);
     }
   };
 
@@ -381,7 +286,7 @@ export default function Notifications() {
             <Card>
               <CardHeader>
                 <CardTitle>Visitas Agendadas</CardTitle>
-                <CardDescription>Próximos {settings.daysBeforeVisit} dias</CardDescription>
+                <CardDescription>Todas as visitas pendentes</CardDescription>
               </CardHeader>
               <CardContent>
                 {visibleUpcomingVisits.length > 0 && (
@@ -393,7 +298,7 @@ export default function Notifications() {
                 )}
                 {visibleUpcomingVisits.length === 0 ? (
                   <p className="py-8 text-center text-muted-foreground">
-                    Nenhuma visita agendada para os próximos {settings.daysBeforeVisit} dias.
+                    Nenhuma visita pendente.
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -488,41 +393,12 @@ export default function Notifications() {
               </CardHeader>
               <CardContent className="space-y-6">
 
-                {/* ── EmailJS credentials ───────────────────────────────── */}
-                <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <h3 className="font-semibold text-gray-800">Credenciais EmailJS</h3>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Service ID</label>
-                      <Input
-                        placeholder="service_xxxxxxx"
-                        value={settings.emailjsServiceId}
-                        onChange={(e) => setSettings({ ...settings, emailjsServiceId: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Template ID</label>
-                      <Input
-                        placeholder="template_xxxxxxx"
-                        value={settings.emailjsTemplateId}
-                        onChange={(e) => setSettings({ ...settings, emailjsTemplateId: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Public Key</label>
-                      <Input
-                        placeholder="sua_public_key"
-                        value={settings.emailjsPublicKey}
-                        onChange={(e) => setSettings({ ...settings, emailjsPublicKey: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  {emailjsConfigured && (
-                    <p className="flex items-center gap-1 text-xs text-green-700">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Credenciais preenchidas — envio habilitado.
-                    </p>
-                  )}
+                {/* ── Info banner ───────────────────────────────────────────── */}
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                  <p className="text-sm text-blue-800">
+                    Os alertas são exibidos em tempo real no app. Configure seu e-mail abaixo para receber resumos futuros via Resend (recurso em breve).
+                  </p>
                 </div>
 
                 <div>
@@ -596,27 +472,9 @@ export default function Notifications() {
                   />
                 </div>
 
-                <div className="flex gap-3">
-                  <Button onClick={handleSaveSettings} disabled={isSavingSettings} className="gap-2">
-                    {isSavingSettings ? 'Salvando…' : 'Salvar no Firebase'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleSendTestEmail}
-                    disabled={isSendingEmail || !emailjsConfigured || !settings.emailAddress}
-                    title={
-                      !emailjsConfigured
-                        ? 'Preencha as credenciais EmailJS acima para habilitar'
-                        : !settings.emailAddress
-                          ? 'Preencha o e-mail de destino'
-                          : 'Enviar resumo de alertas agora'
-                    }
-                    className="gap-2"
-                  >
-                    <Mail className="h-4 w-4" />
-                    {isSendingEmail ? 'Enviando…' : 'Enviar e-mail de teste'}
-                  </Button>
-                </div>
+                <Button onClick={handleSaveSettings} disabled={isSavingSettings} className="gap-2">
+                  {isSavingSettings ? 'Salvando…' : 'Salvar no Firebase'}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

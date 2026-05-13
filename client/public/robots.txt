@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+
+# Bloqueia rotas internas do app (só landing page deve ser indexada)
+Disallow: /billing
+Disallow: /cadastro
+Disallow: /profile
+Disallow: /nutrition/
+Disallow: /inspection
+Disallow: /training
+Disallow: /certificates
+Disallow: /reports
+Disallow: /documents
+Disallow: /schools
+Disallow: /notifications
+Disallow: /team
+Disallow: /ppes
+Disallow: /schedule
+Disallow: /maintenance
+Disallow: /acceptability
+Disallow: /resto-ingesta
+
+# Permite rotas públicas
+Allow: /landing
+Allow: /planos
+Allow: /privacidade
+Allow: /termos
+Allow: /login
+
+Sitemap: https://www.eduplate.com.br/sitemap.xml

@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useSearch } from 'wouter';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, CheckCircle2, Loader2, Lock, Mail, User, KeyRound, HelpCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Lock, Mail } from 'lucide-react';
 import EduPlateLogo from '@/components/EduPlateLogo';
 
 export default function Login() {
-  const { login, register, resetPassword, error } = useAuth();
+  const { login, resetPassword, error } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const redirectTo = new URLSearchParams(search).get('redirect') || '/';
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
@@ -20,12 +18,6 @@ export default function Login() {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [registerName, setRegisterName] = useState('');
-  const [registerRole, setRegisterRole] = useState<'admin' | 'nutritionist' | 'viewer'>('nutritionist');
-  const [inviteCode, setInviteCode] = useState('');
-  const [joinMode, setJoinMode] = useState<'new' | 'join'>('new');
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,25 +41,6 @@ export default function Login() {
       setLocation(redirectTo);
     } catch (err) {
       console.error('Erro no login:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      await register(
-        registerEmail,
-        registerPassword,
-        registerName,
-        registerRole,
-        joinMode === 'join' ? inviteCode : undefined
-      );
-      setLocation(redirectTo);
-    } catch (err) {
-      console.error('Erro no registro:', err);
     } finally {
       setLoading(false);
     }
@@ -167,24 +140,6 @@ export default function Login() {
             <p className="text-gray-400 text-sm mt-1">Acesse com suas credenciais</p>
           </div>
 
-          {/* Tabs */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-            {(['login', 'register'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
-                style={
-                  activeTab === tab
-                    ? { background: 'white', color: '#1B2A4A', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
-                    : { color: '#9ca3af' }
-                }
-              >
-                {tab === 'login' ? 'Entrar' : 'Registrar'}
-              </button>
-            ))}
-          </div>
-
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
@@ -194,7 +149,7 @@ export default function Login() {
           )}
 
           {/* ── Login form ── */}
-          {activeTab === 'login' && !showReset && (
+          {!showReset && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Email</label>
@@ -250,7 +205,7 @@ export default function Login() {
           )}
 
           {/* ── Recuperar senha ── */}
-          {activeTab === 'login' && showReset && (
+          {showReset && (
             <div className="space-y-4">
               <div>
                 <button
@@ -299,145 +254,14 @@ export default function Login() {
             </div>
           )}
 
-          {/* ── Register form ── */}
-          {activeTab === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Nome Completo</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input
-                    type="text"
-                    placeholder="Seu nome"
-                    value={registerName}
-                    onChange={(e) => setRegisterName(e.target.value)}
-                    disabled={loading}
-                    required
-                    className="pl-9 border-gray-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Email</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                    className="pl-9 border-gray-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Senha</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input
-                    type="password"
-                    placeholder="Crie uma senha"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                    className="pl-9 border-gray-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1.5">Função</label>
-                <Select value={registerRole} onValueChange={(v: any) => setRegisterRole(v)}>
-                  <SelectTrigger className="border-gray-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Nutricionista RT (Admin)</SelectItem>
-                    <SelectItem value="nutritionist">Agente Escolar</SelectItem>
-                    <SelectItem value="viewer">Visualizador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Org mode toggle */}
-              <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Organização</p>
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setJoinMode('new')}
-                    className="flex-1 py-1.5 text-xs rounded-lg font-medium transition-all"
-                    style={
-                      joinMode === 'new'
-                        ? { background: '#4CAF50', color: 'white' }
-                        : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }
-                    }
-                  >
-                    Nova organização
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setJoinMode('join')}
-                    className="flex-1 py-1.5 text-xs rounded-lg font-medium transition-all"
-                    style={
-                      joinMode === 'join'
-                        ? { background: '#4CAF50', color: 'white' }
-                        : { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb' }
-                    }
-                  >
-                    Entrar com convite
-                  </button>
-                </div>
-                {joinMode === 'new' && (
-                  <p className="text-xs text-gray-400 flex items-center gap-1">
-                    <HelpCircle className="w-3 h-3" />
-                    Será criada uma nova organização. Convide outros usuários depois.
-                  </p>
-                )}
-                {joinMode === 'join' && (
-                  <div className="mt-1">
-                    <div className="relative">
-                      <KeyRound className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <Input
-                        type="text"
-                        placeholder="Código de convite (ex: AB1C2D)"
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                        disabled={loading}
-                        maxLength={6}
-                        className="pl-9 border-gray-200 text-sm font-mono tracking-widest uppercase"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 rounded-xl font-semibold text-white mt-2 flex items-center justify-center gap-2 transition-opacity"
-                style={{ background: '#4CAF50', opacity: loading ? 0.7 : 1 }}
-              >
-                {loading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Registrando…</>
-                  : 'Criar Conta'}
-              </button>
-            </form>
-          )}
-
-          {/* Ver planos link */}
+          {/* Ainda não tem conta */}
           <div className="mt-6 text-center">
             <a
-              href="/planos"
+              href="/landing"
               className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
               style={{ color: '#4CAF50' }}
             >
-              Ver planos e preços →
+              Ainda não tem conta? Conheça os planos →
             </a>
           </div>
 
