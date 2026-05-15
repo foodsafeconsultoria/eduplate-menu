@@ -383,6 +383,53 @@ export default function SpecialDiets() {
           </div>
         </div>
 
+        {/* ── PNAE Guidance banner ─────────────────────────────────────────── */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Obrigações PNAE — Resolução CD/FNDE nº 06/2020 (Art. 20)</p>
+              <p className="mt-1 text-xs text-blue-700 leading-relaxed">
+                É obrigatório oferecer cardápio específico e seguro para alunos com necessidades alimentares especiais mediante <strong>laudo médico ou prescrição de nutricionista</strong>.
+                As principais restrições exigidas são: alergia alimentar (leite, ovo, trigo, amendoim, soja, frutos do mar, gergelim), doença celíaca, diabetes, fenilcetonúria e intolerâncias.
+                O cardápio substituto deve garantir os mesmos aportes nutricionais previstos no PNAE.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Restriction summary chips ─────────────────────────────────────── */}
+        {specialDiets.filter(d => d.status === 'active').length > 0 && (() => {
+          const countMap = new Map<string, number>();
+          specialDiets.filter(d => d.status === 'active').forEach(d => {
+            (d.labels ?? []).forEach(label => {
+              countMap.set(label, (countMap.get(label) ?? 0) + 1);
+            });
+            if (!d.labels?.length) countMap.set('_sem-label', (countMap.get('_sem-label') ?? 0) + 1);
+          });
+          return (
+            <div className="flex flex-wrap gap-2">
+              {Array.from(countMap.entries())
+                .filter(([k]) => k !== '_sem-label')
+                .sort((a, b) => b[1] - a[1])
+                .map(([key, count]) => {
+                  const info = DIET_LABELS.find(l => l.key === key);
+                  if (!info) return null;
+                  return (
+                    <span key={key} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${info.color}`}>
+                      {info.text} <span className="rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+                    </span>
+                  );
+                })}
+              {countMap.get('_sem-label') && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                  Sem classificação <span className="rounded-full bg-white/60 px-1.5 py-0.5 text-[10px] font-bold">{countMap.get('_sem-label')}</span>
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Search */}
         <Card>
           <CardContent className="p-4">
@@ -488,6 +535,10 @@ export default function SpecialDiets() {
                   })}
                 </div>
               </div>
+
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                💡 <strong>PNAE exige laudo médico</strong> para cada restrição. Registre o CID-10 no campo diagnóstico e a prescrição abaixo. O cardápio substituto deve ter o mesmo valor nutricional.
+              </p>
 
               <div>
                 <Label>Prescrição Alimentar</Label>

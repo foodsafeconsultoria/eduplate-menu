@@ -17,7 +17,7 @@ import { DIET_LABEL_MAP } from '@/data/dietLabels';
 import type { Food, Menu, MenuInsumo, MenuSlot, NutritionNutrientSet, Recipe } from '@/types/nutrition';
 import {
   AlertTriangle, BookOpen, ChevronDown, ClipboardList, ClipboardPaste, Copy,
-  Leaf, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
+  LayoutGrid, LayoutList, Leaf, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
@@ -197,7 +197,16 @@ async function generateMenuPDF(
 
   // ── Meal grid — only nomeFantasia ────────────────────────────────────────
   const startY = 40;
-  const head = [['REFEIÇÃO', ...weekdays.map((d) => d.toUpperCase())]];
+  const weekStart = (menu as any).weekStartDate;
+  const head = [[
+    'REFEIÇÃO',
+    ...weekdays.map((d, i) => {
+      if (!weekStart) return d.toUpperCase();
+      const dt = new Date(weekStart + 'T12:00:00');
+      dt.setDate(dt.getDate() + i);
+      return `${d.toUpperCase()}\n${format(dt, 'dd/MM')}`;
+    }),
+  ]];
 
   const slots = menu.slots || [];
 
@@ -316,10 +325,17 @@ async function generateMenuPDF(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
-  doc.text(
+  const sc = (menu as any).studentCount;
+  const totalCostForPdf = allInsumos.reduce((sum, ins) => {
+    const scale = ins.pesoReferencia > 0 ? ins.pesoAtual / ins.pesoReferencia : 0;
+    return sum + ins.custoBase * scale;
+  }, 0);
+  const avgCostPerDay = daysCount > 0 ? totalCostForPdf / daysCount : 0;
+  const footerParts = [
     `${menu.responsibleName} — Nutricionista Responsável Técnica — PNAE`,
-    pw / 2, ph - 5, { align: 'center' },
-  );
+    sc ? `Nº de alunos: ${sc} · Custo/aluno/dia: R$ ${avgCostPerDay.toFixed(2)}` : '',
+  ].filter(Boolean);
+  doc.text(footerParts.join('  ·  '), pw / 2, ph - 5, { align: 'center' });
 
   doc.save(`Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`);
 }
@@ -419,6 +435,8 @@ export default function Menus() {
    */
   const [targetCategories, setTargetCategories] = useState<string[]>(['Fundamental 1']);
   const [referenceMonth, setReferenceMonth] = useState('');
+  const [weekStartDate, setWeekStartDate] = useState('');  // "YYYY-MM-DD" of the Monday
+  const [studentCount, setStudentCount] = useState<number | ''>('');
   const [targetSchoolIds, setTargetSchoolIds] = useState<string[]>([]);
 
   // ── Slot state (replaces items + customTitles) ───────────────────────────────
@@ -525,6 +543,19 @@ export default function Menus() {
   const currentMonth    = new Date().getMonth();
 
   const schoolMap = useMemo(() => new Map(schools.map((s) => [s.id, s.name])), [schools]);
+
+  /** Maps weekday name → "dd/MM" string when weekStartDate is set */
+  const weekDayDates = useMemo(() => {
+    if (!weekStartDate) return {} as Record<string, string>;
+    const start = new Date(weekStartDate + 'T12:00:00');
+    return Object.fromEntries(
+      weekdays.map((day, i) => {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        return [day, format(d, 'dd/MM')];
+      }),
+    );
+  }, [weekStartDate]);
 
   // ── Search results ───────────────────────────────────────────────────────────
   const searchResults = useMemo(() => {
@@ -813,7 +844,7 @@ export default function Menus() {
 
   const resetForm = () => {
     setTitle(''); setTargetCategories(['Fundamental 1']); setReferenceMonth('');
-    setTargetSchoolIds([]); setTargetDay('Segunda');
+    setTargetSchoolIds([]); setWeekStartDate(''); setStudentCount(''); setTargetDay('Segunda');
     setTargetMeal(mealMap['Fundamental 1'][0]); setSourceType('recipe');
     setSearch(''); setSlots([]); setPendingFood(null);
     setClipboard(null); setEditingMenuId(null);
@@ -828,6 +859,8 @@ export default function Menus() {
       : [menu.category || 'Fundamental 1'];
     setTargetCategories(tc);
     setReferenceMonth(menu.referenceMonth || '');
+    setWeekStartDate(menu.weekStartDate || '');
+    setStudentCount(menu.studentCount ?? '');
     setTargetSchoolIds(menu.schoolIds || []);
 
     // Load slots — migrate from legacy items if necessary
@@ -861,6 +894,8 @@ export default function Menus() {
       category:             effectiveCategory,
       targetCategories,
       referenceMonth,
+      weekStartDate:        weekStartDate || undefined,
+      studentCount:         studentCount !== '' ? Number(studentCount) : undefined,
       schoolIds:            targetSchoolIds,
       slots,
       items:                [],
@@ -911,6 +946,7 @@ export default function Menus() {
   const [galleryCategory, setGalleryCategory] = useState('');   // '' = todas
   const [galleryMonth,    setGalleryMonth]    = useState('');   // '' = todos
   const [gallerySort,     setGallerySort]     = useState<'newest' | 'oldest' | 'alpha' | 'edited'>('newest');
+  const [galleryView, setGalleryView] = useState<'grid' | 'list'>('grid');
 
   /** All distinct referenceMonth values for the filter dropdown */
   const allReferenceMonths = useMemo(() =>
@@ -1020,7 +1056,7 @@ export default function Menus() {
               <div className="space-y-5">
 
                 {/* Meta fields */}
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
                   <div>
                     <Label>Título *</Label>
                     <Input
@@ -1078,6 +1114,44 @@ export default function Menus() {
                       value={referenceMonth}
                       onChange={(e) => setReferenceMonth(e.target.value)}
                       placeholder="Ex: Maio 2026"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Semana (segunda-feira)</Label>
+                    <Input
+                      type="date"
+                      value={weekStartDate}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setWeekStartDate(v);
+                        // auto-fill referenceMonth from date if empty
+                        if (v && !referenceMonth) {
+                          const d = new Date(v + 'T12:00:00');
+                          const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                          setReferenceMonth(`${months[d.getMonth()]} ${d.getFullYear()}`);
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                    {weekStartDate && (
+                      <p className="mt-0.5 text-[10px] text-green-700">
+                        {weekdays.map((d, i) => {
+                          const dt = new Date(weekStartDate + 'T12:00:00');
+                          dt.setDate(dt.getDate() + i);
+                          return `${d} ${format(dt, 'dd/MM')}`;
+                        }).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Nº de alunos</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={studentCount}
+                      onChange={(e) => setStudentCount(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Ex: 120"
                       className="mt-1"
                     />
                   </div>
@@ -1300,7 +1374,9 @@ export default function Menus() {
                     <Card key={day} className="overflow-hidden">
                       <CardHeader className="border-b bg-green-700 py-2 px-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-white">{day}</span>
+                          <span className="text-sm font-bold text-white">
+                            {day}{weekDayDates[day] ? ` (${weekDayDates[day]})` : ''}
+                          </span>
                           <div className="flex gap-1.5">
                             <button type="button" title="Copiar dia" onClick={() => copyDay(day)}
                               className="rounded p-0.5 text-green-200 hover:bg-green-600 hover:text-white">
@@ -1425,8 +1501,11 @@ export default function Menus() {
                         {[
                           { label: 'Custo médio/dia', value: `R$ ${summary.averageCost.toFixed(2)}` },
                           { label: 'Kcal média',      value: summary.averageNutrients.kcal.toFixed(0) },
-                          { label: 'Proteína média',  value: `${summary.averageNutrients.protein.toFixed(1)} g` },
-                          { label: 'Ag. Familiar',    value: `${summary.familyFarmShare.toFixed(0)}%`, ok: summary.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30) },
+                          { label: studentCount ? `Custo/aluno (${studentCount} alunos)` : 'Proteína média',
+                            value: studentCount ? `R$ ${summary.averageCost.toFixed(2)}` : `${summary.averageNutrients.protein.toFixed(1)} g` },
+                          { label: studentCount ? 'Custo total semana' : 'Ag. Familiar',
+                            value: studentCount ? `R$ ${(summary.averageCost * 5 * Number(studentCount)).toFixed(2)}` : `${summary.familyFarmShare.toFixed(0)}%`,
+                            ok: studentCount ? undefined : summary.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30) },
                         ].map(({ label, value, ok }) => (
                           <div key={label} className="rounded-lg border bg-white p-3">
                             <p className="text-xs text-gray-500">{label}</p>
@@ -1556,11 +1635,29 @@ export default function Menus() {
             <div className="flex items-center gap-2 mb-3">
               <SlidersHorizontal className="h-4 w-4 text-gray-500" />
               <span className="text-sm font-semibold text-gray-700">Filtrar galeria</span>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  title="Grade"
+                  onClick={() => setGalleryView('grid')}
+                  className={`rounded p-1.5 transition-colors ${galleryView === 'grid' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  title="Lista"
+                  onClick={() => setGalleryView('list')}
+                  className={`rounded p-1.5 transition-colors ${galleryView === 'list' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+              </div>
               {(gallerySearch || galleryCategory || galleryMonth) && (
                 <button
                   type="button"
                   onClick={() => { setGallerySearch(''); setGalleryCategory(''); setGalleryMonth(''); }}
-                  className="ml-auto flex items-center gap-1 rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
+                  className="flex items-center gap-1 rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
                 >
                   <X className="h-3 w-3" /> Limpar filtros
                 </button>
@@ -1642,6 +1739,96 @@ export default function Menus() {
               </button>
             </CardContent>
           </Card>
+        ) : galleryView === 'list' ? (
+          /* ── List view ───────────────────────────────────────────────────── */
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700">Título</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 hidden md:table-cell">Etapa</th>
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 hidden md:table-cell">Referência</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gray-700">Kcal</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gray-700 hidden sm:table-cell">Custo/dia</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gray-700 hidden lg:table-cell">Ag.Fam.</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gray-700 hidden lg:table-cell">Alunos</th>
+                  <th className="px-4 py-2.5 text-left font-semibold text-gray-700 hidden xl:table-cell">Status</th>
+                  <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredMenus.map((menu) => {
+                  const schoolNames = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
+                  const cat = menu.category as (typeof categories)[number];
+                  const ml  = mealMap[cat] ?? ['Refeição'];
+                  const afOk = menu.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30);
+                  return (
+                    <tr key={menu.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900 truncate max-w-[200px]">{menu.title}</p>
+                        <p className="text-xs text-gray-400 truncate max-w-[200px]">
+                          {schoolNames.length > 0 ? schoolNames.join(', ') : 'Toda a rede'}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3 hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {(menu.targetCategories?.length ? menu.targetCategories : [menu.category]).map((c) => (
+                            <span key={c} className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800">{c}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-gray-600 hidden md:table-cell">
+                        {menu.referenceMonth || '—'}
+                        {menu.weekStartDate && (
+                          <p className="text-[10px] text-gray-400">
+                            {format(new Date(menu.weekStartDate + 'T12:00:00'), 'dd/MM')} – {format(new Date(new Date(menu.weekStartDate + 'T12:00:00').setDate(new Date(menu.weekStartDate + 'T12:00:00').getDate() + 4)), 'dd/MM')}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right font-semibold">{menu.averageKcal.toFixed(0)}</td>
+                      <td className="px-3 py-3 text-right hidden sm:table-cell">R$ {menu.averageCost.toFixed(2)}</td>
+                      <td className={`px-3 py-3 text-right font-semibold hidden lg:table-cell ${afOk ? 'text-green-700' : 'text-amber-600'}`}>
+                        {menu.familyFarmShare.toFixed(0)}%
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-600 hidden lg:table-cell">
+                        {menu.studentCount ? menu.studentCount : '—'}
+                      </td>
+                      <td className="px-4 py-3 hidden xl:table-cell">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          menu.status === 'published' ? 'bg-green-100 text-green-800' :
+                          menu.status === 'approved'  ? 'bg-blue-100 text-blue-800' :
+                          menu.status === 'under_review' ? 'bg-amber-100 text-amber-800' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>{menu.status}</span>
+                        {menu.complianceAlerts.length > 0 && (
+                          <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">
+                            {menu.complianceAlerts.length} alerta(s)
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-700 hover:bg-green-50"
+                            title="Imprimir PDF"
+                            onClick={() => generateMenuPDF(menu, schoolNames, ml).catch(() => toast.error('Erro ao gerar PDF.'))}>
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50"
+                            title="Editar" onClick={() => openEditMenu(menu)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:bg-red-50"
+                            title="Excluir" onClick={() => { deleteMenu(menu.id); toast.success('Cardápio excluído.'); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {filteredMenus.map((menu) => {
@@ -1709,6 +1896,16 @@ export default function Menus() {
                       </div>
                     )}
 
+                    {(menu.studentCount || menu.weekStartDate) && (
+                      <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-800 flex flex-wrap gap-x-3 gap-y-1">
+                        {menu.weekStartDate && (
+                          <span>📅 {format(new Date(menu.weekStartDate + 'T12:00:00'), 'dd/MM')} – {format(new Date(new Date(menu.weekStartDate + 'T12:00:00').setDate(new Date(menu.weekStartDate + 'T12:00:00').getDate() + 4)), 'dd/MM/yyyy')}</span>
+                        )}
+                        {menu.studentCount && (
+                          <span>👨‍🎓 {menu.studentCount} alunos · R$ {(menu.averageCost).toFixed(2)}/aluno/dia · semana: R$ {(menu.averageCost * 5 * menu.studentCount).toFixed(2)}</span>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-gray-400">
                       Salvo em {safeFormat(menu.updatedAt, 'dd/MM/yyyy HH:mm')} · {menu.responsibleName}
                     </p>
