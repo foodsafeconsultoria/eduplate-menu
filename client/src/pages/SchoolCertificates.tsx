@@ -2,11 +2,10 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Trophy, Award, TrendingUp, School2, AlertTriangle, Upload, X } from 'lucide-react';
+import { Download, Trophy, Award, TrendingUp, School2, AlertTriangle } from 'lucide-react';
 import { useInspections, useSchools } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 
@@ -84,148 +83,233 @@ function buildWatermarkDataUrl(pdfWmm: number, pdfHmm: number): string {
   return canvas.toDataURL('image/png');
 }
 
-async function generateCertificatePDF(cert: SchoolCertificate, signatureUrl?: string, signer?: { name: string; crn: string }) {
+async function generateCertificatePDF(
+  cert: SchoolCertificate,
+  signatureUrl?: string,
+  signer?: { name: string; crn: string; municipio?: string; uf?: string },
+  orgLogoUrl?: string,
+) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const wmUrl = buildWatermarkDataUrl(pw, ph);
 
-  // Ivory background + watermark
-  doc.setFillColor(255, 253, 244);
+  // ── Helpers ──
+  const green: [number, number, number]  = [22, 101, 52];
+  const navy:  [number, number, number]  = [27, 42, 74];
+  const ivory: [number, number, number]  = [255, 253, 244];
+  const loadImg = (src: string) =>
+    fetch(src).then(r => r.blob()).then(b => new Promise<string>((res, rej) => {
+      const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b);
+    }));
+  const toDataUrl = async (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('data:')) return url;
+    return loadImg(url).catch(() => undefined);
+  };
+
+  // Pre-load images in parallel
+  const [resolvedSig, resolvedLogo] = await Promise.all([
+    toDataUrl(signatureUrl),
+    toDataUrl(orgLogoUrl),
+  ]);
+
+  // ── Marca d'água ──
+  const wmUrl = buildWatermarkDataUrl(pw, ph);
+  doc.setFillColor(...ivory);
   doc.rect(0, 0, pw, ph, 'F');
   doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
 
-  // Outer border (thick green)
-  doc.setDrawColor(22, 101, 52);
-  doc.setLineWidth(3.5);
-  doc.rect(8, 8, pw - 16, ph - 16);
-  // Inner border (thin)
-  doc.setLineWidth(1);
+  // ── Moldura dupla ──
+  doc.setDrawColor(...green);
+  doc.setLineWidth(4);
+  doc.rect(7, 7, pw - 14, ph - 14);
+  doc.setLineWidth(0.8);
   doc.setDrawColor(21, 128, 61);
-  doc.rect(12, 12, pw - 24, ph - 24);
+  doc.rect(11, 11, pw - 22, ph - 22);
 
-  // Header band — white background so logos are visible
-  doc.setFillColor(255, 255, 255);
-  doc.rect(12, 12, pw - 24, 32, 'F');
-  // thin green bottom line for the header
-  doc.setFillColor(22, 101, 52);
-  doc.rect(12, 43, pw - 24, 1.5, 'F');
+  // ── Faixa de cabeçalho ──
+  doc.setFillColor(...navy);
+  doc.rect(11, 11, pw - 22, 36, 'F');
 
-  // Logos
+  // Logo org (esquerda)
+  if (resolvedLogo) {
+    try { doc.addImage(resolvedLogo, 'PNG', 15, 14, 28, 28); } catch (_) {}
+  }
+  // Logo padrão nutricao (direita)
   try {
-    const loadImg = (src: string) => fetch(src).then(r => r.blob()).then(b => new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b); }));
-    const [brasaoUrl, nutricaoUrl] = await Promise.all([loadImg('/brasao-itai.png'), loadImg('/logo-nutricao.png')]);
-    doc.addImage(brasaoUrl,   'PNG', 16,       14, 26, 26);
-    doc.addImage(nutricaoUrl, 'PNG', pw - 42,  14, 26, 26);
-  } catch (_) { /* logos optional */ }
+    const nutData = await loadImg('/logo-nutricao.png').catch(() => null);
+    if (nutData) doc.addImage(nutData, 'PNG', pw - 43, 14, 28, 28);
+  } catch (_) {}
 
-  doc.setTextColor(22, 101, 52);
+  // Texto cabeçalho
+  const municipioLabel = signer?.municipio
+    ? `SECRETARIA DE EDUCAÇÃO — ${signer.municipio.toUpperCase()}${signer.uf ? `/${signer.uf.toUpperCase()}` : ''}`
+    : 'SECRETARIA DE EDUCAÇÃO — PROGRAMA PNAE';
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('PREFEITURA MUNICIPAL | SECRETARIA DE EDUCAÇÃO', pw / 2, 24, { align: 'center' });
-  doc.setFontSize(9);
+  doc.setFontSize(10);
+  doc.text(municipioLabel, pw / 2, 22, { align: 'center' });
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.text('PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR — PNAE', pw / 2, 33, { align: 'center' });
-
-  // Title
-  doc.setTextColor(22, 101, 52);
+  doc.setTextColor(180, 220, 180);
+  doc.text('PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR — PNAE', pw / 2, 30, { align: 'center' });
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
+  doc.setFontSize(7.5);
+  doc.text('RDC ANVISA nº 216/2004  ·  Resolução FNDE/CD nº 06/2020  ·  Lei nº 11.947/2009', pw / 2, 40, { align: 'center' });
+
+  // ── Título principal ──
+  doc.setTextColor(...green);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(32);
   doc.text('CERTIFICADO DE QUALIDADE', pw / 2, 62, { align: 'center' });
 
-  doc.setFontSize(11);
-  doc.setTextColor(80, 80, 80);
+  // Linha decorativa
+  const lineY = 67;
+  doc.setDrawColor(...green);
+  doc.setLineWidth(0.4);
+  doc.line(pw * 0.18, lineY, pw * 0.82, lineY);
+  // ponto central
+  doc.setFillColor(...green);
+  doc.circle(pw / 2, lineY, 1.5, 'F');
+
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Boas Práticas de Manipulação de Alimentos em Unidade de Alimentação Escolar', pw / 2, 72, { align: 'center' });
+  doc.setTextColor(90, 90, 90);
+  doc.text('Boas Práticas de Manipulação de Alimentos em Unidade de Alimentação Escolar', pw / 2, 73, { align: 'center' });
 
-  // Decorative line
-  doc.setDrawColor(21, 128, 61);
-  doc.setLineWidth(0.5);
-  doc.line(30, 77, pw - 30, 77);
+  // ── Corpo ──
+  doc.setFontSize(11.5);
+  doc.setTextColor(60, 60, 60);
+  doc.text('Certificamos que a unidade de alimentação escolar da instituição', pw / 2, 83, { align: 'center' });
 
-  // Body
-  doc.setFontSize(12);
-  doc.setTextColor(50, 50, 50);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Certificamos que a unidade de alimentação escolar da', pw / 2, 83, { align: 'center' });
-
-  // School name (highlighted)
-  doc.setFontSize(20);
+  // Nome da escola
+  doc.setFontSize(cert.schoolName.length > 50 ? 16 : 20);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(22, 101, 52);
+  doc.setTextColor(...green);
   const nameLines = doc.splitTextToSize(cert.schoolName, pw - 60);
-  doc.text(nameLines, pw / 2, 95, { align: 'center' });
-  const nameEnd = 95 + (nameLines.length - 1) * 10;
+  doc.text(nameLines, pw / 2, 94, { align: 'center' });
+  const nameEnd = 94 + (nameLines.length - 1) * (cert.schoolName.length > 50 ? 8 : 10);
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(50, 50, 50);
-  doc.text('alcançou conformidade média de', pw / 2, nameEnd + 12, { align: 'center' });
+  doc.setTextColor(70, 70, 70);
+  doc.text('atingiu a conformidade média de', pw / 2, nameEnd + 10, { align: 'center' });
 
-  // Score
-  doc.setFontSize(34);
+  // Score — grande destaque
+  const scoreColor: [number, number, number] = cert.averageConformity >= 80
+    ? [21, 128, 61] : cert.averageConformity >= 60 ? [180, 120, 0] : [185, 28, 28];
+  doc.setFontSize(42);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(21, 128, 61);
-  doc.text(`${cert.averageConformity}%`, pw / 2, nameEnd + 28, { align: 'center' });
+  doc.setTextColor(...scoreColor);
+  doc.text(`${cert.averageConformity}%`, pw / 2, nameEnd + 26, { align: 'center' });
 
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(50, 50, 50);
-  doc.text('nas Boas Práticas de Manipulação de Alimentos — conforme RDC ANVISA nº 216/2004 e Resolução FNDE/CD nº 38/2009', pw / 2, nameEnd + 40, { align: 'center' });
+  // Barra de conformidade
+  const barW = 100, barX = (pw - barW) / 2, barY = nameEnd + 31;
+  doc.setFillColor(230, 230, 230);
+  doc.roundedRect(barX, barY, barW, 4, 2, 2, 'F');
+  doc.setFillColor(...scoreColor);
+  doc.roundedRect(barX, barY, barW * (cert.averageConformity / 100), 4, 2, 2, 'F');
 
-  // Info row
-  const infoY = nameEnd + 52;
   doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  [
-    [`Última inspeção: ${cert.lastInspectionDate.toLocaleDateString('pt-BR')}`, 0.2],
-    [`Diretor(a): ${cert.lastInspectionDirector || '—'}`, 0.5],
-    [`Total de inspeções: ${cert.totalInspections}`, 0.72],
-    [`Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 0.88],
-  ].forEach(([text, xRatio]) => {
-    doc.text(String(text), pw * Number(xRatio), infoY, { align: 'center' });
+  doc.text(
+    'nas verificações de Boas Práticas de Manipulação de Alimentos realizadas pela equipe de nutrição.',
+    pw / 2, nameEnd + 42, { align: 'center' }
+  );
+
+  // ── Info row (4 colunas) ──
+  const infoY = nameEnd + 52;
+  doc.setFillColor(243, 250, 244);
+  doc.roundedRect(14, infoY - 5, pw - 28, 14, 2, 2, 'F');
+  doc.setDrawColor(200, 235, 210);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(14, infoY - 5, pw - 28, 14, 2, 2, 'D');
+
+  const infoCols: [string, string][] = [
+    ['Última inspeção', cert.lastInspectionDate.toLocaleDateString('pt-BR')],
+    ['Diretor(a)', cert.lastInspectionDirector || '—'],
+    ['Total de inspeções', String(cert.totalInspections)],
+    ['Emissão', new Date().toLocaleDateString('pt-BR')],
+  ];
+  infoCols.forEach(([label, value], i) => {
+    const x = pw * (0.15 + i * 0.23);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(label.toUpperCase(), x, infoY + 0.5, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(value, x, infoY + 6, { align: 'center' });
   });
 
-  // Divider
-  doc.setDrawColor(200, 230, 200);
-  doc.setLineWidth(0.3);
-  doc.line(30, infoY + 6, pw - 30, infoY + 6);
+  // ── Área de assinatura ──
+  const sigY = ph - 34;
 
-  // Signature area
-  const sigY = ph - 38;
-  if (signatureUrl) {
-    try { doc.addImage(signatureUrl, 'PNG', pw * 0.65, sigY - 16, 40, 14); } catch {}
+  // Selo (esquerda)
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(...green);
+  doc.setLineWidth(0.8);
+  doc.circle(pw * 0.14, sigY - 2, 15, 'FD');
+  doc.setLineWidth(0.3);
+  doc.circle(pw * 0.14, sigY - 2, 13, 'D');
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...green);
+  doc.text('BOAS', pw * 0.14, sigY - 7, { align: 'center' });
+  doc.text('PRÁTICAS', pw * 0.14, sigY - 2, { align: 'center' });
+  doc.text('✓ PNAE', pw * 0.14, sigY + 3, { align: 'center' });
+
+  // Linha de pontuação (direita)
+  const scoreBoxX = pw * 0.72;
+  doc.setFillColor(cert.averageConformity >= 80 ? 240 : 255, cert.averageConformity >= 80 ? 253 : 243, cert.averageConformity >= 80 ? 244 : 220);
+  doc.roundedRect(scoreBoxX - 18, sigY - 16, 36, 22, 3, 3, 'F');
+  doc.setDrawColor(...scoreColor);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(scoreBoxX - 18, sigY - 16, 36, 22, 3, 3, 'D');
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...scoreColor);
+  doc.text(`${cert.averageConformity}%`, scoreBoxX, sigY - 4, { align: 'center' });
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...scoreColor);
+  doc.text(cert.averageConformity >= 80 ? 'CONFORMIDADE PLENA' : cert.averageConformity >= 60 ? 'EM DESENVOLVIMENTO' : 'NECESSITA ATENÇÃO', scoreBoxX, sigY + 3, { align: 'center' });
+
+  // Bloco assinatura (centro)
+  const rtX = pw * 0.45;
+  if (resolvedSig) {
+    try { doc.addImage(resolvedSig, 'PNG', rtX - 30, sigY - 18, 60, 16, '', 'NONE'); } catch (_) {}
   }
   doc.setDrawColor(100, 100, 100);
   doc.setLineWidth(0.4);
-  doc.line(pw * 0.55, sigY, pw * 0.85, sigY);
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 40, 40);
+  doc.line(rtX - 34, sigY - 1, rtX + 34, sigY - 1);
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
-  if (signerName) {
-    doc.text(signerName, pw * 0.7, sigY + 6, { align: 'center' });
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 80);
-    doc.text(signerCrn ? `Nutricionista RT PNAE — ${signerCrn}` : 'Nutricionista Responsável Técnica — PNAE', pw * 0.7, sigY + 12, { align: 'center' });
-  } else {
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 80);
-    doc.text('Nutricionista Responsável Técnica — PNAE', pw * 0.7, sigY + 12, { align: 'center' });
-  }
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text(signerName || 'Nutricionista Responsável Técnica', rtX, sigY + 5, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text(
+    signerCrn ? `Nutricionista RT PNAE — ${signerCrn}` : 'Responsável Técnica — PNAE',
+    rtX, sigY + 11, { align: 'center' }
+  );
 
-  // Seal
-  doc.setFillColor(240, 253, 244); doc.setDrawColor(22, 101, 52); doc.setLineWidth(0.5);
-  doc.circle(pw * 0.15, sigY - 2, 14, 'FD');
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(22, 101, 52);
-  doc.text('BOAS', pw * 0.15, sigY - 6, { align: 'center' });
-  doc.text('PRÁTICAS', pw * 0.15, sigY - 1, { align: 'center' });
-  doc.text('PNAE', pw * 0.15, sigY + 4, { align: 'center' });
+  // ── Rodapé ──
+  doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  doc.text(
+    `Certificado válido por 12 meses a partir da data de emissão. Gerado em ${new Date().toLocaleDateString('pt-BR')} — EduPlate Menu`,
+    pw / 2, ph - 14, { align: 'center' }
+  );
 
-  // Footer
-  doc.setFontSize(7); doc.setTextColor(130, 130, 130);
-  doc.text('Este certificado é válido como comprovante de conformidade com as normas do PNAE — válido por 12 meses a partir da data de emissão.', pw / 2, ph - 16, { align: 'center' });
-
-  doc.save(`Certificado_${cert.schoolName}_${new Date().toISOString().split('T')[0]}.pdf`);
-  toast.success('Certificado gerado com sucesso!');
+  doc.save(`Certificado_${cert.schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+  toast.success('Certificado gerado!');
 }
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
@@ -247,23 +331,33 @@ export default function SchoolCertificates() {
   const orgId = user?.organizationId || 'pnae-default-org';
   const { inspections } = useInspections();
   const { schools } = useSchools();
+  const { settings: orgSettings } = useOrgSettings();
 
+  // Signer from orgSettings (Firestore), fallback to localStorage SIGPC config
   const signer = useMemo(() => {
+    if (orgSettings.nutritionistName) {
+      return {
+        name: orgSettings.nutritionistName,
+        crn:  orgSettings.nutritionistCrn  || '',
+        municipio: orgSettings.municipio || '',
+        uf:   orgSettings.uf || 'SP',
+      };
+    }
     try {
       const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
         || localStorage.getItem('pnae_sigpc_entity_config');
       if (raw) {
         const cfg = JSON.parse(raw);
-        return { name: cfg.nutricionista || '', crn: cfg.crn || '' };
+        return { name: cfg.nutricionista || '', crn: cfg.crn || '', municipio: cfg.municipio || '', uf: cfg.uf || 'SP' };
       }
     } catch (_) {}
-    return { name: '', crn: '' };
-  }, [orgId]);
+    return { name: '', crn: '', municipio: '', uf: 'SP' };
+  }, [orgSettings, orgId]);
 
-  const [signatureUrl, setSignatureUrl] = useState<string | undefined>(
-    () => localStorage.getItem('pnae_signature') || undefined
-  );
-  const [sigDialogOpen, setSigDialogOpen] = useState(false);
+  // Signature: prefer orgSettings (Firestore Storage), fallback to localStorage
+  const signatureUrl = orgSettings.signatureUrl || localStorage.getItem('pnae_signature') || undefined;
+  const orgLogoUrl   = orgSettings.logoUrl || undefined;
+
 
   const certificates = useMemo<SchoolCertificate[]>(() => {
     const map: Record<string, {
@@ -303,22 +397,6 @@ export default function SchoolCertificates() {
   const compliant = certificates.filter(c => c.isCompliant);
   const developing = certificates.filter(c => !c.isCompliant);
 
-  function handleSignatureUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem máxima: 2MB'); return; }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const dataUrl = ev.target?.result as string;
-      setSignatureUrl(dataUrl);
-      localStorage.setItem('pnae_signature', dataUrl);
-      toast.success('Assinatura salva!');
-      setSigDialogOpen(false);
-    };
-    reader.readAsDataURL(file);
-  }
-
   return (
     <div className="flex-1 p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
       {/* Page Header */}
@@ -334,36 +412,12 @@ export default function SchoolCertificates() {
           <p className="text-muted-foreground mt-1">Escolas que atingiram conformidade nas normas PNAE</p>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Dialog open={sigDialogOpen} onOpenChange={setSigDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Upload className="h-4 w-4" />
-                {signatureUrl ? 'Trocar Assinatura' : 'Carregar Assinatura'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Assinatura Digital</DialogTitle>
-                <DialogDescription>
-                  Carregue sua assinatura digitalizada (PNG/JPG transparente, máx. 2MB). Ela aparecerá em todos os certificados.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                {signatureUrl && (
-                  <div className="relative w-48 h-16 border rounded-lg overflow-hidden mx-auto bg-gray-50">
-                    <img src={signatureUrl} alt="Assinatura atual" className="w-full h-full object-contain" />
-                    <button onClick={() => { setSignatureUrl(undefined); localStorage.removeItem('pnae_signature'); }}
-                      className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow hover:bg-red-50">
-                      <X className="h-3 w-3 text-red-500" />
-                    </button>
-                  </div>
-                )}
-                <Input type="file" accept="image/*" onChange={handleSignatureUpload} />
-                <p className="text-xs text-muted-foreground">Recomendado: PNG com fundo transparente, resolução ≥ 300×100px</p>
-              </div>
-            </DialogContent>
-          </Dialog>
+        {/* Info about signature source */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground rounded-lg border border-dashed px-3 py-2">
+          {signatureUrl
+            ? <><span className="text-green-600 font-semibold">✓ Assinatura configurada</span> — gerenciada em Treinamentos → Configurações</>
+            : <><span className="text-amber-600 font-semibold">⚠ Sem assinatura</span> — configure em Treinamentos → Configurações</>
+          }
         </div>
       </div>
 
@@ -442,7 +496,7 @@ export default function SchoolCertificates() {
                       <Button
                         size="sm"
                         className="w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground"
-                        onClick={() => { generateCertificatePDF(cert, signatureUrl, signer).catch(() => {}); }}
+                        onClick={() => { generateCertificatePDF(cert, signatureUrl, signer, orgLogoUrl).catch(() => {}); }}
                       >
                         <Download className="h-4 w-4" />
                         Gerar Certificado PDF

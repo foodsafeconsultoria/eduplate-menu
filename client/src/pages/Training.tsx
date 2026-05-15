@@ -226,6 +226,16 @@ async function generateCertificatePDF(
       const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b);
     }));
 
+  // Convert HTTP URLs → data URLs (jsPDF cannot fetch HTTPS directly)
+  const toDataUrl = async (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('data:')) return url;
+    return loadImgUrl(url).catch(() => undefined);
+  };
+
+  const resolvedSignature       = await toDataUrl(signatureDataUrl);
+  const resolvedInstructorSig   = await toDataUrl(instructorSignatureDataUrl);
+
   try {
     if (orgLogoUrl) {
       const logoData = await loadImgUrl(orgLogoUrl).catch(() => null);
@@ -335,11 +345,11 @@ async function generateCertificatePDF(
 
   // ── Bloco central: Instrutor ──
   const instrX = signerName ? pw * 0.42 : pw * 0.5;
-  const instrSigUrl = instructorSignatureDataUrl || signatureDataUrl; // fallback: usa a única assinatura se só houver uma
-  if (instrSigUrl && !signatureDataUrl) {
+  const instrSigUrl = resolvedInstructorSig || resolvedSignature; // fallback: usa a única assinatura se só houver uma
+  if (instrSigUrl && !resolvedSignature) {
     // só instrutor tem assinatura
     try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
-  } else if (instrSigUrl && instructorSignatureDataUrl) {
+  } else if (instrSigUrl && resolvedInstructorSig) {
     // assinatura específica do instrutor
     try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
   }
@@ -358,8 +368,8 @@ async function generateCertificatePDF(
   // ── Bloco direito: Nutricionista RT (se preenchida) ──
   if (signerName) {
     const rtX = pw * 0.75;
-    if (signatureDataUrl) {
-      try { doc.addImage(signatureDataUrl, 'PNG', rtX - 28, sigY - 20, 56, 15, '', 'NONE'); } catch (_) {}
+    if (resolvedSignature) {
+      try { doc.addImage(resolvedSignature, 'PNG', rtX - 28, sigY - 20, 56, 15, '', 'NONE'); } catch (_) {}
     }
     doc.setLineWidth(0.4);
     doc.setDrawColor(100, 100, 100);
@@ -517,16 +527,45 @@ export default function TrainingPage() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
 
-  // Load org-scoped data from localStorage on mount / orgId change
+  // Load org-scoped data: localStorage first (instant), then Firestore sync (authoritative)
   useEffect(() => {
+    let mounted = true;
+
+    // 1. Immediate render from localStorage cache
     try {
       const raw = localStorage.getItem(trainingsKey);
-      setTrainings(raw ? JSON.parse(raw) : []);
-    } catch { setTrainings([]); }
+      if (raw) setTrainings(JSON.parse(raw));
+    } catch {}
     try {
       const raw = localStorage.getItem(attendeesKey);
-      setAttendees(raw ? JSON.parse(raw) : []);
-    } catch { setAttendees([]); }
+      if (raw) setAttendees(JSON.parse(raw));
+    } catch {}
+
+    // 2. Background sync from Firestore (authoritative — survives browser clearing)
+    const syncFirestore = async () => {
+      try {
+        const [tSnap, aSnap] = await Promise.all([
+          getDocs(collection(db, 'organizations', orgId, 'trainings')),
+          getDocs(collection(db, 'organizations', orgId, 'training_attendees')),
+        ]);
+        if (!mounted) return;
+        if (!tSnap.empty) {
+          const remote = tSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Training);
+          setTrainings(remote);
+          localStorage.setItem(trainingsKey, JSON.stringify(remote));
+        }
+        if (!aSnap.empty) {
+          const remote = aSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Attendee);
+          setAttendees(remote);
+          localStorage.setItem(attendeesKey, JSON.stringify(remote));
+        }
+      } catch (err) {
+        console.warn('[Training] Firestore sync failed, using localStorage cache:', err);
+      }
+    };
+    syncFirestore();
+
+    return () => { mounted = false; };
   }, [orgId]);
 
   const [activeTab, setActiveTab] = useState('list');
