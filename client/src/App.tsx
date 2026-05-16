@@ -33,6 +33,7 @@ import LandingPage from '@/pages/LandingPage';
 import TrialBanner from '@/components/TrialBanner';
 import TrialGate from '@/components/TrialGate';
 import OnboardingModal from '@/components/OnboardingModal';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import Foods from '@/pages/nutrition/Foods';
 import Menus from '@/pages/nutrition/Menus';
 import NutritionHub from '@/pages/nutrition/NutritionHub';
@@ -134,6 +135,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <OfflineIndicator />
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>

@@ -109,6 +109,7 @@ export interface Inspection {
   photos?: string[]; // Base64 de fotos
   
   overallScore: number; // Porcentagem de conformidade
+  aiReport?: string;    // Relatório narrativo gerado por IA (salvo para reusar)
   createdAt: Date;
   createdBy: string;
 }

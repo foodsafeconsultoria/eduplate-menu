@@ -170,7 +170,13 @@ function DocRow({ name, category, doc, onFileChange, onDateChange, onDelete }: R
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    try { await onFileChange(file); } finally { setUploading(false); }
+    try {
+      await onFileChange(file);
+    } catch {
+      // errors are handled by the parent; just clear the spinner
+    } finally {
+      setUploading(false);
+    }
     e.target.value = '';
   };
 
@@ -327,19 +333,60 @@ export default function Documents() {
   };
 
   const handleFile = async (name: string, category: DocumentCategory, file: File) => {
-    if (!user?.organizationId) { toast.error('Usuário sem organização'); return; }
+    if (!user?.organizationId) {
+      toast.error('Usuário sem organização. Faça login novamente.');
+      return;
+    }
+
+    // Validate file size (max 10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. O limite é 10 MB.');
+      return;
+    }
+
     const doc = getOrCreateDoc(name, category);
     setUploadingId(doc.id);
+
     try {
       const path = `orgs/${user.organizationId}/documents/${Date.now()}_${file.name}`;
       const fRef = storageRef(storage, path);
-      await uploadBytes(fRef, file);
-      const fileUrl = await getDownloadURL(fRef);
+
+      // Race upload against a 30-second timeout so the spinner never hangs forever
+      const uploadWithTimeout = Promise.race([
+        (async () => {
+          await uploadBytes(fRef, file);
+          return getDownloadURL(fRef);
+        })(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Tempo limite de envio excedido (30s). Verifique sua conexão e as regras do Firebase Storage.')), 30_000)
+        ),
+      ]);
+
+      const fileUrl = await uploadWithTimeout;
       updateDocument(doc.id, { fileUrl, fileName: file.name });
       toast.success('Arquivo anexado com sucesso');
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao enviar arquivo');
+    } catch (err: any) {
+      console.error('[Documents] upload error:', err);
+
+      // Diagnose common Firebase Storage errors
+      const code: string = err?.code || '';
+      if (code === 'storage/unauthorized') {
+        toast.error('Sem permissão no Firebase Storage. Verifique as regras de segurança do Storage no Console Firebase.');
+      } else if (code === 'storage/canceled') {
+        toast.error('Envio cancelado.');
+      } else if (code === 'storage/unknown' || err?.message?.includes('CORS')) {
+        toast.error('Erro de CORS no Firebase Storage. Configure as regras de CORS para o bucket no Firebase Console.');
+      } else if (err?.message?.includes('Tempo limite')) {
+        toast.error(err.message);
+      } else {
+        toast.error(`Erro ao enviar arquivo: ${err?.message || 'erro desconhecido'}`);
+      }
+
+      // If the doc was just created for this upload and has no file, remove it to avoid ghost entries
+      const freshDoc = documents.find(d => d.id === doc.id);
+      if (freshDoc && !freshDoc.fileUrl) {
+        deleteDocument(doc.id);
+      }
     } finally {
       setUploadingId(null);
     }

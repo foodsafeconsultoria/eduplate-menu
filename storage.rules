@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helper: usuário autenticado ──────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ── Branding da organização (logos, assinaturas) ──────────────────────────
+    // Qualquer usuário autenticado pode ler; apenas usuários autenticados podem gravar
+    match /orgs/{orgId}/branding/{file} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Documentos obrigatórios da organização ────────────────────────────────
+    match /orgs/{orgId}/documents/{file} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Bloquear tudo o mais por padrão ───────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

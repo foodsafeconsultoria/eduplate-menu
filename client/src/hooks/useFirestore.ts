@@ -175,6 +175,7 @@ function normalizeInspections(raw: unknown): Inspection[] {
       guidelines: inspection.guidelines || '',
       photos: Array.isArray(inspection.photos) ? inspection.photos : [],
       overallScore: Number(inspection.overallScore) || 0,
+      aiReport: inspection.aiReport || undefined,
       createdAt: toDate(inspection.createdAt),
       createdBy: inspection.createdBy || 'Sistema',
     } as Inspection;
