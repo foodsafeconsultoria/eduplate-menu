@@ -64,13 +64,30 @@ aiRouter.post('/inspection-report', async (req: Request, res: Response) => {
 
   const prompt = `Você é um nutricionista especialista em PNAE (Programa Nacional de Alimentação Escolar) e boas práticas de manipulação de alimentos (Resolução RDC nº 216/2004 e Resolução CD/FNDE nº 06/2020).
 
-Com base nos dados da visita técnica abaixo, escreva um RELATÓRIO DE FISCALIZAÇÃO completo e profissional em português do Brasil. O relatório deve ter tom técnico e formal, mas claro. Siga esta estrutura:
+Com base nos dados da visita técnica abaixo, escreva um RELATÓRIO DE FISCALIZAÇÃO completo e profissional em português do Brasil.
 
-1. **IDENTIFICAÇÃO DA VISITA** — escola, nutricionista, diretor, data, score geral
-2. **OBJETIVO DA VISITA** — contextualize com base no objetivo informado
-3. **ANÁLISE POR SEÇÃO** — para cada seção do checklist, faça um comentário analítico (não apenas liste os números — interprete os resultados)
-4. **NÃO CONFORMIDADES CRÍTICAS** — liste e explique as não conformidades encontradas, com referência à legislação aplicável quando pertinente
-5. **CONCLUSÃO E RECOMENDAÇÕES** — avaliação geral e orientações prioritárias para melhoria
+REGRAS DE FORMATAÇÃO — MUITO IMPORTANTE:
+- NÃO use markdown (sem **, sem ##, sem -, sem *).
+- Separe as seções com o título da seção em LETRAS MAIÚSCULAS numa linha própria, seguido de dois-pontos. Exemplo: "1. IDENTIFICAÇÃO DA VISITA:"
+- Depois do título, escreva o conteúdo em parágrafos normais.
+- Use apenas texto plano. Sem listas com traço ou asterisco — use frases completas.
+- Cada seção deve ser separada por uma linha em branco.
+
+ESTRUTURA OBRIGATÓRIA:
+1. IDENTIFICAÇÃO DA VISITA:
+(escola, nutricionista, diretor, data, score geral — em parágrafos)
+
+2. OBJETIVO DA VISITA:
+(contextualize com base no objetivo informado)
+
+3. ANÁLISE POR SEÇÃO:
+(para cada seção do checklist, faça um comentário analítico — interprete os resultados, não apenas liste os números)
+
+4. NÃO CONFORMIDADES CRÍTICAS:
+(liste e explique as não conformidades encontradas em parágrafos, com referência à legislação quando pertinente; se não houver, diga "Nenhuma não conformidade crítica foi identificada nesta visita.")
+
+5. CONCLUSÃO E RECOMENDAÇÕES:
+(avaliação geral e orientações prioritárias para melhoria, em parágrafos)
 
 ---
 DADOS DA VISITA:
@@ -88,7 +105,7 @@ ${sectionSummaries.join('\n')}
 ${nonConformities.length > 0 ? `NÃO CONFORMIDADES IDENTIFICADAS:\n${nonConformities.join('\n')}` : 'Nenhuma não conformidade registrada com observação.'}
 
 ---
-Escreva o relatório completo agora. Use parágrafos, não bullets excessivos. Seja detalhado e profissional.`;
+Escreva o relatório completo agora. Use somente texto plano, SEM markdown, SEM asteriscos, SEM cerquilhas. Seja detalhado e profissional.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {

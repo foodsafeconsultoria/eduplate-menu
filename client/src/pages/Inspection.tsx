@@ -38,7 +38,8 @@ import PhotoUploader from '@/components/PhotoUploader';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { assetToDataUrl, brandColors as _bc } from '@/lib/pdfBranding';
+import { assetToDataUrl, brandColors as _bc, urlToDataUrl, addPdfFooter } from '@/lib/pdfBranding';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 type SectionKey = keyof typeof checklistSections;
 
@@ -634,6 +635,7 @@ export default function InspectionPage() {
   const { schools } = useSchools();
   const { inspections, setInspections } = useInspections();
   const { addTicket: addMaintenanceTicket } = useMaintenanceTickets();
+  const { settings: orgSettings } = useOrgSettings();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('form');
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
@@ -746,6 +748,138 @@ export default function InspectionPage() {
       setAiCopied(true);
       setTimeout(() => setAiCopied(false), 2000);
     });
+  };
+
+  /**
+   * Generates a professional ABNT-formatted PDF from the AI narrative report.
+   * Layout: A4, margins 30/20/38/25 mm (L/R/T/B), ABNT body text.
+   * Header uses the municipal brasão (orgSettings.logoUrl) + nutrition logo.
+   */
+  const handleDownloadAiReportPDF = async () => {
+    if (!aiReportText || !aiInspection) return;
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pw   = doc.internal.pageSize.getWidth();   // 210
+    const ph   = doc.internal.pageSize.getHeight();  // 297
+
+    // ── ABNT margins ────────────────────────────────────────────────────────
+    const marginLeft  = 30;
+    const marginRight = 20;
+    const marginBottom = 25;
+    const bodyWidth   = pw - marginLeft - marginRight;  // 160 mm
+
+    // ── Municipality subtitle ────────────────────────────────────────────────
+    const municipio = orgSettings.municipio || '';
+    const uf        = orgSettings.uf        || '';
+    const municipioLine = municipio
+      ? `SECRETARIA MUNICIPAL DE EDUCAÇÃO — ${municipio.toUpperCase()}${uf ? `/${uf.toUpperCase()}` : ''}`
+      : 'PNAE — Gestão de Nutrição Escolar';
+
+    // ── Header (uses pdfBranding helper) ────────────────────────────────────
+    const { addPdfHeader } = await import('@/lib/pdfBranding');
+    let y = await addPdfHeader(doc, {
+      title: 'RELATÓRIO DE FISCALIZAÇÃO',
+      subtitle: municipioLine,
+      municipality: `Escola: ${aiInspection.schoolName}  ·  ${new Date(aiInspection.inspectionDate).toLocaleDateString('pt-BR')}  ·  Conformidade: ${aiInspection.overallScore}%`,
+      orgLogoUrl: orgSettings.logoUrl,
+    });
+
+    // ── Body text ────────────────────────────────────────────────────────────
+    const lines = aiReportText.split('\n');
+    const isHeader = (line: string) => /^\d+\.\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]+:/.test(line.trim()) || /^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]{6,}:$/.test(line.trim());
+
+    const addPageIfNeeded = () => {
+      if (y > ph - marginBottom) {
+        addPdfFooter(doc, `PNAE — ${municipioLine}`);
+        doc.addPage();
+        y = 20;
+      }
+    };
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) { y += 3; continue; }
+
+      addPageIfNeeded();
+
+      if (isHeader(line)) {
+        // Section title: green bold
+        y += 3;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(22, 101, 52);
+        const wrapped = doc.splitTextToSize(line, bodyWidth);
+        doc.text(wrapped, marginLeft, y);
+        y += wrapped.length * 5 + 2;
+        // thin green underline
+        doc.setDrawColor(22, 101, 52);
+        doc.setLineWidth(0.3);
+        doc.line(marginLeft, y - 1, marginLeft + bodyWidth, y - 1);
+        y += 2;
+      } else {
+        // Body paragraph
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(31, 41, 55);
+        const wrapped = doc.splitTextToSize(line, bodyWidth);
+        for (const wl of wrapped) {
+          addPageIfNeeded();
+          doc.text(wl, marginLeft, y);
+          y += 5;
+        }
+        y += 1; // small gap after paragraph
+      }
+    }
+
+    // ── Signature block ─────────────────────────────────────────────────────
+    y += 10;
+    addPageIfNeeded();
+
+    const signerName = orgSettings.nutritionistName || aiInspection.nutritionist || '';
+    const signerCrn  = orgSettings.nutritionistCrn  || '';
+    const dateLabel  = `${municipio || 'Local'}, ${new Date(aiInspection.inspectionDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(dateLabel, marginLeft, y);
+    y += 14;
+
+    // Signature line
+    const sigX = marginLeft + (bodyWidth - 80) / 2;
+    doc.setDrawColor(80, 80, 80);
+    doc.setLineWidth(0.4);
+    doc.line(sigX, y, sigX + 80, y);
+    y += 4;
+
+    // Try to render the signature image if available
+    if (orgSettings.signatureUrl) {
+      try {
+        const sigData = await urlToDataUrl(orgSettings.signatureUrl);
+        doc.addImage(sigData, 'PNG', sigX + 10, y - 20, 60, 16);
+      } catch (_) { /* no sig image */ }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(31, 41, 55);
+    doc.text(signerName || 'Nutricionista Responsável Técnico', sigX + 40, y, { align: 'center' });
+    y += 4;
+
+    if (signerCrn) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`CRN: ${signerCrn}`, sigX + 40, y, { align: 'center' });
+    }
+
+    // ── Footer on last page ─────────────────────────────────────────────────
+    addPdfFooter(doc, `PNAE — ${municipioLine}`);
+
+    // ── Save ────────────────────────────────────────────────────────────────
+    const schoolSlug = aiInspection.schoolName.replace(/\s+/g, '_').substring(0, 30);
+    const dateSlug   = new Date(aiInspection.inspectionDate).toISOString().substring(0, 10);
+    doc.save(`Relatorio_IA_${schoolSlug}_${dateSlug}.pdf`);
   };
 
   // Filtros do histórico
@@ -1652,7 +1786,7 @@ export default function InspectionPage() {
           </div>
 
           {aiReportText && !aiLoading && (
-            <div className="flex gap-3 justify-end border-t pt-4 mt-2 shrink-0">
+            <div className="flex flex-wrap gap-2 justify-end border-t pt-4 mt-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -1668,6 +1802,13 @@ export default function InspectionPage() {
                 onClick={() => { if (aiInspection) handleGenerateAiReport(aiInspection, true); }}
               >
                 <Sparkles className="h-4 w-4" /> Regenerar
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2 bg-green-700 hover:bg-green-800 text-white"
+                onClick={handleDownloadAiReportPDF}
+              >
+                <Download className="h-4 w-4" /> Baixar PDF
               </Button>
             </div>
           )}

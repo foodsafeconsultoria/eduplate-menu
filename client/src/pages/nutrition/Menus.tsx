@@ -17,13 +17,13 @@ import { DIET_LABEL_MAP } from '@/data/dietLabels';
 import type { Food, Menu, MenuInsumo, MenuSlot, NutritionNutrientSet, Recipe } from '@/types/nutrition';
 import {
   AlertTriangle, BookOpen, ChevronDown, ClipboardList, ClipboardPaste, Copy,
-  LayoutGrid, LayoutList, Leaf, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
+  LayoutGrid, LayoutList, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getFoodSeasonality, getSuggestionsForMonth, seasonLabels } from '@/data/seasonality';
+import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -1014,14 +1014,6 @@ export default function Menus() {
     return list;
   }, [menus, gallerySearch, galleryCategory, galleryMonth, gallerySort, schoolMap]);
 
-  // ── Season suggestions ────────────────────────────────────────────────────────
-
-  const seasonSuggestions = getSuggestionsForMonth(currentMonth);
-  const monthNames = [
-    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
-  ];
-
   // ── JSX ───────────────────────────────────────────────────────────────────────
 
   return (
@@ -1602,32 +1594,6 @@ export default function Menus() {
             </DialogContent>
           </Dialog>
         </div>
-
-        {/* ── Seasonal suggestions banner ────────────────────────────────────── */}
-        {seasonSuggestions.length > 0 && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Leaf className="h-4 w-4 text-green-700" />
-              <span className="text-sm font-semibold text-green-800">
-                Sugestões de Safra para {monthNames[currentMonth]}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {seasonSuggestions.map((s) => {
-                const info = seasonLabels[s.season];
-                return (
-                  <span
-                    key={s.name}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${info.color}`}
-                    title={`Ingredientes: ${s.ingredients.join(', ')}`}
-                  >
-                    {info.emoji} {s.name}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* ── Gallery filter bar ───────────────────────────────────────────────── */}
         {!loading && menus.length > 0 && (
