@@ -55,6 +55,100 @@ function drawLeafCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, siz
   ctx.restore();
 }
 
+/** Draws the official-style PNAE logo on a canvas and returns a PNG data URL. */
+function buildPnaeLogoDataUrl(px: number): string {
+  const h = Math.round(px * 1.55);
+  const canvas = document.createElement('canvas');
+  canvas.width = px; canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  const cx = px / 2;
+  const NAVY   = '#1B2A4A';
+  const AMBER  = '#C97010';
+  const YELLOW = '#F5CC3A';
+
+  // ── Diamond ──────────────────────────────────────────────────────────────────
+  const hs = px * 0.41;
+  const dy = px * 0.42;
+  ctx.beginPath();
+  ctx.moveTo(cx,        dy - hs);
+  ctx.lineTo(cx + hs,   dy);
+  ctx.lineTo(cx,        dy + hs);
+  ctx.lineTo(cx - hs,   dy);
+  ctx.closePath();
+  ctx.fillStyle = AMBER;
+  ctx.fill();
+
+  // Inner diamond highlight (lighter top half)
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(cx, dy - hs);
+  ctx.lineTo(cx + hs, dy);
+  ctx.lineTo(cx, dy);
+  ctx.lineTo(cx - hs, dy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // ── Plate (oval, center) ──────────────────────────────────────────────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, dy, px * 0.16, px * 0.115, 0, 0, Math.PI * 2);
+  ctx.fillStyle = YELLOW;
+  ctx.fill();
+  // plate rim
+  ctx.strokeStyle = NAVY;
+  ctx.lineWidth = px * 0.018;
+  ctx.stroke();
+  ctx.restore();
+
+  // ── Fork (left) ──────────────────────────────────────────────────────────────
+  ctx.fillStyle = NAVY;
+  const forkX = cx - px * 0.215;
+  const tineTop = dy - hs * 0.72;
+  const handleBot = dy + hs * 0.58;
+  // 3 tines
+  for (let i = 0; i < 3; i++) {
+    const tx = forkX + (i - 1) * px * 0.033;
+    ctx.fillRect(tx - px * 0.013, tineTop, px * 0.026, hs * 0.42);
+  }
+  // connecting bar between tines and handle
+  ctx.fillRect(forkX - px * 0.046 + px * 0.013, tineTop + hs * 0.40, px * 0.066, px * 0.03);
+  // handle
+  ctx.fillRect(forkX - px * 0.018, tineTop + hs * 0.43, px * 0.036, handleBot - (tineTop + hs * 0.43));
+
+  // ── Knife (right) ────────────────────────────────────────────────────────────
+  const knX = cx + px * 0.215;
+  // blade
+  ctx.beginPath();
+  ctx.moveTo(knX - px * 0.025, tineTop);
+  ctx.lineTo(knX + px * 0.025, tineTop + hs * 0.28);
+  ctx.lineTo(knX + px * 0.018, tineTop + hs * 0.42);
+  ctx.lineTo(knX - px * 0.018, tineTop + hs * 0.42);
+  ctx.closePath();
+  ctx.fillStyle = NAVY;
+  ctx.fill();
+  // handle
+  ctx.fillRect(knX - px * 0.018, tineTop + hs * 0.43, px * 0.036, handleBot - (tineTop + hs * 0.43));
+
+  // ── "pnae" text ───────────────────────────────────────────────────────────────
+  ctx.fillStyle = NAVY;
+  ctx.font = `900 ${Math.round(px * 0.245)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('pnae', cx, dy + hs + px * 0.235);
+
+  // ── Subtitle lines ────────────────────────────────────────────────────────────
+  ctx.fillStyle = AMBER;
+  ctx.font = `${Math.round(px * 0.078)}px Arial`;
+  ctx.fillText('Programa Nacional de', cx, dy + hs + px * 0.40);
+  ctx.fillText('—Alimentação Escolar—', cx, dy + hs + px * 0.52);
+
+  return canvas.toDataURL('image/png');
+}
+
 function buildWatermarkDataUrl(pdfWmm: number, pdfHmm: number): string {
   const scale = 3.7795;
   const cw = Math.round(pdfWmm * scale), ch = Math.round(pdfHmm * scale);
@@ -248,19 +342,12 @@ async function generateCertificatePDF(
   // ── Área de assinatura ──
   const sigY = ph - 34;
 
-  // Selo (esquerda)
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(...green);
-  doc.setLineWidth(0.8);
-  doc.circle(pw * 0.14, sigY - 2, 15, 'FD');
-  doc.setLineWidth(0.3);
-  doc.circle(pw * 0.14, sigY - 2, 13, 'D');
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...green);
-  doc.text('BOAS', pw * 0.14, sigY - 7, { align: 'center' });
-  doc.text('PRÁTICAS', pw * 0.14, sigY - 2, { align: 'center' });
-  doc.text('✓ PNAE', pw * 0.14, sigY + 3, { align: 'center' });
+  // Selo PNAE (esquerda) — logo oficial estilo FNDE
+  const pnaeLogo = buildPnaeLogoDataUrl(120);
+  // Logo height is 1.55× width; at 32mm wide → ~49.6mm tall, but we only show top portion
+  const sealW = 32;
+  const sealH = sealW * 1.55;
+  try { doc.addImage(pnaeLogo, 'PNG', pw * 0.14 - sealW / 2, sigY - 18, sealW, sealH); } catch (_) {}
 
   // Linha de pontuação (direita)
   const scoreBoxX = pw * 0.72;

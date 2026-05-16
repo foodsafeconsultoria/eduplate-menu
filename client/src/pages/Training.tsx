@@ -184,220 +184,267 @@ async function generateCertificatePDF(
   training: Training,
   options: CertOptions = {},
 ) {
-  const { signatureDataUrl, instructorSignatureDataUrl, signer, orgLogoUrl } = options;
+  const { signatureDataUrl, signer, orgLogoUrl } = options;
+
   const doc = new jsPDF('landscape', 'mm', 'a4');
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
+  const pw = doc.internal.pageSize.getWidth();   // 297
+  const ph = doc.internal.pageSize.getHeight();  // 210
 
-  // ── Marca d'água (canvas) ──
-  const wmUrl = buildWatermarkDataUrl(pw, ph);
-  doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
-
-  // ── Fundo levemente off-white ──
-  doc.setFillColor(252, 251, 248);
-  // (não preenchemos pois sobrepõe a marca d'água — deixamos o canvas renderizado)
-
-  // ── Borda dupla verde ──
-  doc.setDrawColor(22, 120, 60);
-  doc.setLineWidth(2.5);
-  doc.rect(7, 7, pw - 14, ph - 14);
-  doc.setLineWidth(0.6);
-  doc.setDrawColor(34, 197, 94);   // verde mais claro para borda interna
-  doc.rect(11, 11, pw - 22, ph - 22);
-
-  // Cantos decorativos
-  [[7, 7], [pw - 7, 7], [7, ph - 7], [pw - 7, ph - 7]].forEach(([cx, cy]) => {
-    doc.setFillColor(22, 120, 60);
-    doc.rect(cx - 3, cy - 3, 6, 6, 'F');
-  });
-
-  // ── Faixa cabeçalho — verde mais vivo ──
-  doc.setFillColor(34, 139, 74);   // #228B4A — mais claro que o antigo (22,101,52)
-  doc.rect(11, 11, pw - 22, 26, 'F');
-
-  // Logos — fundo branco arredondado para visibilidade sobre o verde
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(13, 12, 24, 24, 5, 5, 'F');   // fundo brasão
-  doc.roundedRect(pw - 37, 12, 24, 24, 5, 5, 'F'); // fundo nutricao
-
-  // ── Logos — left: org logo (Firebase); right: default nutricao logo ──
-  const loadImgUrl = (url: string) =>
-    fetch(url).then(r => r.blob()).then(b => new Promise<string>((res, rej) => {
-      const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b);
-    }));
-
-  // Convert HTTP URLs → data URLs (jsPDF cannot fetch HTTPS directly)
-  const toDataUrl = async (url?: string) => {
-    if (!url) return undefined;
+  // ── Image loader ────────────────────────────────────────────────────────────
+  const toDataUrl = async (url?: string): Promise<string | null> => {
+    if (!url) return null;
     if (url.startsWith('data:')) return url;
-    return loadImgUrl(url).catch(() => undefined);
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return null;
+      const b = await r.blob();
+      return await new Promise<string>((res, rej) => {
+        const fr = new FileReader();
+        fr.onloadend = () => res(fr.result as string);
+        fr.onerror = rej;
+        fr.readAsDataURL(b);
+      });
+    } catch { return null; }
   };
 
-  const resolvedSignature       = await toDataUrl(signatureDataUrl);
-  const resolvedInstructorSig   = await toDataUrl(instructorSignatureDataUrl);
+  const [orgLogo, nutricaoLogo, sigImg] = await Promise.all([
+    toDataUrl(orgLogoUrl),
+    toDataUrl('/logo-nutricao.png'),
+    toDataUrl(signatureDataUrl),
+  ]);
 
-  try {
-    if (orgLogoUrl) {
-      const logoData = await loadImgUrl(orgLogoUrl).catch(() => null);
-      if (logoData) doc.addImage(logoData, 'PNG', 15, 14, 20, 20);
-    }
-  } catch (_) {}
-  try {
-    const nutricaoData = await loadImgUrl('/logo-nutricao.png').catch(() => null);
-    if (nutricaoData) doc.addImage(nutricaoData, 'PNG', pw - 35, 14, 20, 20);
-  } catch (_) {}
+  // ── Palette ──────────────────────────────────────────────────────────────────
+  const G_DARK  : [number,number,number] = [15,  70, 40];
+  const G_MED   : [number,number,number] = [22, 101, 52];
+  const G_TINT  : [number,number,number] = [220, 245, 230];
+  const GOLD    : [number,number,number] = [180, 140, 10];
+  const GRAY    : [number,number,number] = [100, 100, 100];
+  const DARK    : [number,number,number] = [40,  40,  40];
+  const WHITE   : [number,number,number] = [255, 255, 255];
+  const addImg = (data: string | null, fmt: string, x: number, y: number, w: number, h: number) => {
+    if (!data) return;
+    try { doc.addImage(data, fmt, x, y, w, h); } catch (_) {}
+  };
 
-  doc.setTextColor(255, 255, 255);
+  // ── Background ───────────────────────────────────────────────────────────────
+  doc.setFillColor(252, 252, 250);
+  doc.rect(0, 0, pw, ph, 'F');
+
+  // ── LEFT green sidebar ───────────────────────────────────────────────────────
+  const SIDE = 54;
+  doc.setFillColor(...G_DARK);
+  doc.rect(0, 0, SIDE, ph, 'F');
+  // lighter inner strip
+  doc.setFillColor(22, 90, 50);
+  doc.rect(SIDE - 7, 0, 7, ph, 'F');
+
+  // ── RIGHT gold accent bar ────────────────────────────────────────────────────
+  doc.setFillColor(...GOLD);
+  doc.rect(pw - 4, 0, 4, ph, 'F');
+
+  // ── TOP + BOTTOM gold lines (content area) ───────────────────────────────────
+  doc.setFillColor(...GOLD);
+  doc.rect(SIDE, 0, pw - SIDE - 4, 2, 'F');
+  doc.rect(SIDE, ph - 2, pw - SIDE - 4, 2, 'F');
+
+  // ── BRASAO in sidebar (top, white circle bg) ──────────────────────────────────
+  const LOGO_R = 19;
+  const LOGO_CX = SIDE / 2;
+  const LOGO_CY = 22;
+  doc.setFillColor(...WHITE);
+  doc.circle(LOGO_CX, LOGO_CY, LOGO_R + 2, 'F');
+  addImg(orgLogo, 'PNG', LOGO_CX - LOGO_R, LOGO_CY - LOGO_R, LOGO_R * 2, LOGO_R * 2);
+
+  // ── SIGNATURE IMAGE in sidebar (middle) ───────────────────────────────────────
+  if (sigImg) {
+    const SW = SIDE - 10;
+    const SH = 20;
+    const SX = 5;
+    const SY = ph / 2 - SH / 2 + 10;
+    doc.setFillColor(22, 90, 50);
+    doc.roundedRect(SX - 1, SY - 3, SW + 2, SH + 6, 3, 3, 'F');
+    addImg(sigImg, 'PNG', SX, SY, SW, SH);
+    // "Assinatura" label
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 230, 180);
+    doc.text('ASSINATURA', SIDE / 2, SY + SH + 5, { align: 'center' });
+  }
+
+  // ── NUTRICAO LOGO in sidebar (bottom) ─────────────────────────────────────────
+  const NL = 24;
+  addImg(nutricaoLogo, 'PNG', SIDE / 2 - NL / 2, ph - NL - 6, NL, NL);
+
+  // ── PNAE vertical label in sidebar ───────────────────────────────────────────
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 220, 190);
+  // Use a simple label at bottom of sidebar area
+  doc.text('PNAE', SIDE / 2, ph - NL - 14, { align: 'center' });
+
+  // ── MAIN CONTENT ─────────────────────────────────────────────────────────────
+  const CX = SIDE + 12;   // content left
+  const CW = pw - SIDE - 4 - CX - 8;  // content width
+
+  // Subtitle
+  let Y = 18;
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(
-    'DEPARTAMENTO DE ALIMENTAÇÃO ESCOLAR  ·  PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR',
-    pw / 2, 20,
-    { align: 'center' }
-  );
-  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  doc.setCharSpace(1.5);
+  doc.text('CERTIFICADO DE PARTICIPAÇÃO E CONCLUSÃO', CX, Y);
+  doc.setCharSpace(0);
+
+  // Title
+  Y += 13;
+  doc.setFontSize(34);
   doc.setFont('helvetica', 'bold');
-  doc.text('PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR – PNAE', pw / 2, 28, { align: 'center' });
+  doc.setTextColor(...G_MED);
+  doc.text('CERTIFICADO', CX, Y);
 
-  // ── Título principal ──
-  doc.setTextColor(34, 101, 52);
-  doc.setFontSize(28);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CERTIFICADO', pw / 2, 52, { align: 'center' });
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text('DE PARTICIPAÇÃO E CONCLUSÃO', pw / 2, 62, { align: 'center' });
+  // Gold underline
+  Y += 3;
+  doc.setFillColor(...GOLD);
+  doc.rect(CX, Y, 88, 1.5, 'F');
 
-  // Linha divisória
-  doc.setDrawColor(22, 163, 74);
-  doc.setLineWidth(0.5);
-  doc.line(40, 63, pw - 40, 63);
+  // "Certificamos que"
+  Y += 13;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(...GRAY);
+  doc.text('Certificamos que', CX, Y);
 
-  // ── Corpo ──
-  doc.setTextColor(40, 40, 40);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Certificamos que', pw / 2, 77, { align: 'center' });
-
-  // Nome
+  // Name
+  Y += 10;
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(34, 101, 52);
-  doc.text(attendee.name.toUpperCase(), pw / 2, 91, { align: 'center' });
+  doc.setTextColor(...DARK);
+  const nameLines = doc.splitTextToSize(attendee.name.toUpperCase(), CW);
+  doc.text(nameLines, CX, Y);
+  Y += nameLines.length * 9;
 
-  // CPF
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
-  doc.text(`CPF: ${attendee.cpf}`, pw / 2, 99, { align: 'center' });
-
-  // Linha sob o nome
-  doc.setDrawColor(200, 220, 200);
+  // CPF pill
+  doc.setFillColor(...G_TINT);
+  doc.setDrawColor(...G_MED);
   doc.setLineWidth(0.3);
-  doc.line(pw * 0.25, 102, pw * 0.75, 102);
-
-  // Participação
-  doc.setFontSize(11);
-  doc.setTextColor(40, 40, 40);
-  doc.text('participou e concluiu com aproveitamento o treinamento:', pw / 2, 112, { align: 'center' });
-
-  // Título do treinamento
-  const trainingLines = doc.splitTextToSize(training.title, pw - 100);
-  doc.setFontSize(14);
+  doc.roundedRect(CX, Y - 1.5, 54, 7.5, 2, 2, 'FD');
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(34, 101, 52);
-  doc.text(trainingLines, pw / 2, 124, { align: 'center' });
+  doc.setTextColor(...G_MED);
+  doc.text('CPF:', CX + 3, Y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...DARK);
+  doc.text(attendee.cpf, CX + 13, Y + 4);
+  Y += 13;
 
-  // Detalhes
-  const detailsY = 142 + (trainingLines.length - 1) * 7;
+  // Participation text
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(...GRAY);
+  doc.text('participou e concluiu com aproveitamento o treinamento:', CX, Y);
+
+  // Training title
+  Y += 9;
+  const trainingLines = doc.splitTextToSize(training.title, CW);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...G_MED);
+  doc.text(trainingLines, CX, Y);
+  Y += trainingLines.length * 7 + 7;
+
+  // ── Info chips ────────────────────────────────────────────────────────────────
   const dateFormatted = format(new Date(training.date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  doc.text(`Data: ${dateFormatted}`, pw * 0.25, detailsY, { align: 'center' });
-  doc.text(`Carga horária: ${training.duration}h`, pw * 0.5, detailsY, { align: 'center' });
-  const locLines = doc.splitTextToSize(`Local: ${training.location}`, 70);
-  doc.text(locLines, pw * 0.75, detailsY, { align: 'center' });
+  const chips: [string, string][] = [
+    ['DATA', dateFormatted],
+    ['CARGA HORÁRIA', `${training.duration}h`],
+    ['LOCAL', training.location],
+  ];
+  let chipX = CX;
+  for (const [label, value] of chips) {
+    const lw = doc.getTextWidth(label + ': ');
+    const vw = doc.getTextWidth(value);
+    const chipW = Math.min(lw + vw + 8, 90);
+    doc.setFillColor(245, 250, 247);
+    doc.setDrawColor(180, 215, 190);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(chipX, Y - 5, chipW, 8, 2, 2, 'FD');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...G_MED);
+    doc.text(label + ': ', chipX + 3, Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+    doc.text(value, chipX + 3 + lw, Y);
+    chipX += chipW + 5;
+    if (chipX > CX + CW - 50) { chipX = CX; Y += 11; }
+  }
+  Y += 12;
 
-  // ── Linha divisória acima das assinaturas ──
-  const sigLineY = ph - 48;
-  doc.setDrawColor(22, 163, 74);
-  doc.setLineWidth(0.4);
-  doc.line(25, sigLineY, pw - 25, sigLineY);
+  // ── Divider ───────────────────────────────────────────────────────────────────
+  doc.setDrawColor(210, 210, 210);
+  doc.setLineWidth(0.3);
+  doc.line(CX, Y, pw - 14, Y);
+  Y += 7;
 
-  // ── Assinaturas ──
-  const sigY = ph - 32;
-
+  // ── Signature blocks ──────────────────────────────────────────────────────────
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
   const signerCity = signer?.city || '';
-  const instructorName = training.instructor || '';
+  const instrName  = training.instructor || '';
+  const numBlocks  = signerName ? 3 : 2;
+  const blkW = CW / numBlocks;
+  const blk = Array.from({ length: numBlocks }, (_, i) => CX + blkW * i + blkW / 2);
+  const lineY = Y + 10;
 
-  // ── Bloco esquerdo: Data de emissão ──
-  doc.setFontSize(9);
+  // Date (left)
+  const emDate = `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`;
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text(
-    `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
-    pw * 0.18, sigY - 14, { align: 'center' }
-  );
+  doc.setTextColor(...GRAY);
+  doc.text(emDate, blk[0], lineY - 4, { align: 'center' });
 
-  // ── Bloco central: Instrutor ──
-  const instrX = signerName ? pw * 0.42 : pw * 0.5;
-  const instrSigUrl = resolvedInstructorSig || resolvedSignature; // fallback: usa a única assinatura se só houver uma
-  if (instrSigUrl && !resolvedSignature) {
-    // só instrutor tem assinatura
-    try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
-  } else if (instrSigUrl && resolvedInstructorSig) {
-    // assinatura específica do instrutor
-    try { doc.addImage(instrSigUrl, 'PNG', instrX - 25, sigY - 20, 50, 15, '', 'NONE'); } catch (_) {}
-  }
+  // Instructor (center)
+  doc.setDrawColor(...GRAY);
   doc.setLineWidth(0.4);
-  doc.setDrawColor(100, 100, 100);
-  doc.line(instrX - 28, sigY - 4, instrX + 28, sigY - 4);
+  doc.line(blk[1] - 28, lineY, blk[1] + 28, lineY);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(34, 101, 52);
-  doc.text(instructorName, instrX, sigY + 1, { align: 'center' });
+  doc.setTextColor(...G_MED);
+  doc.text(instrName, blk[1], lineY + 5, { align: 'center' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text('Instrutor(a) Responsável', instrX, sigY + 7, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY);
+  doc.text('Instrutor(a) Responsável', blk[1], lineY + 10, { align: 'center' });
 
-  // ── Bloco direito: Nutricionista RT (se preenchida) ──
-  if (signerName) {
-    const rtX = pw * 0.75;
-    if (resolvedSignature) {
-      try { doc.addImage(resolvedSignature, 'PNG', rtX - 28, sigY - 20, 56, 15, '', 'NONE'); } catch (_) {}
-    }
+  // RT Nutritionist (right)
+  if (signerName && blk[2] !== undefined) {
+    doc.setDrawColor(...GRAY);
     doc.setLineWidth(0.4);
-    doc.setDrawColor(100, 100, 100);
-    doc.line(rtX - 30, sigY - 4, rtX + 30, sigY - 4);
+    doc.line(blk[2] - 30, lineY, blk[2] + 30, lineY);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(34, 101, 52);
-    doc.text(signerName, rtX, sigY + 1, { align: 'center' });
+    doc.setTextColor(...G_MED);
+    doc.text(signerName, blk[2], lineY + 5, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...GRAY);
     doc.text(
       signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
-      rtX, sigY + 7, { align: 'center' }
+      blk[2], lineY + 10, { align: 'center' }
     );
   }
 
-  // ── Rodapé ──
-  doc.setFontSize(7);
-  doc.setTextColor(140, 140, 140);
+  // ── Footer ────────────────────────────────────────────────────────────────────
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 160);
   doc.text(
-    `Certificado gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} — ID: ${attendee.id} — Res. FNDE/CD nº 06/2020 · Lei 11.947/2009`,
-    pw / 2, ph - 13, { align: 'center' }
+    `Emitido em ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ID: ${attendee.id}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009`,
+    CX, ph - 7,
   );
 
-  doc.save(`Certificado_${attendee.name.replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, '')}_${training.date}.pdf`);
+  doc.save(`Certificado_${attendee.name.replace(/\s+/g, '_').normalize('NFD').replace(/[̀-ͯ]/g, '')}_${training.date}.pdf`);
 }
-
 // ─── QR Code Display (Telão) ──────────────────────────────────────────────────
 
 function QRDisplay({
