@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref as storageRef, getBytes } from 'firebase/storage';
 import {
   collection, doc, setDoc, onSnapshot, query, where, getDocs, deleteDoc,
 } from 'firebase/firestore';
@@ -190,29 +191,45 @@ async function generateCertificatePDF(
   const pw = doc.internal.pageSize.getWidth();   // 297
   const ph = doc.internal.pageSize.getHeight();  // 210
 
-  // ── Image loader: URL → data URL (HTMLImageElement + canvas) ─────────────────
-  // Mais confiável com URLs do Firebase Storage do que fetch+CORS
+  // ── Image loader: URL → data URL ─────────────────────────────────────────────
+  // Para URLs do Firebase Storage usa getBytes() (sem CORS); para outras usa fetch
   const toDataUrl = async (url?: string | null): Promise<string | null> => {
     if (!url) return null;
     if (url.startsWith('data:')) return url;
-    return new Promise<string | null>((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
+
+    // Extrai o path do Storage a partir da download URL do Firebase
+    const extractStoragePath = (u: string): string | null => {
+      try {
+        const match = u.match(/\/o\/([^?]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+      } catch { return null; }
+    };
+
+    const blobToDataUrl = (blob: Blob): Promise<string> =>
+      new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onloadend = () => res(fr.result as string);
+        fr.onerror = rej;
+        fr.readAsDataURL(blob);
+      });
+
+    // Tenta via Firebase SDK (contorna CORS)
+    if (url.includes('firebasestorage.googleapis.com')) {
+      const path = extractStoragePath(url);
+      if (path) {
         try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || 400;
-          canvas.height = img.naturalHeight || 400;
-          const ctx = canvas.getContext('2d')!;
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        } catch {
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
+          const bytes = await getBytes(storageRef(storage, path));
+          return await blobToDataUrl(new Blob([bytes]));
+        } catch { /* cai no fetch abaixo */ }
+      }
+    }
+
+    // Fallback: fetch normal (para imagens locais ou outros CDNs)
+    try {
+      const r = await fetch(url, { mode: 'cors' });
+      if (!r.ok) return null;
+      return await blobToDataUrl(await r.blob());
+    } catch { return null; }
   };
 
   // Detecta formato real a partir do data URL (evita falha silenciosa no jsPDF)
@@ -656,26 +673,25 @@ export default function TrainingPage() {
   }, [orgSettings, orgId]);
 
   // ── Pré-cachear imagens do Firebase Storage no localStorage ──────────────────
-  // Garante que uploads já existentes (antes desta versão) também sejam usados no PDF
+  // Usa getBytes() do SDK para evitar CORS; popula o cache para uso offline e PDF
   useEffect(() => {
-    const cacheImage = (url: string | undefined, lsKey: string) => {
+    const cacheViaSDK = async (url: string | undefined, lsKey: string) => {
       if (!url || url.startsWith('data:') || localStorage.getItem(lsKey)) return;
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || 400;
-          canvas.height = img.naturalHeight || 400;
-          const ctx = canvas.getContext('2d')!;
-          ctx.drawImage(img, 0, 0);
-          localStorage.setItem(lsKey, canvas.toDataURL('image/png'));
-        } catch (_) {}
-      };
-      img.src = url;
+      try {
+        const match = url.match(/\/o\/([^?]+)/);
+        if (!match) return;
+        const path = decodeURIComponent(match[1]);
+        const bytes = await getBytes(storageRef(storage, path));
+        const blob = new Blob([bytes]);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) localStorage.setItem(lsKey, reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (_) {}
     };
-    cacheImage(orgSettings.logoUrl, `pnae_logo_${orgId}`);
-    cacheImage(orgSettings.signatureUrl, 'pnae_signature');
+    cacheViaSDK(orgSettings.logoUrl, `pnae_logo_${orgId}`);
+    cacheViaSDK(orgSettings.signatureUrl, 'pnae_signature');
   }, [orgSettings.logoUrl, orgSettings.signatureUrl, orgId]);
 
   // Modal de adição manual de participante
