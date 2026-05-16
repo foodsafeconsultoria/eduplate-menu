@@ -169,6 +169,9 @@ function DocRow({ name, category, doc, onFileChange, onDateChange, onDelete }: R
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset imediatamente via ref — garante que qualquer upload futuro funcione
+    // independente de re-renders ou reciclagem do SyntheticEvent pelo React
+    if (fileRef.current) fileRef.current.value = '';
     setUploading(true);
     try {
       await onFileChange(file);
@@ -177,7 +180,6 @@ function DocRow({ name, category, doc, onFileChange, onDateChange, onDelete }: R
     } finally {
       setUploading(false);
     }
-    e.target.value = '';
   };
 
   const handleDateBlur = () => {
