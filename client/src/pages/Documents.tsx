@@ -333,10 +333,8 @@ export default function Documents() {
   };
 
   const handleFile = async (name: string, category: DocumentCategory, file: File) => {
-    if (!user?.organizationId) {
-      toast.error('Usuário sem organização. Faça login novamente.');
-      return;
-    }
+    // Use organizationId with fallback — same pattern as other hooks
+    const orgId = user?.organizationId || 'pnae-default-org';
 
     // Validate file size (max 10 MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -348,7 +346,7 @@ export default function Documents() {
     setUploadingId(doc.id);
 
     try {
-      const path = `orgs/${user.organizationId}/documents/${Date.now()}_${file.name}`;
+      const path = `orgs/${orgId}/documents/${Date.now()}_${file.name}`;
       const fRef = storageRef(storage, path);
 
       // Race upload against a 30-second timeout so the spinner never hangs forever
