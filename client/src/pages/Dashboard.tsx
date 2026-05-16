@@ -215,18 +215,18 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Agricultura familiar</p>
             <div className="flex items-baseline gap-2 mb-3">
-              <span className={`text-3xl font-semibold ${familyFarmShare >= 30 ? 'text-green-600' : 'text-amber-600'}`}>
+              <span className={`text-3xl font-semibold ${familyFarmShare >= 45 ? 'text-green-600' : 'text-amber-600'}`}>
                 {familyFarmShare.toFixed(0)}%
               </span>
               <span className="text-sm text-gray-400">média</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1 mb-2.5">
               <div
-                className={`h-1 rounded-full ${familyFarmShare >= 30 ? 'bg-green-500' : 'bg-amber-400'}`}
+                className={`h-1 rounded-full ${familyFarmShare >= 45 ? 'bg-green-500' : 'bg-amber-400'}`}
                 style={{ width: `${Math.min(familyFarmShare, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">Meta mínima: 30% (Lei 11.947/2009)</p>
+            <p className="text-xs text-gray-400">Meta mínima: 45% (Resolução FNDE nº 06/2020 — vigência 2026)</p>
           </div>
 
           {/* Conformidade das visitas */}
