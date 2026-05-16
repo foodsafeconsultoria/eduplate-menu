@@ -1001,14 +1001,16 @@ export default function Menus() {
         const tB = b.updatedAt ? new Date(typeof (b.updatedAt as any).toDate === 'function' ? (b.updatedAt as any).toDate() : b.updatedAt).getTime() : 0;
         return tB - tA;
       }
-      // 'newest' / 'oldest' = sort by referenceMonth (chronological)
-      const rA = parseReferenceDate(a.referenceMonth);
-      const rB = parseReferenceDate(b.referenceMonth);
-      if (rA !== rB) return gallerySort === 'newest' ? rB - rA : rA - rB;
-      // tie-break: updatedAt
-      const tA = a.updatedAt ? new Date(typeof (a.updatedAt as any).toDate === 'function' ? (a.updatedAt as any).toDate() : a.updatedAt).getTime() : 0;
-      const tB = b.updatedAt ? new Date(typeof (b.updatedAt as any).toDate === 'function' ? (b.updatedAt as any).toDate() : b.updatedAt).getTime() : 0;
-      return gallerySort === 'newest' ? tB - tA : tA - tB;
+      // 'newest' / 'oldest' = sort by createdAt (when the menu was actually created)
+      const toMs = (v: any): number => {
+        if (!v) return 0;
+        if (typeof v?.toDate === 'function') return v.toDate().getTime();
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      };
+      const cA = toMs(a.createdAt) || toMs(a.updatedAt);
+      const cB = toMs(b.createdAt) || toMs(b.updatedAt);
+      return gallerySort === 'newest' ? cB - cA : cA - cB;
     });
 
     return list;
@@ -1665,8 +1667,8 @@ export default function Menus() {
                 onChange={(e) => setGallerySort(e.target.value as typeof gallerySort)}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="newest">Mais recente (mês ref.)</option>
-                <option value="oldest">Mais antigo (mês ref.)</option>
+                <option value="newest">Mais recente (criação)</option>
+                <option value="oldest">Mais antigo (criação)</option>
                 <option value="edited">Última edição</option>
                 <option value="alpha">A → Z</option>
               </select>
