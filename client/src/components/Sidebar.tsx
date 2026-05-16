@@ -8,7 +8,6 @@ import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import BrandLogo from '@/components/BrandLogo';
 import {
   Apple,
-  BarChart3,
   Bell,
   BookOpen,
   Calendar,
@@ -70,7 +69,6 @@ const fiscalizacaoChildren: NavItem[] = [
   { label: 'Inspeções',      href: '/inspection',     icon: <ClipboardCheck className="h-4 w-4" /> },
   { label: 'Gestão de EPIs', href: '/ppes',           icon: <Shield className="h-4 w-4" /> },
   { label: 'Cronograma',     href: '/schedule',       icon: <Calendar className="h-4 w-4" /> },
-  { label: 'Relatórios',     href: '/reports',        icon: <BarChart3 className="h-4 w-4" /> },
   { label: 'Escolas',        href: '/schools',        icon: <School className="h-4 w-4" /> },
   { label: 'Resto/Ingesta',  href: '/resto-ingesta',  icon: <Utensils className="h-4 w-4" /> },
   { label: 'Aceitabilidade', href: '/acceptability',  icon: <CheckCircle className="h-4 w-4" /> },
@@ -88,7 +86,6 @@ export default function Sidebar() {
     location === '/inspection' ||
     location === '/ppes' ||
     location === '/schedule' ||
-    location === '/reports' ||
     location === '/schools' ||
     location === '/resto-ingesta' ||
     location === '/acceptability';

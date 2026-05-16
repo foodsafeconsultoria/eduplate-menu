@@ -15,7 +15,6 @@ import NotFound from "./pages/NotFound";
 import Notifications from '@/pages/Notifications';
 import PPEs from '@/pages/PPEs';
 import Profile from '@/pages/Profile';
-import Reports from '@/pages/Reports';
 import RestoIngesta from '@/pages/RestoIngesta';
 import Schedule from '@/pages/Schedule';
 import SchoolCertificates from '@/pages/SchoolCertificates';
@@ -104,7 +103,6 @@ function Router() {
               <Route path="/inspection" component={Inspection} />
               <Route path="/ppes" component={PPEs} />
               <Route path="/schedule" component={Schedule} />
-              <Route path="/reports" component={Reports} />
               <Route path="/schools" component={Schools} />
               <Route path="/resto-ingesta" component={RestoIngesta} />
               <Route path="/acceptability" component={Acceptability} />

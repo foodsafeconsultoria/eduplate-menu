@@ -8,7 +8,7 @@ import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useDocuments } from '@/hooks/useDocuments';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
-  Apple, BarChart3, Bell, BookOpen, Calendar, CheckCircle,
+  Apple, Bell, BookOpen, Calendar, CheckCircle,
   ClipboardCheck, ClipboardList, ClipboardMinus, Factory,
   FileBarChart2, FileText, GraduationCap, LayoutDashboard,
   LogOut, Menu, School, Shield, ShieldAlert, Trophy,
@@ -220,7 +220,6 @@ export default function TopNav() {
     { label: 'Inspeções',      href: '/inspection',    icon: <ClipboardCheck className="h-4 w-4" /> },
     { label: 'Gestão de EPIs', href: '/ppes',          icon: <Shield className="h-4 w-4" /> },
     { label: 'Cronograma',     href: '/schedule',      icon: <Calendar className="h-4 w-4" />, badge: upcomingVisitsCount },
-    { label: 'Relatórios',     href: '/reports',       icon: <BarChart3 className="h-4 w-4" /> },
     { label: 'Escolas',        href: '/schools',       icon: <School className="h-4 w-4" /> },
     { label: 'Resto/Ingesta',  href: '/resto-ingesta', icon: <Utensils className="h-4 w-4" /> },
     { label: 'Aceitabilidade', href: '/acceptability', icon: <CheckCircle className="h-4 w-4" /> },
