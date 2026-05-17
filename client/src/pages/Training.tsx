@@ -302,19 +302,19 @@ async function generateCertificatePDF(
   const CX = SIDE + 14;
   const CW = pw - SIDE - 4 - CX - 8;
 
-  let Y = 20;
+  let Y = 18;
 
   // Subtítulo
-  doc.setFontSize(8.5);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
-  doc.setCharSpace(1.5);
+  doc.setCharSpace(1.8);
   doc.text('CERTIFICADO DE PARTICIPAÇÃO E CONCLUSÃO', CX, Y);
   doc.setCharSpace(0);
 
   // Título
-  Y += 15;
-  doc.setFontSize(40);
+  Y += 16;
+  doc.setFontSize(46);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text('CERTIFICADO', CX, Y);
@@ -322,52 +322,52 @@ async function generateCertificatePDF(
   // Sublinhado dourado
   Y += 3;
   doc.setFillColor(...GOLD);
-  doc.rect(CX, Y, 95, 2, 'F');
+  doc.rect(CX, Y, 110, 2.5, 'F');
 
   // "Certificamos que"
-  Y += 13;
-  doc.setFontSize(12);
+  Y += 14;
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...GRAY);
   doc.text('Certificamos que', CX, Y);
 
   // Nome
-  Y += 11;
-  doc.setFontSize(26);
+  Y += 12;
+  doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
   const nameLines = doc.splitTextToSize(attendee.name.toUpperCase(), CW);
   doc.text(nameLines, CX, Y);
-  Y += nameLines.length * 10;
+  Y += nameLines.length * 11;
 
   // CPF pill
   doc.setFillColor(...G_TINT);
   doc.setDrawColor(...G_MED);
   doc.setLineWidth(0.3);
-  doc.roundedRect(CX, Y - 2, 70, 9, 2, 2, 'FD');
-  doc.setFontSize(9.5);
+  doc.roundedRect(CX, Y - 2, 76, 10, 2, 2, 'FD');
+  doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
-  doc.text('CPF:', CX + 3, Y + 5);
+  doc.text('CPF:', CX + 3, Y + 6);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...DARK);
-  doc.text(attendee.cpf, CX + 16, Y + 5);
-  Y += 15;
+  doc.text(attendee.cpf, CX + 17, Y + 6);
+  Y += 17;
 
   // Texto de participação
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
   doc.text('participou e concluiu com aproveitamento o treinamento:', CX, Y);
 
   // Título do treinamento
-  Y += 10;
+  Y += 11;
   const trainingLines = doc.splitTextToSize(training.title, CW);
-  doc.setFontSize(14);
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text(trainingLines, CX, Y);
-  Y += trainingLines.length * 8 + 9;
+  Y += trainingLines.length * 9 + 10;
 
   // Chips de info
   const dateFormatted = format(new Date(training.date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -377,23 +377,23 @@ async function generateCertificatePDF(
     ['LOCAL', training.location],
   ];
   let chipX = CX;
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   for (const [label, value] of chips) {
     const lw = doc.getTextWidth(label + ': ');
     const vw = doc.getTextWidth(value);
-    const chipW = Math.min(lw + vw + 8, 96);
+    const chipW = Math.min(lw + vw + 10, 100);
     doc.setFillColor(245, 250, 247);
     doc.setDrawColor(180, 215, 190);
     doc.setLineWidth(0.3);
-    doc.roundedRect(chipX, Y - 6, chipW, 9.5, 2, 2, 'FD');
+    doc.roundedRect(chipX, Y - 6.5, chipW, 10.5, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
     doc.text(label + ': ', chipX + 3, Y);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...DARK);
     doc.text(value, chipX + 3 + lw, Y);
-    chipX += chipW + 5;
-    if (chipX > CX + CW - 50) { chipX = CX; Y += 13; }
+    chipX += chipW + 6;
+    if (chipX > CX + CW - 55) { chipX = CX; Y += 15; }
   }
   Y += 14;
 
@@ -401,66 +401,84 @@ async function generateCertificatePDF(
   doc.setDrawColor(210, 210, 210);
   doc.setLineWidth(0.3);
   doc.line(CX, Y, pw - 14, Y);
-  Y += 8;
+  Y += 6;
 
-  // ── ÁREA DE ASSINATURAS — 2 blocos lado a lado ────────────────────────────────
+  // ── ÁREA DE ASSINATURAS ───────────────────────────────────────────────────────
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
   const signerCity = signer?.city || '';
   const instrName  = training.instructor || '';
-
   const emDate = `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`;
-  const halfW  = CW / 2;
-  const instrX = CX + halfW / 2;
-  const rtX    = CX + halfW + halfW / 2;
-  const lineY  = Y + 22;
 
-  // ── Bloco INSTRUTOR (esquerda) ──
-  doc.setFontSize(9);
+  // Número de blocos: participante | instrutor | RT (se tiver)
+  const numSigBlocks = signerName ? 3 : 2;
+  const blkW = CW / numSigBlocks;
+  const alunoX  = CX + blkW * 0 + blkW / 2;
+  const instrX  = CX + blkW * 1 + blkW / 2;
+  const rtX     = CX + blkW * 2 + blkW / 2;
+  const lineY   = Y + 24;
+
+  // Data acima do bloco do aluno
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
-  doc.text(emDate, instrX, lineY - 10, { align: 'center' });
+  doc.text(emDate, alunoX, lineY - 10, { align: 'center' });
+
+  // ── Bloco ALUNO (esquerda) — linha em branco para assinar ──
+  doc.setDrawColor(...GRAY);
+  doc.setLineWidth(0.4);
+  doc.line(alunoX - 35, lineY, alunoX + 35, lineY);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...G_MED);
+  doc.text(attendee.name, alunoX, lineY + 7, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY);
+  doc.text('Participante', alunoX, lineY + 14, { align: 'center' });
+
+  // ── Bloco INSTRUTOR (centro) ──
   doc.setDrawColor(...GRAY);
   doc.setLineWidth(0.4);
   doc.line(instrX - 35, lineY, instrX + 35, lineY);
-  doc.setFontSize(10);
+  doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
-  doc.text(instrName, instrX, lineY + 6, { align: 'center' });
+  doc.text(instrName, instrX, lineY + 7, { align: 'center' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(9.5);
   doc.setTextColor(...GRAY);
-  doc.text('Instrutor(a) Responsável', instrX, lineY + 13, { align: 'center' });
+  doc.text('Instrutor(a) Responsável', instrX, lineY + 14, { align: 'center' });
 
   // ── Bloco NUTRICIONISTA RT (direita) — com assinatura digital ──
   if (signerName) {
     if (sigImg) {
-      const SW = 64; const SH = 22;
+      const SW = 66; const SH = 22;
       addImg(sigImg, rtX - SW / 2, lineY - SH - 2, SW, SH);
     }
     doc.setDrawColor(...GRAY);
     doc.setLineWidth(0.4);
     doc.line(rtX - 38, lineY, rtX + 38, lineY);
-    doc.setFontSize(10);
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
-    doc.text(signerName, rtX, lineY + 6, { align: 'center' });
+    doc.text(signerName, rtX, lineY + 7, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(9.5);
     doc.setTextColor(...GRAY);
     doc.text(
       signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
-      rtX, lineY + 13, { align: 'center' }
+      rtX, lineY + 14, { align: 'center' }
     );
   }
 
   // Rodapé
-  doc.setFontSize(7);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(160, 160, 160);
   doc.text(
     `Emitido em ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ID: ${attendee.id}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009`,
-    CX, ph - 7,
+    CX, ph - 6,
   );
 
   doc.save(`Certificado_${attendee.name.replace(/\s+/g, '_').normalize('NFD').replace(/[̀-ͯ]/g, '')}_${training.date}.pdf`);

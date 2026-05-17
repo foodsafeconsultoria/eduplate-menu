@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Trophy, Award, TrendingUp, School2, AlertTriangle } from 'lucide-react';
 import { useInspections, useSchools } from '@/hooks/useFirestore';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrgSettings } from '@/hooks/useOrgSettings';
+import { useOrgSettings, OrgSettings } from '@/hooks/useOrgSettings';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
+import { storage } from '@/lib/firebase';
+import { ref as storageRef, getBytes } from 'firebase/storage';
 
 interface SchoolCertificate {
   schoolId: string;
@@ -20,384 +22,323 @@ interface SchoolCertificate {
   isCompliant: boolean;
 }
 
-// ── Canvas watermark helpers (same as Training / Inspection) ─────────────────
-function drawAppleCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
-  ctx.save();
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(185,28,28,0.18)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x + r * 0.35, y, r * 0.6, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(220,38,38,0.13)'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x, y - r);
-  ctx.bezierCurveTo(x + r * 0.3, y - r * 1.5, x + r * 0.6, y - r * 1.3, x + r * 0.2, y - r * 0.8);
-  ctx.strokeStyle = 'rgba(21,128,61,0.25)'; ctx.lineWidth = r * 0.2; ctx.stroke();
-  ctx.restore();
-}
-
-function drawCarrotCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 6);
-  ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * 0.3, size * 0.6); ctx.lineTo(-size * 0.3, size * 0.6); ctx.closePath();
-  ctx.fillStyle = 'rgba(234,88,12,0.2)'; ctx.fill();
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    ctx.moveTo(0, -size - size * 0.1 * i);
-    ctx.bezierCurveTo(size * 0.5, -size - size * 0.6 - i * size * 0.1, -size * 0.5, -size - size * 0.6 - i * size * 0.1, 0, -size - size * 0.1 * i);
-    ctx.fillStyle = 'rgba(21,128,61,0.22)'; ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawLeafCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
-  ctx.beginPath(); ctx.moveTo(0, -size);
-  ctx.bezierCurveTo(size * 0.8, -size * 0.5, size * 0.8, size * 0.5, 0, size);
-  ctx.bezierCurveTo(-size * 0.8, size * 0.5, -size * 0.8, -size * 0.5, 0, -size);
-  ctx.fillStyle = 'rgba(21,128,61,0.17)'; ctx.fill();
-  ctx.restore();
-}
-
-/** Draws the official-style PNAE logo on a canvas and returns a PNG data URL. */
-function buildPnaeLogoDataUrl(px: number): string {
-  const h = Math.round(px * 1.55);
-  const canvas = document.createElement('canvas');
-  canvas.width = px; canvas.height = h;
-  const ctx = canvas.getContext('2d')!;
-
-  const cx = px / 2;
-  const NAVY   = '#1B2A4A';
-  const AMBER  = '#C97010';
-  const YELLOW = '#F5CC3A';
-
-  // ── Diamond ──────────────────────────────────────────────────────────────────
-  const hs = px * 0.41;
-  const dy = px * 0.42;
-  ctx.beginPath();
-  ctx.moveTo(cx,        dy - hs);
-  ctx.lineTo(cx + hs,   dy);
-  ctx.lineTo(cx,        dy + hs);
-  ctx.lineTo(cx - hs,   dy);
-  ctx.closePath();
-  ctx.fillStyle = AMBER;
-  ctx.fill();
-
-  // Inner diamond highlight (lighter top half)
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.beginPath();
-  ctx.moveTo(cx, dy - hs);
-  ctx.lineTo(cx + hs, dy);
-  ctx.lineTo(cx, dy);
-  ctx.lineTo(cx - hs, dy);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  // ── Plate (oval, center) ──────────────────────────────────────────────────────
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(cx, dy, px * 0.16, px * 0.115, 0, 0, Math.PI * 2);
-  ctx.fillStyle = YELLOW;
-  ctx.fill();
-  // plate rim
-  ctx.strokeStyle = NAVY;
-  ctx.lineWidth = px * 0.018;
-  ctx.stroke();
-  ctx.restore();
-
-  // ── Fork (left) ──────────────────────────────────────────────────────────────
-  ctx.fillStyle = NAVY;
-  const forkX = cx - px * 0.215;
-  const tineTop = dy - hs * 0.72;
-  const handleBot = dy + hs * 0.58;
-  // 3 tines
-  for (let i = 0; i < 3; i++) {
-    const tx = forkX + (i - 1) * px * 0.033;
-    ctx.fillRect(tx - px * 0.013, tineTop, px * 0.026, hs * 0.42);
-  }
-  // connecting bar between tines and handle
-  ctx.fillRect(forkX - px * 0.046 + px * 0.013, tineTop + hs * 0.40, px * 0.066, px * 0.03);
-  // handle
-  ctx.fillRect(forkX - px * 0.018, tineTop + hs * 0.43, px * 0.036, handleBot - (tineTop + hs * 0.43));
-
-  // ── Knife (right) ────────────────────────────────────────────────────────────
-  const knX = cx + px * 0.215;
-  // blade
-  ctx.beginPath();
-  ctx.moveTo(knX - px * 0.025, tineTop);
-  ctx.lineTo(knX + px * 0.025, tineTop + hs * 0.28);
-  ctx.lineTo(knX + px * 0.018, tineTop + hs * 0.42);
-  ctx.lineTo(knX - px * 0.018, tineTop + hs * 0.42);
-  ctx.closePath();
-  ctx.fillStyle = NAVY;
-  ctx.fill();
-  // handle
-  ctx.fillRect(knX - px * 0.018, tineTop + hs * 0.43, px * 0.036, handleBot - (tineTop + hs * 0.43));
-
-  // ── "pnae" text ───────────────────────────────────────────────────────────────
-  ctx.fillStyle = NAVY;
-  ctx.font = `900 ${Math.round(px * 0.245)}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('pnae', cx, dy + hs + px * 0.235);
-
-  // ── Subtitle lines ────────────────────────────────────────────────────────────
-  ctx.fillStyle = AMBER;
-  ctx.font = `${Math.round(px * 0.078)}px Arial`;
-  ctx.fillText('Programa Nacional de', cx, dy + hs + px * 0.40);
-  ctx.fillText('—Alimentação Escolar—', cx, dy + hs + px * 0.52);
-
-  return canvas.toDataURL('image/png');
-}
-
-function buildWatermarkDataUrl(pdfWmm: number, pdfHmm: number): string {
-  const scale = 3.7795;
-  const cw = Math.round(pdfWmm * scale), ch = Math.round(pdfHmm * scale);
-  const canvas = document.createElement('canvas');
-  canvas.width = cw; canvas.height = ch;
-  const ctx = canvas.getContext('2d')!;
-  const positions = [
-    { x: 0.08, y: 0.1 }, { x: 0.25, y: 0.22 }, { x: 0.55, y: 0.08 }, { x: 0.75, y: 0.18 },
-    { x: 0.92, y: 0.1 }, { x: 0.12, y: 0.45 }, { x: 0.38, y: 0.55 }, { x: 0.65, y: 0.42 },
-    { x: 0.88, y: 0.48 }, { x: 0.18, y: 0.78 }, { x: 0.45, y: 0.88 }, { x: 0.7, y: 0.75 },
-    { x: 0.92, y: 0.82 }, { x: 0.5, y: 0.35 },
-  ];
-  positions.forEach((p, i) => {
-    const px = p.x * cw, py = p.y * ch, s = 18 + (i % 3) * 6;
-    if (i % 3 === 0) drawAppleCanvas(ctx, px, py, s);
-    else if (i % 3 === 1) drawCarrotCanvas(ctx, px, py, s);
-    else drawLeafCanvas(ctx, px, py, s);
-  });
-  ctx.save();
-  ctx.translate(cw / 2, ch / 2); ctx.rotate(-Math.PI / 4);
-  ctx.font = `bold ${Math.round(ch * 0.18)}px Arial`;
-  ctx.fillStyle = 'rgba(22,101,52,0.07)';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('PNAE', 0, 0);
-  ctx.restore();
-  return canvas.toDataURL('image/png');
-}
+// ── Certificate PDF (mesmo padrão visual do módulo de Treinamentos) ──────────
 
 async function generateCertificatePDF(
   cert: SchoolCertificate,
-  signatureUrl?: string,
-  signer?: { name: string; crn: string; municipio?: string; uf?: string },
-  orgLogoUrl?: string,
+  signer: { name: string; crn: string; municipio?: string; uf?: string },
+  orgSettings: Pick<OrgSettings, 'logoUrl' | 'logoDataUrl' | 'signatureUrl' | 'signatureDataUrl'>,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
+  const pw = doc.internal.pageSize.getWidth();   // 297
+  const ph = doc.internal.pageSize.getHeight();  // 210
 
-  // ── Helpers ──
-  const green: [number, number, number]  = [22, 101, 52];
-  const navy:  [number, number, number]  = [27, 42, 74];
-  const ivory: [number, number, number]  = [255, 253, 244];
-  const loadImg = (src: string) =>
-    fetch(src).then(r => r.blob()).then(b => new Promise<string>((res, rej) => {
-      const fr = new FileReader(); fr.onloadend = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b);
-    }));
-  const toDataUrl = async (url?: string) => {
-    if (!url) return undefined;
+  // ── Image loader (Firebase-safe, sem CORS) ───────────────────────────────────
+  const toDataUrl = async (url?: string | null): Promise<string | null> => {
+    if (!url) return null;
     if (url.startsWith('data:')) return url;
-    return loadImg(url).catch(() => undefined);
+    const extractStoragePath = (u: string): string | null => {
+      try {
+        const match = u.match(/\/o\/([^?]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+      } catch { return null; }
+    };
+    const blobToDataUrl = (blob: Blob): Promise<string> =>
+      new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onloadend = () => res(fr.result as string);
+        fr.onerror = rej;
+        fr.readAsDataURL(blob);
+      });
+    if (url.includes('firebasestorage.googleapis.com')) {
+      const path = extractStoragePath(url);
+      if (path) {
+        try {
+          const bytes = await getBytes(storageRef(storage, path));
+          return await blobToDataUrl(new Blob([bytes]));
+        } catch { /* fallback */ }
+      }
+    }
+    try {
+      const r = await fetch(url, { mode: 'cors' });
+      if (!r.ok) return null;
+      return await blobToDataUrl(await r.blob());
+    } catch { return null; }
   };
 
-  // Pre-load images in parallel
-  const [resolvedSig, resolvedLogo] = await Promise.all([
-    toDataUrl(signatureUrl),
-    toDataUrl(orgLogoUrl),
+  const imgFmt = (data: string): string => {
+    if (data.startsWith('data:image/jpeg') || data.startsWith('data:image/jpg')) return 'JPEG';
+    if (data.startsWith('data:image/webp')) return 'WEBP';
+    return 'PNG';
+  };
+  const addImg = (data: string | null, x: number, y: number, w: number, h: number) => {
+    if (!data) return;
+    try { doc.addImage(data, imgFmt(data), x, y, w, h); } catch (_) {}
+  };
+
+  // Prefer stored dataUrl (no CORS), fallback to URL fetch
+  const [orgLogo, sigImg] = await Promise.all([
+    orgSettings.logoDataUrl
+      ? Promise.resolve(orgSettings.logoDataUrl)
+      : toDataUrl(orgSettings.logoUrl),
+    orgSettings.signatureDataUrl
+      ? Promise.resolve(orgSettings.signatureDataUrl)
+      : toDataUrl(orgSettings.signatureUrl),
   ]);
 
-  // ── Marca d'água ──
-  const wmUrl = buildWatermarkDataUrl(pw, ph);
-  doc.setFillColor(...ivory);
+  // ── Palette ──────────────────────────────────────────────────────────────────
+  const G_DARK: [number, number, number] = [15,  70,  40];
+  const G_MED:  [number, number, number] = [22, 101,  52];
+  const G_TINT: [number, number, number] = [220, 245, 230];
+  const GOLD:   [number, number, number] = [180, 140,  10];
+  const GRAY:   [number, number, number] = [100, 100, 100];
+  const DARK:   [number, number, number] = [40,   40,  40];
+  const WHITE:  [number, number, number] = [255, 255, 255];
+
+  const scoreRgb: [number, number, number] = cert.averageConformity >= 80
+    ? [21, 128, 61] : cert.averageConformity >= 60 ? [180, 120, 0] : [185, 28, 28];
+
+  // ── Background ───────────────────────────────────────────────────────────────
+  doc.setFillColor(252, 252, 250);
   doc.rect(0, 0, pw, ph, 'F');
-  doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
 
-  // ── Moldura dupla ──
-  doc.setDrawColor(...green);
-  doc.setLineWidth(4);
-  doc.rect(7, 7, pw - 14, ph - 14);
-  doc.setLineWidth(0.8);
-  doc.setDrawColor(21, 128, 61);
-  doc.rect(11, 11, pw - 22, ph - 22);
+  // ── LEFT sidebar ─────────────────────────────────────────────────────────────
+  const SIDE = 54;
+  doc.setFillColor(...G_DARK);
+  doc.rect(0, 0, SIDE, ph, 'F');
+  doc.setFillColor(22, 90, 50);
+  doc.rect(SIDE - 7, 0, 7, ph, 'F');
 
-  // ── Faixa de cabeçalho ──
-  doc.setFillColor(...navy);
-  doc.rect(11, 11, pw - 22, 36, 'F');
+  // ── RIGHT + TOP + BOTTOM gold accents ────────────────────────────────────────
+  doc.setFillColor(...GOLD);
+  doc.rect(pw - 4, 0, 4, ph, 'F');
+  doc.rect(SIDE, 0, pw - SIDE - 4, 2, 'F');
+  doc.rect(SIDE, ph - 2, pw - SIDE - 4, 2, 'F');
 
-  // Logo org (esquerda)
-  if (resolvedLogo) {
-    try { doc.addImage(resolvedLogo, 'PNG', 15, 14, 28, 28); } catch (_) {}
+  // ── BRASÃO no sidebar ────────────────────────────────────────────────────────
+  const LOGO_R = 22;
+  const LOGO_CX = SIDE / 2;
+  const LOGO_CY = 30;
+  doc.setFillColor(...WHITE);
+  doc.circle(LOGO_CX, LOGO_CY, LOGO_R + 2, 'F');
+  if (orgLogo) {
+    addImg(orgLogo, LOGO_CX - LOGO_R, LOGO_CY - LOGO_R, LOGO_R * 2, LOGO_R * 2);
+  } else {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...G_MED);
+    doc.text('BRASÃO', LOGO_CX, LOGO_CY + 1, { align: 'center' });
   }
-  // Logo padrão nutricao (direita)
-  try {
-    const nutData = await loadImg('/logo-nutricao.png').catch(() => null);
-    if (nutData) doc.addImage(nutData, 'PNG', pw - 43, 14, 28, 28);
-  } catch (_) {}
 
-  // Texto cabeçalho
-  const municipioLabel = signer?.municipio
-    ? `SECRETARIA DE EDUCAÇÃO — ${signer.municipio.toUpperCase()}${signer.uf ? `/${signer.uf.toUpperCase()}` : ''}`
-    : 'SECRETARIA DE EDUCAÇÃO — PROGRAMA PNAE';
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text(municipioLabel, pw / 2, 22, { align: 'center' });
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 220, 180);
-  doc.text('PROGRAMA NACIONAL DE ALIMENTAÇÃO ESCOLAR — PNAE', pw / 2, 30, { align: 'center' });
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
+  // "QUALIDADE" label abaixo do brasão
   doc.setFontSize(7.5);
-  doc.text('RDC ANVISA nº 216/2004  ·  Resolução FNDE/CD nº 06/2020  ·  Lei nº 11.947/2009', pw / 2, 40, { align: 'center' });
-
-  // ── Título principal ──
-  doc.setTextColor(...green);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(32);
-  doc.text('CERTIFICADO DE QUALIDADE', pw / 2, 62, { align: 'center' });
+  doc.setTextColor(180, 220, 190);
+  doc.setCharSpace(1.5);
+  doc.text('QUALIDADE', SIDE / 2, LOGO_CY + LOGO_R + 14, { align: 'center' });
+  doc.setCharSpace(0);
 
-  // Linha decorativa
-  const lineY = 67;
-  doc.setDrawColor(...green);
-  doc.setLineWidth(0.4);
-  doc.line(pw * 0.18, lineY, pw * 0.82, lineY);
-  // ponto central
-  doc.setFillColor(...green);
-  doc.circle(pw / 2, lineY, 1.5, 'F');
+  // Score badge circular no centro do sidebar
+  const scoreCY = ph / 2 + 8;
+  doc.setFillColor(255, 255, 255);
+  doc.circle(SIDE / 2, scoreCY, 17, 'F');
+  doc.setDrawColor(...scoreRgb);
+  doc.setLineWidth(1.5);
+  doc.circle(SIDE / 2, scoreCY, 17, 'D');
+  doc.setLineWidth(0.3);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...scoreRgb);
+  doc.text(`${cert.averageConformity}%`, SIDE / 2, scoreCY + 5, { align: 'center' });
 
-  doc.setFontSize(10);
+  // PNAE label rodapé do sidebar
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(180, 220, 190);
+  doc.text('PNAE', SIDE / 2, ph - 8, { align: 'center' });
+
+  // ── CONTEÚDO PRINCIPAL ────────────────────────────────────────────────────────
+  const CX = SIDE + 14;
+  const CW = pw - SIDE - 4 - CX - 8;
+
+  let Y = 18;
+
+  // Subtítulo
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(90, 90, 90);
-  doc.text('Boas Práticas de Manipulação de Alimentos em Unidade de Alimentação Escolar', pw / 2, 73, { align: 'center' });
+  doc.setTextColor(...GRAY);
+  doc.setCharSpace(1.8);
+  doc.text('CERTIFICADO DE QUALIDADE — BOAS PRÁTICAS', CX, Y);
+  doc.setCharSpace(0);
 
-  // ── Corpo ──
-  doc.setFontSize(11.5);
-  doc.setTextColor(60, 60, 60);
-  doc.text('Certificamos que a unidade de alimentação escolar da instituição', pw / 2, 83, { align: 'center' });
+  // Título
+  Y += 16;
+  doc.setFontSize(46);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...G_MED);
+  doc.text('CERTIFICADO', CX, Y);
+
+  // Sublinhado dourado
+  Y += 3;
+  doc.setFillColor(...GOLD);
+  doc.rect(CX, Y, 110, 2.5, 'F');
+
+  // "Certificamos que..."
+  Y += 14;
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(...GRAY);
+  doc.text('Certificamos que a unidade de alimentação escolar da instituição', CX, Y);
 
   // Nome da escola
-  doc.setFontSize(cert.schoolName.length > 50 ? 16 : 20);
+  Y += 12;
+  const nameFontSize = cert.schoolName.length > 50 ? 18 : 26;
+  doc.setFontSize(nameFontSize);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...green);
-  const nameLines = doc.splitTextToSize(cert.schoolName, pw - 60);
-  doc.text(nameLines, pw / 2, 94, { align: 'center' });
-  const nameEnd = 94 + (nameLines.length - 1) * (cert.schoolName.length > 50 ? 8 : 10);
+  doc.setTextColor(...DARK);
+  const nameLines = doc.splitTextToSize(cert.schoolName.toUpperCase(), CW);
+  doc.text(nameLines, CX, Y);
+  Y += nameLines.length * (nameFontSize === 18 ? 8 : 11);
 
-  doc.setFontSize(11);
+  // Texto de conformidade
+  Y += 4;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(70, 70, 70);
-  doc.text('atingiu a conformidade média de', pw / 2, nameEnd + 10, { align: 'center' });
+  doc.setTextColor(...GRAY);
+  doc.text('atingiu a conformidade média de', CX, Y);
 
-  // Score — grande destaque
-  const scoreColor: [number, number, number] = cert.averageConformity >= 80
-    ? [21, 128, 61] : cert.averageConformity >= 60 ? [180, 120, 0] : [185, 28, 28];
-  doc.setFontSize(42);
+  // Score grande
+  Y += 12;
+  doc.setFontSize(36);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...scoreColor);
-  doc.text(`${cert.averageConformity}%`, pw / 2, nameEnd + 26, { align: 'center' });
+  doc.setTextColor(...scoreRgb);
+  doc.text(`${cert.averageConformity}%`, CX, Y);
 
-  // Barra de conformidade
-  const barW = 100, barX = (pw - barW) / 2, barY = nameEnd + 31;
-  doc.setFillColor(230, 230, 230);
-  doc.roundedRect(barX, barY, barW, 4, 2, 2, 'F');
-  doc.setFillColor(...scoreColor);
-  doc.roundedRect(barX, barY, barW * (cert.averageConformity / 100), 4, 2, 2, 'F');
-
-  doc.setFontSize(9);
+  // Barra de progresso ao lado do score
+  const barW = 80;
+  const barX = CX + 38;
+  const barY = Y - 6;
+  doc.setFillColor(225, 225, 225);
+  doc.roundedRect(barX, barY, barW, 5, 2, 2, 'F');
+  doc.setFillColor(...scoreRgb);
+  doc.roundedRect(barX, barY, barW * (cert.averageConformity / 100), 5, 2, 2, 'F');
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
-  doc.text(
-    'nas verificações de Boas Práticas de Manipulação de Alimentos realizadas pela equipe de nutrição.',
-    pw / 2, nameEnd + 42, { align: 'center' }
-  );
+  doc.setTextColor(...GRAY);
+  doc.text('nas verificações de Boas Práticas de Manipulação de Alimentos.', barX, barY + 14);
 
-  // ── Info row (4 colunas) ──
-  const infoY = nameEnd + 52;
-  doc.setFillColor(243, 250, 244);
-  doc.roundedRect(14, infoY - 5, pw - 28, 14, 2, 2, 'F');
-  doc.setDrawColor(200, 235, 210);
-  doc.setLineWidth(0.2);
-  doc.roundedRect(14, infoY - 5, pw - 28, 14, 2, 2, 'D');
+  Y += 14;
 
-  const infoCols: [string, string][] = [
-    ['Última inspeção', cert.lastInspectionDate.toLocaleDateString('pt-BR')],
-    ['Diretor(a)', cert.lastInspectionDirector || '—'],
-    ['Total de inspeções', String(cert.totalInspections)],
-    ['Emissão', new Date().toLocaleDateString('pt-BR')],
+  // Chips de informações
+  const lastInspDate = cert.lastInspectionDate.toLocaleDateString('pt-BR');
+  const emDateStr = new Date().toLocaleDateString('pt-BR');
+  const chips: [string, string][] = [
+    ['ÚLTIMA INSPEÇÃO', lastInspDate],
+    ['TOTAL INSPEÇÕES', String(cert.totalInspections)],
+    ['EMISSÃO', emDateStr],
   ];
-  infoCols.forEach(([label, value], i) => {
-    const x = pw * (0.15 + i * 0.23);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(120, 120, 120);
-    doc.text(label.toUpperCase(), x, infoY + 0.5, { align: 'center' });
-    doc.setFontSize(9);
+  if (cert.lastInspectionDirector) chips.splice(1, 0, ['DIRETOR(A)', cert.lastInspectionDirector]);
+  let chipX = CX;
+  doc.setFontSize(10);
+  for (const [label, value] of chips) {
+    const lw = doc.getTextWidth(label + ': ');
+    const vw = doc.getTextWidth(value);
+    const chipW = Math.min(lw + vw + 10, 115);
+    doc.setFillColor(245, 250, 247);
+    doc.setDrawColor(180, 215, 190);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(chipX, Y - 6.5, chipW, 10.5, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(value, x, infoY + 6, { align: 'center' });
-  });
-
-  // ── Área de assinatura ──
-  const sigY = ph - 34;
-
-  // Selo PNAE (esquerda) — logo oficial estilo FNDE
-  const pnaeLogo = buildPnaeLogoDataUrl(120);
-  // Logo height is 1.55× width; at 32mm wide → ~49.6mm tall, but we only show top portion
-  const sealW = 32;
-  const sealH = sealW * 1.55;
-  try { doc.addImage(pnaeLogo, 'PNG', pw * 0.14 - sealW / 2, sigY - 18, sealW, sealH); } catch (_) {}
-
-  // Linha de pontuação (direita)
-  const scoreBoxX = pw * 0.72;
-  doc.setFillColor(cert.averageConformity >= 80 ? 240 : 255, cert.averageConformity >= 80 ? 253 : 243, cert.averageConformity >= 80 ? 244 : 220);
-  doc.roundedRect(scoreBoxX - 18, sigY - 16, 36, 22, 3, 3, 'F');
-  doc.setDrawColor(...scoreColor);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(scoreBoxX - 18, sigY - 16, 36, 22, 3, 3, 'D');
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...scoreColor);
-  doc.text(`${cert.averageConformity}%`, scoreBoxX, sigY - 4, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...scoreColor);
-  doc.text(cert.averageConformity >= 80 ? 'CONFORMIDADE PLENA' : cert.averageConformity >= 60 ? 'EM DESENVOLVIMENTO' : 'NECESSITA ATENÇÃO', scoreBoxX, sigY + 3, { align: 'center' });
-
-  // Bloco assinatura (centro)
-  const rtX = pw * 0.45;
-  if (resolvedSig) {
-    try { doc.addImage(resolvedSig, 'PNG', rtX - 30, sigY - 18, 60, 16, '', 'NONE'); } catch (_) {}
+    doc.setTextColor(...G_MED);
+    doc.text(label + ': ', chipX + 3, Y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+    doc.text(value, chipX + 3 + lw, Y);
+    chipX += chipW + 6;
+    if (chipX > CX + CW - 60) { chipX = CX; Y += 15; }
   }
-  doc.setDrawColor(100, 100, 100);
-  doc.setLineWidth(0.4);
-  doc.line(rtX - 34, sigY - 1, rtX + 34, sigY - 1);
-  const signerName = signer?.name || '';
-  const signerCrn  = signer?.crn  || '';
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  doc.text(signerName || 'Nutricionista Responsável Técnica', rtX, sigY + 5, { align: 'center' });
-  doc.setFontSize(8);
+  Y += 14;
+
+  // Divisória
+  doc.setDrawColor(210, 210, 210);
+  doc.setLineWidth(0.3);
+  doc.line(CX, Y, pw - 14, Y);
+  Y += 6;
+
+  // ── ÁREA DE ASSINATURAS ───────────────────────────────────────────────────────
+  const signerName = signer.name || '';
+  const signerCrn  = signer.crn  || '';
+  const signerCity = signer.municipio || '';
+  const emDateFull = `${signerCity ? signerCity + ', ' : ''}${emDateStr}`;
+
+  // 2 blocos: Diretor da escola (esq) | Nutricionista RT (dir)
+  const blkW = CW / 2;
+  const dirX = CX + blkW * 0 + blkW / 2;
+  const rtX  = CX + blkW * 1 + blkW / 2;
+  const lineY = Y + 24;
+
+  // Data acima do bloco esquerdo
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80);
+  doc.setTextColor(...GRAY);
+  doc.text(emDateFull, dirX, lineY - 10, { align: 'center' });
+
+  // Bloco DIRETOR (esq) — linha em branco para assinar
+  doc.setDrawColor(...GRAY);
+  doc.setLineWidth(0.4);
+  doc.line(dirX - 38, lineY, dirX + 38, lineY);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...G_MED);
+  doc.text(cert.lastInspectionDirector || ' ', dirX, lineY + 7, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY);
+  doc.text('Diretor(a) da Unidade Escolar', dirX, lineY + 14, { align: 'center' });
+
+  // Bloco NUTRICIONISTA RT (dir)
+  if (signerName) {
+    if (sigImg) {
+      const SW = 66; const SH = 22;
+      addImg(sigImg, rtX - SW / 2, lineY - SH - 2, SW, SH);
+    }
+    doc.setDrawColor(...GRAY);
+    doc.setLineWidth(0.4);
+    doc.line(rtX - 38, lineY, rtX + 38, lineY);
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...G_MED);
+    doc.text(signerName, rtX, lineY + 7, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...GRAY);
+    doc.text(
+      signerCrn ? `Nutricionista RT PNAE — ${signerCrn}` : 'Nutricionista Responsável Técnica',
+      rtX, lineY + 14, { align: 'center' }
+    );
+  } else {
+    doc.setDrawColor(...GRAY);
+    doc.setLineWidth(0.4);
+    doc.line(rtX - 38, lineY, rtX + 38, lineY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...GRAY);
+    doc.text('Nutricionista Responsável Técnica', rtX, lineY + 7, { align: 'center' });
+  }
+
+  // Rodapé
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 160);
   doc.text(
-    signerCrn ? `Nutricionista RT PNAE — ${signerCrn}` : 'Responsável Técnica — PNAE',
-    rtX, sigY + 11, { align: 'center' }
+    `Emitido em ${emDateStr}  ·  ${cert.schoolName}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009 · RDC ANVISA nº 216/2004`,
+    CX, ph - 6,
   );
 
-  // ── Rodapé ──
-  doc.setFontSize(7);
-  doc.setTextColor(150, 150, 150);
-  doc.text(
-    `Certificado válido por 12 meses a partir da data de emissão. Gerado em ${new Date().toLocaleDateString('pt-BR')} — EduPlate Menu`,
-    pw / 2, ph - 14, { align: 'center' }
-  );
-
-  doc.save(`Certificado_${cert.schoolName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
-  toast.success('Certificado gerado!');
+  doc.save(`Certificado_Qualidade_${cert.schoolName.replace(/\s+/g, '_').normalize('NFD').replace(/[̀-ͯ]/g, '')}_${new Date().toISOString().split('T')[0]}.pdf`);
+  toast.success('Certificado de qualidade gerado!');
 }
+
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
 function scoreColor(score: number) {
@@ -441,9 +382,8 @@ export default function SchoolCertificates() {
     return { name: '', crn: '', municipio: '', uf: 'SP' };
   }, [orgSettings, orgId]);
 
-  // Signature: prefer orgSettings (Firestore Storage), fallback to localStorage
+  // Signature URL para exibição no UI (não usada na geração do PDF — PDF usa orgSettings direto)
   const signatureUrl = orgSettings.signatureUrl || localStorage.getItem('pnae_signature') || undefined;
-  const orgLogoUrl   = orgSettings.logoUrl || undefined;
 
 
   const certificates = useMemo<SchoolCertificate[]>(() => {
@@ -583,7 +523,7 @@ export default function SchoolCertificates() {
                       <Button
                         size="sm"
                         className="w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground"
-                        onClick={() => { generateCertificatePDF(cert, signatureUrl, signer, orgLogoUrl).catch(() => {}); }}
+                        onClick={() => { generateCertificatePDF(cert, signer, orgSettings).catch(() => {}); }}
                       >
                         <Download className="h-4 w-4" />
                         Gerar Certificado PDF
