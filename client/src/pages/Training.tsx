@@ -638,8 +638,23 @@ export default function TrainingPage() {
           const remote = tSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Training);
           setTrainings(remote);
           localStorage.setItem(trainingsKey, JSON.stringify(remote));
-        }
-        if (!aSnap.empty) {
+
+          // Filtrar presenças órfãs (treinamento deletado mas presença ainda no Firestore)
+          if (!aSnap.empty) {
+            const validIds = new Set(remote.map(t => t.id));
+            const allAttendees = aSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Attendee);
+            const validAttendees = allAttendees.filter(a => validIds.has(a.trainingId));
+            const orphans = allAttendees.filter(a => !validIds.has(a.trainingId));
+            // Deletar órfãs do Firestore em background
+            if (orphans.length > 0) {
+              Promise.all(
+                orphans.map(a => deleteDoc(doc(db, 'organizations', orgId, 'training_attendees', a.id)))
+              ).catch(() => {});
+            }
+            setAttendees(validAttendees);
+            localStorage.setItem(attendeesKey, JSON.stringify(validAttendees));
+          }
+        } else if (!aSnap.empty) {
           const remote = aSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Attendee);
           setAttendees(remote);
           localStorage.setItem(attendeesKey, JSON.stringify(remote));
@@ -723,16 +738,34 @@ export default function TrainingPage() {
     description: '',
   });
 
-  // ── Sincronizar presenças do Firestore ──
+  // ── Sincronizar presenças do Firestore (remove órfãos de eventos deletados) ──
   const syncFromFirestore = useCallback(async () => {
     setSyncing(true);
     try {
       const snap = await getDocs(collection(db, 'organizations', orgId, 'training_attendees'));
       if (!snap.empty) {
         const remote = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Attendee);
-        setAttendees(remote);
-        localStorage.setItem(attendeesKey, JSON.stringify(remote));
-        toast.success(`${remote.length} presença(s) sincronizadas do Firebase!`);
+
+        // IDs dos treinamentos que ainda existem
+        const validTrainingIds = new Set(trainings.map(t => t.id));
+
+        // Separar presenças válidas de órfãs
+        const valid   = remote.filter(a => validTrainingIds.has(a.trainingId));
+        const orphans = remote.filter(a => !validTrainingIds.has(a.trainingId));
+
+        // Deletar órfãs do Firestore silenciosamente
+        if (orphans.length > 0) {
+          await Promise.all(
+            orphans.map(a => deleteDoc(doc(db, 'organizations', orgId, 'training_attendees', a.id)))
+          );
+        }
+
+        setAttendees(valid);
+        localStorage.setItem(attendeesKey, JSON.stringify(valid));
+        const msg = orphans.length > 0
+          ? `${valid.length} presença(s) sincronizadas · ${orphans.length} órfã(s) removida(s).`
+          : `${valid.length} presença(s) sincronizadas do Firebase!`;
+        toast.success(msg);
       } else {
         toast.info('Nenhuma presença no Firebase ainda.');
       }
@@ -741,7 +774,7 @@ export default function TrainingPage() {
     } finally {
       setSyncing(false);
     }
-  }, [orgId]);
+  }, [orgId, trainings]);
 
   const save = (t: Training[], a: Attendee[]) => {
     localStorage.setItem(trainingsKey, JSON.stringify(t));
@@ -829,12 +862,21 @@ export default function TrainingPage() {
     setAttendees(updatedA);
     save(updatedT, updatedA);
     toast.success('Treinamento removido.');
-    if (target) {
-      try {
-        await deleteDoc(doc(db, 'organizations', orgId, 'trainings', id));
+    try {
+      // Deletar treinamento e token
+      await deleteDoc(doc(db, 'organizations', orgId, 'trainings', id));
+      if (target) {
         await deleteDoc(doc(db, 'training_tokens', target.presenceToken));
-      } catch (_) {}
-    }
+      }
+      // Deletar TODAS as presenças deste treinamento do Firestore
+      const attendeesSnap = await getDocs(
+        query(
+          collection(db, 'organizations', orgId, 'training_attendees'),
+          where('trainingId', '==', id),
+        )
+      );
+      await Promise.all(attendeesSnap.docs.map(d => deleteDoc(d.ref)));
+    } catch (_) {}
   };
 
   // ── Registrar participante (admin manual ou mesmo dispositivo) ──
