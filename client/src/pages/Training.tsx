@@ -190,6 +190,7 @@ async function generateCertificatePDF(
   const doc = new jsPDF('landscape', 'mm', 'a4');
   const pw = doc.internal.pageSize.getWidth();   // 297
   const ph = doc.internal.pageSize.getHeight();  // 210
+  // ── VERSÃO 3 ─ maçã removida, assinatura ao lado do instrutor, fontes maiores
 
   // ── Image loader: URL → data URL ─────────────────────────────────────────────
   // Para URLs do Firebase Storage usa getBytes() (sem CORS); para outras usa fetch
@@ -276,36 +277,35 @@ async function generateCertificatePDF(
   doc.rect(SIDE, 0, pw - SIDE - 4, 2, 'F');
   doc.rect(SIDE, ph - 2, pw - SIDE - 4, 2, 'F');
 
-  // ── BRASÃO no sidebar (topo) ──────────────────────────────────────────────────
-  const LOGO_R = 20;
+  // ── BRASÃO no sidebar (centro-topo) ──────────────────────────────────────────
+  const LOGO_R = 22;
   const LOGO_CX = SIDE / 2;
-  const LOGO_CY = 24;
+  const LOGO_CY = 30;
   doc.setFillColor(...WHITE);
   doc.circle(LOGO_CX, LOGO_CY, LOGO_R + 2, 'F');
   if (orgLogo) {
     addImg(orgLogo, LOGO_CX - LOGO_R, LOGO_CY - LOGO_R, LOGO_R * 2, LOGO_R * 2);
   } else {
-    // fallback: texto se brasão não carregou
-    doc.setFontSize(6);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
     doc.text('BRASÃO', LOGO_CX, LOGO_CY + 1, { align: 'center' });
   }
 
-  // ── Texto PNAE no rodapé do sidebar ──────────────────────────────────────────
-  doc.setFontSize(7);
+  // ── PNAE no rodapé do sidebar (só texto, sem imagem) ─────────────────────────
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(180, 220, 190);
-  doc.text('PNAE', SIDE / 2, ph - 10, { align: 'center' });
+  doc.text('PNAE', SIDE / 2, ph - 8, { align: 'center' });
 
   // ── CONTEÚDO PRINCIPAL ────────────────────────────────────────────────────────
-  const CX = SIDE + 12;
+  const CX = SIDE + 14;
   const CW = pw - SIDE - 4 - CX - 8;
 
-  let Y = 18;
+  let Y = 20;
 
   // Subtítulo
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
   doc.setCharSpace(1.5);
@@ -313,8 +313,8 @@ async function generateCertificatePDF(
   doc.setCharSpace(0);
 
   // Título
-  Y += 13;
-  doc.setFontSize(34);
+  Y += 15;
+  doc.setFontSize(40);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text('CERTIFICADO', CX, Y);
@@ -322,52 +322,52 @@ async function generateCertificatePDF(
   // Sublinhado dourado
   Y += 3;
   doc.setFillColor(...GOLD);
-  doc.rect(CX, Y, 88, 1.5, 'F');
+  doc.rect(CX, Y, 95, 2, 'F');
 
   // "Certificamos que"
   Y += 13;
-  doc.setFontSize(10);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...GRAY);
   doc.text('Certificamos que', CX, Y);
 
   // Nome
-  Y += 10;
-  doc.setFontSize(22);
+  Y += 11;
+  doc.setFontSize(26);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
   const nameLines = doc.splitTextToSize(attendee.name.toUpperCase(), CW);
   doc.text(nameLines, CX, Y);
-  Y += nameLines.length * 9;
+  Y += nameLines.length * 10;
 
   // CPF pill
   doc.setFillColor(...G_TINT);
   doc.setDrawColor(...G_MED);
   doc.setLineWidth(0.3);
-  doc.roundedRect(CX, Y - 1.5, 60, 7.5, 2, 2, 'FD');
-  doc.setFontSize(8);
+  doc.roundedRect(CX, Y - 2, 70, 9, 2, 2, 'FD');
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
-  doc.text('CPF:', CX + 3, Y + 4);
+  doc.text('CPF:', CX + 3, Y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...DARK);
-  doc.text(attendee.cpf, CX + 13, Y + 4);
-  Y += 13;
+  doc.text(attendee.cpf, CX + 16, Y + 5);
+  Y += 15;
 
   // Texto de participação
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
   doc.text('participou e concluiu com aproveitamento o treinamento:', CX, Y);
 
   // Título do treinamento
-  Y += 9;
+  Y += 10;
   const trainingLines = doc.splitTextToSize(training.title, CW);
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text(trainingLines, CX, Y);
-  Y += trainingLines.length * 7 + 8;
+  Y += trainingLines.length * 8 + 9;
 
   // Chips de info
   const dateFormatted = format(new Date(training.date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -377,15 +377,15 @@ async function generateCertificatePDF(
     ['LOCAL', training.location],
   ];
   let chipX = CX;
+  doc.setFontSize(9);
   for (const [label, value] of chips) {
     const lw = doc.getTextWidth(label + ': ');
     const vw = doc.getTextWidth(value);
-    const chipW = Math.min(lw + vw + 8, 92);
+    const chipW = Math.min(lw + vw + 8, 96);
     doc.setFillColor(245, 250, 247);
     doc.setDrawColor(180, 215, 190);
     doc.setLineWidth(0.3);
-    doc.roundedRect(chipX, Y - 5, chipW, 8, 2, 2, 'FD');
-    doc.setFontSize(7.5);
+    doc.roundedRect(chipX, Y - 6, chipW, 9.5, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
     doc.text(label + ': ', chipX + 3, Y);
@@ -393,75 +393,69 @@ async function generateCertificatePDF(
     doc.setTextColor(...DARK);
     doc.text(value, chipX + 3 + lw, Y);
     chipX += chipW + 5;
-    if (chipX > CX + CW - 50) { chipX = CX; Y += 11; }
+    if (chipX > CX + CW - 50) { chipX = CX; Y += 13; }
   }
-  Y += 12;
+  Y += 14;
 
   // Divisória
   doc.setDrawColor(210, 210, 210);
   doc.setLineWidth(0.3);
   doc.line(CX, Y, pw - 14, Y);
-  Y += 7;
+  Y += 8;
 
-  // ── ÁREA DE ASSINATURAS ───────────────────────────────────────────────────────
+  // ── ÁREA DE ASSINATURAS — 2 blocos lado a lado ────────────────────────────────
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
   const signerCity = signer?.city || '';
   const instrName  = training.instructor || '';
 
-  // Número de blocos: data | instrutor | RT (se tiver)
-  const numBlocks = signerName ? 3 : 2;
-  const blkW = CW / numBlocks;
-  const blk = Array.from({ length: numBlocks }, (_, i) => CX + blkW * i + blkW / 2);
-  const lineY = Y + 16;   // linha da assinatura
-
-  // Data de emissão (bloco esquerdo)
   const emDate = `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`;
-  doc.setFontSize(8);
+  const halfW  = CW / 2;
+  const instrX = CX + halfW / 2;
+  const rtX    = CX + halfW + halfW / 2;
+  const lineY  = Y + 22;
+
+  // ── Bloco INSTRUTOR (esquerda) ──
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
-  doc.text(emDate, blk[0], lineY - 4, { align: 'center' });
-
-  // Bloco do instrutor (sem assinatura — instrutor é avulso)
+  doc.text(emDate, instrX, lineY - 10, { align: 'center' });
   doc.setDrawColor(...GRAY);
   doc.setLineWidth(0.4);
-  doc.line(blk[1] - 28, lineY, blk[1] + 28, lineY);
-  doc.setFontSize(9);
+  doc.line(instrX - 35, lineY, instrX + 35, lineY);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
-  doc.text(instrName, blk[1], lineY + 5, { align: 'center' });
+  doc.text(instrName, instrX, lineY + 6, { align: 'center' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setTextColor(...GRAY);
-  doc.text('Instrutor(a) Responsável', blk[1], lineY + 10, { align: 'center' });
+  doc.text('Instrutor(a) Responsável', instrX, lineY + 13, { align: 'center' });
 
-  // Bloco da Nutricionista RT (com imagem da assinatura)
-  if (signerName && blk[2] !== undefined) {
-    const rtX = blk[2];
-    // Imagem da assinatura acima da linha
+  // ── Bloco NUTRICIONISTA RT (direita) — com assinatura digital ──
+  if (signerName) {
     if (sigImg) {
-      const SW = 56;
-      const SH = 18;
-      addImg(sigImg, rtX - SW / 2, lineY - SH - 1, SW, SH);
+      const SW = 64; const SH = 22;
+      addImg(sigImg, rtX - SW / 2, lineY - SH - 2, SW, SH);
     }
     doc.setDrawColor(...GRAY);
     doc.setLineWidth(0.4);
-    doc.line(rtX - 30, lineY, rtX + 30, lineY);
-    doc.setFontSize(9);
+    doc.line(rtX - 38, lineY, rtX + 38, lineY);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
-    doc.text(signerName, rtX, lineY + 5, { align: 'center' });
+    doc.text(signerName, rtX, lineY + 6, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setTextColor(...GRAY);
     doc.text(
       signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
-      rtX, lineY + 10, { align: 'center' }
+      rtX, lineY + 13, { align: 'center' }
     );
   }
 
   // Rodapé
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(160, 160, 160);
   doc.text(
@@ -1221,9 +1215,9 @@ export default function TrainingPage() {
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 shrink-0"
                         onClick={() => viewTraining && generateCertificatePDF(att, viewTraining, {
-                                          signatureDataUrl: localStorage.getItem('pnae_signature') || orgSettings.signatureUrl,
+                                          signatureDataUrl: orgSettings.signatureDataUrl || orgSettings.signatureUrl,
                                           signer,
-                                          orgLogoUrl: localStorage.getItem(`pnae_logo_${orgId}`) || orgSettings.logoUrl,
+                                          orgLogoUrl: orgSettings.logoDataUrl || orgSettings.logoUrl,
                                         })}
                       >
                         <Award className="w-4 h-4 mr-1" />Certificado
@@ -1241,9 +1235,9 @@ export default function TrainingPage() {
                     toast.info('Gerando certificados...');
                     for (const att of viewAttendees) {
                       await generateCertificatePDF(att, viewTraining, {
-                          signatureDataUrl: localStorage.getItem('pnae_signature') || orgSettings.signatureUrl,
+                          signatureDataUrl: orgSettings.signatureDataUrl || orgSettings.signatureUrl,
                           signer,
-                          orgLogoUrl: localStorage.getItem(`pnae_logo_${orgId}`) || orgSettings.logoUrl,
+                          orgLogoUrl: orgSettings.logoDataUrl || orgSettings.logoUrl,
                         });
                       await new Promise(r => setTimeout(r, 400));
                     }

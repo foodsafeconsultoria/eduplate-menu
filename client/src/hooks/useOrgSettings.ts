@@ -4,8 +4,10 @@
  * Document path: organizations/{orgId}/settings/branding
  *
  * Fields:
- *   logoUrl          – municipality / school logo (uploaded to Firebase Storage)
- *   signatureUrl     – nutritionist RT handwritten signature (PNG transparent)
+ *   logoUrl          – municipality / school logo (Firebase Storage URL)
+ *   logoDataUrl      – logo as base64 dataURL (salvo no Firestore para evitar CORS no PDF)
+ *   signatureUrl     – nutritionist RT handwritten signature (Firebase Storage URL)
+ *   signatureDataUrl – assinatura como base64 dataURL (salvo no Firestore para evitar CORS)
  *   nutritionistName – full name
  *   nutritionistCrn  – CRN registration number
  *   municipio        – city name
@@ -19,7 +21,9 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export interface OrgSettings {
   logoUrl?: string;
+  logoDataUrl?: string;        // base64 dataURL — sem CORS, usada diretamente no PDF
   signatureUrl?: string;
+  signatureDataUrl?: string;   // base64 dataURL — sem CORS, usada diretamente no PDF
   nutritionistName?: string;
   nutritionistCrn?: string;
   municipio?: string;
@@ -30,6 +34,16 @@ const LEGACY_ORG_ID = 'pnae-default-org';
 
 function storageKey(orgId: string) {
   return `pnae_org_settings_${orgId}`;
+}
+
+/** Converte um File para dataURL (base64) */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export function useOrgSettings() {
@@ -72,7 +86,6 @@ export function useOrgSettings() {
             nutritionistCrn:  legacy.crn           || '',
             municipio:        legacy.municipio      || '',
             uf:               legacy.uf             || 'SP',
-            signatureUrl:     localStorage.getItem('pnae_signature') || undefined,
           };
           setSettings(seeded);
         }
@@ -105,15 +118,35 @@ export function useOrgSettings() {
     }
   }, [orgId, settings]);
 
-  // ── Upload image to Firebase Storage ──────────────────────────────────────
+  // ── Upload image: Storage (URL) + Firestore (dataURL) ────────────────────
+  // Salva a imagem no Storage E o dataURL no Firestore para uso no PDF sem CORS
   const uploadImage = useCallback(async (
     file: File,
     field: 'logo' | 'signature',
   ): Promise<string> => {
+    // 1. Upload para Firebase Storage
     const path = `orgs/${orgId}/branding/${field}_${Date.now()}.png`;
     const fRef = storageRef(storage, path);
     await uploadBytes(fRef, file);
-    return getDownloadURL(fRef);
+    const url = await getDownloadURL(fRef);
+
+    // 2. Converter para dataURL e salvar no Firestore imediatamente
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const dataField = field === 'logo' ? 'logoDataUrl' : 'signatureDataUrl';
+      // Salva só o dataURL (merge) — o caller cuida do resto
+      await setDoc(
+        doc(db, 'organizations', orgId, 'settings', 'branding'),
+        { [dataField]: dataUrl },
+        { merge: true },
+      );
+      // Atualiza estado local imediatamente
+      setSettings(prev => ({ ...prev, [dataField]: dataUrl }));
+    } catch (err) {
+      console.warn('[useOrgSettings] dataUrl save error:', err);
+    }
+
+    return url;
   }, [orgId]);
 
   return {
