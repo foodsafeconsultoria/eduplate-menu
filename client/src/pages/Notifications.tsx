@@ -397,7 +397,7 @@ export default function Notifications() {
                 <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
                   <p className="text-sm text-blue-800">
-                    Os alertas são exibidos em tempo real no app. Configure seu e-mail abaixo para receber resumos futuros via Resend (recurso em breve).
+                    Os alertas são exibidos em tempo real no app. Configure seu e-mail abaixo para receber notificações sobre vencimentos de documentos, alertas de cardápio e outros eventos importantes do município.
                   </p>
                 </div>
 

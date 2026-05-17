@@ -10,7 +10,7 @@ import {
   School, BookOpen, Settings, CheckCircle2,
   ArrowRight, X, Sparkles,
 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -66,13 +66,33 @@ export default function OnboardingModal() {
   useEffect(() => {
     if (!orgId || subLoading) return;
 
-    // Use localStorage as a lightweight flag (per browser/device)
     const key = `onboarding_done_${orgId}`;
-    if (!localStorage.getItem(key)) {
-      // Small delay so the dashboard renders first
+
+    // Fast path: already dismissed on this device
+    if (localStorage.getItem(key)) return;
+
+    // Authoritative check: read Firestore so the flag persists across devices/browsers
+    let cancelled = false;
+    getDoc(doc(db, 'organizations', orgId)).then(snap => {
+      if (cancelled) return;
+      if (snap.exists() && snap.data()?.onboardingDone) {
+        // Already done on another device — persist locally and don't show
+        localStorage.setItem(key, '1');
+        return;
+      }
+      // Not done yet — show after a small delay so the dashboard renders first
       const t = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(t);
-    }
+      // store timer id for cleanup
+      (window as any).__onboardingTimer = t;
+    }).catch(() => {
+      // On error, fall back to showing the modal
+      if (!cancelled) setTimeout(() => setVisible(true), 800);
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout((window as any).__onboardingTimer);
+    };
   }, [orgId, subLoading]);
 
   const dismiss = async (markDone = true) => {

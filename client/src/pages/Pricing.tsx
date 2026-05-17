@@ -72,7 +72,7 @@ const PLANS: Plan[] = [
     features: [
       'Municípios ilimitados',
       'Usuários ilimitados',
-      'Tudo do plano Profissional',
+      'Tudo do plano Essencial',
       'Painel multi-município consolidado',
       'SLA 99,9% garantido',
       'Suporte dedicado (WhatsApp)',

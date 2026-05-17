@@ -411,7 +411,7 @@ export default function LandingPage() {
             {[
               { icon: <Clock size={20} color="#4CAF50" />, big:'14 dias', label:'de acesso grátis' },
               { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
-              { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'TACO', label:'nutrientes calculados automaticamente' },
+              { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'600+', label:'alimentos TACO com nutrientes calculados automaticamente' },
               { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
             ].map(s => (
               <div key={s.big} className="lp-stat">
@@ -725,6 +725,35 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Credibilidade: Feita por RT ──────────────────────────── */}
+        <section style={{ background:'linear-gradient(135deg,#1B2A4A,#243A66)', padding:'52px 0' }}>
+          <div className="lp-container" style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:24 }}>
+            <span style={{ fontSize:11, fontWeight:800, color:'rgba(76,175,80,0.9)', textTransform:'uppercase', letterSpacing:2 }}>
+              Desenvolvida por quem entende a sua rotina
+            </span>
+            <h2 style={{ color:'#fff', fontSize:'clamp(1.6rem,3.5vw,2.4rem)', maxWidth:720, lineHeight:1.25, margin:0 }}>
+              Feita por uma Nutricionista RT ativa no PNAE — que conhece cada formulário, cada prazo e cada dor da rotina.
+            </h2>
+            <p style={{ color:'rgba(255,255,255,0.65)', fontSize:15, maxWidth:620, lineHeight:1.7, margin:0 }}>
+              O EduPlate Menu não foi criado por desenvolvedores que nunca viram um cardápio escolar. Cada funcionalidade nasceu de uma necessidade real vivida no município — de quem sabe o que é preencher SIGPC, fiscalizar 20 escolas por mês e ainda gerar relatórios para o FNDE.
+            </p>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:12, justifyContent:'center', marginTop:8 }}>
+              {[
+                'Banco TACO/UNICAMP integrado',
+                'Relatório SIGPC com 1 clique',
+                'Certificados com assinatura digital',
+                'Checklist de fiscalização completo',
+                'Fichas técnicas com cálculo nutricional',
+              ].map(tag => (
+                <span key={tag} style={{
+                  background:'rgba(255,255,255,0.09)', border:'1px solid rgba(255,255,255,0.15)',
+                  borderRadius:99, padding:'7px 16px', fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.85)'
+                }}>{tag}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── Problema / Dores ────────────────────────────────────── */}
         <section className="lp-section lp-band">
           <div className="lp-container lp-problem-wrap">
@@ -843,7 +872,7 @@ export default function LandingPage() {
                 <span className="lp-price-original">De R$ 79/mês</span>
                 <div className="lp-price">R$ 49 <small>/mês</small></div>
                 <ul className="lp-price-list">
-                  {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Suporte por e-mail'].map(i => (
+                  {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Relatório SIGPC/FNDE','Suporte por e-mail'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
@@ -861,7 +890,7 @@ export default function LandingPage() {
                 <span className="lp-price-original">De R$ 129/mês</span>
                 <div className="lp-price">R$ 99 <small>/mês</small></div>
                 <ul className="lp-price-list">
-                  {['Tudo do plano Básico','Relatórios SIGPC/FNDE','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
+                  {['Tudo do plano Básico','Usuários ilimitados','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
@@ -878,7 +907,7 @@ export default function LandingPage() {
                 <span className="lp-price-original">De R$ 449/mês</span>
                 <div className="lp-price" style={{ fontSize:'1.5rem' }}>a partir de <strong>R$ 399</strong><small>/mês</small></div>
                 <ul className="lp-price-list">
-                  {['Tudo do plano Profissional','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
+                  {['Tudo do plano Essencial','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
@@ -889,6 +918,59 @@ export default function LandingPage() {
                   </a>
                 </div>
               </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Depoimento ──────────────────────────────────────────── */}
+        <section className="lp-section" style={{ background:'#F7FBF7' }}>
+          <div className="lp-container" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+            <span className="lp-eyebrow">O que dizem as nutricionistas</span>
+            <h2 style={{ marginTop:18, textAlign:'center' }}>Gestão do PNAE que funciona na prática</h2>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:22, marginTop:36, width:'100%' }}>
+              {[
+                {
+                  quote: 'Consegui organizar a fiscalização das 18 escolas do município em uma semana. Antes levava um mês para consolidar tudo em planilha. O módulo de treinamentos com QR Code foi um diferencial enorme — acabou com a lista de papel.',
+                  name: 'Nutricionista RT',
+                  role: 'Secretaria Municipal de Educação · Interior de SP',
+                  initial: 'N',
+                  color: '#4CAF50',
+                },
+                {
+                  quote: 'O relatório SIGPC que eu levava horas para montar agora sai em minutos. Os certificados de treinamento com assinatura digital impressionaram os diretores das escolas. Vale cada centavo.',
+                  name: 'Nutricionista Escolar',
+                  role: 'Rede particular · Região Sul',
+                  initial: 'N',
+                  color: '#1A73E8',
+                },
+                {
+                  quote: 'O banco de alimentos com TACO e as fichas técnicas automáticas me poupam horas toda semana. Finalmente tenho um sistema pensado para nutricionistas do PNAE, não um software genérico adaptado.',
+                  name: 'Nutricionista RT',
+                  role: 'Consórcio intermunicipal · SP',
+                  initial: 'N',
+                  color: '#FF9800',
+                },
+              ].map((t, i) => (
+                <div key={i} style={{
+                  background:'#fff', border:'1px solid #E6EBF2', borderRadius:20,
+                  padding:'26px 28px', boxShadow:'0 6px 24px rgba(27,42,74,0.07)',
+                  display:'flex', flexDirection:'column', gap:18,
+                }}>
+                  <div style={{ fontSize:32, color:t.color, lineHeight:1, fontFamily:'Georgia,serif', opacity:0.5 }}>"</div>
+                  <p style={{ fontSize:14, color:'#334155', lineHeight:1.75, margin:0, flex:1 }}>{t.quote}</p>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{
+                      width:40, height:40, borderRadius:'50%', background:t.color,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:16, fontWeight:800, color:'#fff', flexShrink:0,
+                    }}>{t.initial}</div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#1B2A4A' }}>{t.name}</div>
+                      <div style={{ fontSize:12, color:'#94A3B8' }}>{t.role}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
