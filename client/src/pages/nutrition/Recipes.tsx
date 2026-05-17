@@ -250,7 +250,7 @@ export default function Recipes() {
     } catch (_) {}
     return 'Nutricionista RT — PNAE';
   }, [orgId]);
-  const { foods } = useFoods();
+  const { foods, loading: foodsLoading } = useFoods();
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -280,9 +280,14 @@ export default function Recipes() {
   }, [foods]);
 
   // ── Auto-seed default recipes for new orgs (runs once per org) ──────────────
-  const SEED_FLAG = `pnae_default_v2_seeded_${orgId}`;
+  // v3: waits for BOTH recipes AND foods to load before seeding so that
+  // enrichWithRealFoods has real food IDs available (fixes blank nutritional data).
+  const SEED_FLAG = `pnae_default_v3_seeded_${orgId}`;
   useEffect(() => {
-    if (loading) return;
+    if (loading) return;           // wait for recipes
+    if (foodsLoading) return;      // wait for foods
+    if (!orgId || orgId === 'pnae-default-org') return; // wait for real org
+    if (!foods.length) return;    // no foods = nothing to match against
     if (localStorage.getItem(SEED_FLAG)) return;
     const existingNames = new Set(recipes.map((r) => r.name.toLowerCase()));
     const toSeed = DEFAULT_RECIPES.filter((r) => !existingNames.has(r.name.toLowerCase()));
@@ -301,7 +306,7 @@ export default function Recipes() {
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, orgId]);
+  }, [loading, foodsLoading, orgId, foods.length]);
 
   // ── Manual import button handler ─────────────────────────────────────────────
   const importDefaultRecipes = async () => {
@@ -317,7 +322,6 @@ export default function Recipes() {
         addRecipe(enrichWithRealFoods(recipe));
         await new Promise((res) => setTimeout(res, 30));
       }
-      // Reset flag so next load re-checks
       localStorage.removeItem(SEED_FLAG);
       toast.success(`${toImport.length} ficha(s) PNAE importada(s) com sucesso!`);
     } catch (err) {
@@ -325,6 +329,44 @@ export default function Recipes() {
       toast.error('Erro ao importar fichas PNAE.');
     } finally {
       setImporting(false);
+    }
+  };
+
+  // ── Cleanup: delete duplicates + re-seed with correct food IDs ───────────────
+  // Needed for accounts that were seeded before foods were loaded (v1/v2 bug).
+  const [cleaning, setCleaning] = useState(false);
+  const hasDuplicates = useMemo(() => {
+    const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
+    const counts = new Map<string, number>();
+    for (const r of recipes) {
+      const k = r.name.toLowerCase();
+      if (defaultNameSet.has(k)) counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    return [...counts.values()].some((c) => c > 1);
+  }, [recipes]);
+
+  const cleanupAndReseed = async () => {
+    if (!orgId || orgId === 'pnae-default-org') return;
+    setCleaning(true);
+    try {
+      const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
+      // Delete every recipe matching a default name (all copies, then re-add fresh)
+      const toDelete = recipes.filter((r) => defaultNameSet.has(r.name.toLowerCase()));
+      for (const r of toDelete) {
+        deleteRecipe(r.id);
+        await new Promise((res) => setTimeout(res, 20));
+      }
+      // Clear LS recipe cache + all seed flags so next load fetches fresh from Firestore
+      localStorage.removeItem(`pnae_nutrition_recipes_${orgId}`);
+      ['v1', 'v2', 'v3'].forEach((v) =>
+        localStorage.removeItem(`pnae_default_${v}_seeded_${orgId}`)
+      );
+      toast.success('Fichas PNAE limpas! Recarregando com dados corretos…');
+      setTimeout(() => window.location.reload(), 1800);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao limpar fichas.');
+      setCleaning(false);
     }
   };
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
@@ -657,13 +699,25 @@ export default function Recipes() {
             <Button
               variant="outline"
               onClick={importDefaultRecipes}
-              disabled={importing}
+              disabled={importing || cleaning}
               className="border-green-300 text-green-700 hover:bg-green-50"
               title="Importar fichas técnicas padrão do PNAE"
             >
               <Download className="mr-2 h-4 w-4" />
               {importing ? 'Importando…' : 'Fichas PNAE'}
             </Button>
+            {hasDuplicates && (
+              <Button
+                variant="outline"
+                onClick={cleanupAndReseed}
+                disabled={cleaning}
+                className="border-orange-300 text-orange-700 hover:bg-orange-50 animate-pulse"
+                title="Foram detectadas fichas duplicadas — clique para corrigir"
+              >
+                <X className="mr-2 h-4 w-4" />
+                {cleaning ? 'Limpando…' : 'Corrigir Duplicatas'}
+              </Button>
+            )}
             {recipes.length > 0 && (
               <Button
                 variant="outline"
