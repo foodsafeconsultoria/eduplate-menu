@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,7 +11,7 @@ import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Food, RecipeClassification, RecipeIngredient } from '@/types/nutrition';
-import { Download, FileText, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { Download, FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -254,7 +254,56 @@ export default function Recipes() {
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
+  // ── Match a default recipe ingredient to a real food by name ────────────────
+  const enrichWithRealFoods = useMemo(() => (recipe: typeof DEFAULT_RECIPES[0]) => {
+    if (!foods.length) return recipe;
+    const enrichedIngredients = recipe.ingredients.map((ing) => {
+      const n = ing.foodName.toLowerCase().trim();
+      // Try exact → starts-with → contains match
+      const matched =
+        foods.find((f) => f.name.toLowerCase() === n) ||
+        foods.find((f) => f.name.toLowerCase().startsWith(n) || n.startsWith(f.name.toLowerCase().split(',')[0].trim())) ||
+        foods.find((f) => f.name.toLowerCase().includes(n) || n.split(' ').every((w) => f.name.toLowerCase().includes(w)));
+      if (!matched) return ing;
+      return {
+        ...ing,
+        foodId: matched.id,
+        estimatedCost:
+          matched.unit === 'unit'
+            ? matched.price * (ing.grossWeight / 0.1)
+            : matched.price * ing.grossWeight,
+      };
+    });
+    return { ...recipe, ingredients: enrichedIngredients };
+  }, [foods]);
+
+  // ── Auto-seed default recipes for new orgs (runs once per org) ──────────────
+  const SEED_FLAG = `pnae_default_v2_seeded_${orgId}`;
+  useEffect(() => {
+    if (loading) return;
+    if (localStorage.getItem(SEED_FLAG)) return;
+    const existingNames = new Set(recipes.map((r) => r.name.toLowerCase()));
+    const toSeed = DEFAULT_RECIPES.filter((r) => !existingNames.has(r.name.toLowerCase()));
+    if (toSeed.length === 0) {
+      localStorage.setItem(SEED_FLAG, '1');
+      return;
+    }
+    (async () => {
+      for (const recipe of toSeed) {
+        addRecipe(enrichWithRealFoods(recipe));
+        await new Promise((res) => setTimeout(res, 25));
+      }
+      localStorage.setItem(SEED_FLAG, '1');
+      if (toSeed.length >= 5) {
+        toast.success(`${toSeed.length} fichas técnicas PNAE carregadas automaticamente!`);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, orgId]);
+
+  // ── Manual import button handler ─────────────────────────────────────────────
   const importDefaultRecipes = async () => {
     setImporting(true);
     try {
@@ -265,10 +314,11 @@ export default function Recipes() {
         return;
       }
       for (const recipe of toImport) {
-        addRecipe(recipe);
-        // small yield so React can process intermediate state
+        addRecipe(enrichWithRealFoods(recipe));
         await new Promise((res) => setTimeout(res, 30));
       }
+      // Reset flag so next load re-checks
+      localStorage.removeItem(SEED_FLAG);
       toast.success(`${toImport.length} ficha(s) PNAE importada(s) com sucesso!`);
     } catch (err) {
       console.error(err);
@@ -584,13 +634,32 @@ export default function Recipes() {
             </p>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* View mode toggle */}
+            <div className="flex rounded-md border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={`px-2.5 py-1.5 text-sm flex items-center gap-1 transition-colors ${viewMode === 'cards' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                title="Visualização em cards"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-2.5 py-1.5 text-sm flex items-center gap-1 transition-colors border-l border-gray-200 ${viewMode === 'list' ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                title="Visualização em lista"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
             <Button
               variant="outline"
               onClick={importDefaultRecipes}
               disabled={importing}
               className="border-green-300 text-green-700 hover:bg-green-50"
-              title="Importar 50 fichas técnicas padrão do PNAE"
+              title="Importar fichas técnicas padrão do PNAE"
             >
               <Download className="mr-2 h-4 w-4" />
               {importing ? 'Importando…' : 'Fichas PNAE'}
@@ -837,7 +906,7 @@ export default function Recipes() {
                         <CardTitle>Painel PNAE</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm text-gray-700">
-                        <p>Per capita estimado: <span className="font-semibold text-gray-900">{perCapita.toFixed(3)} kg</span></p>
+                        <p>Per capita estimado: <span className="font-semibold text-gray-900">{(perCapita * 1000).toFixed(0)} g ({perCapita.toFixed(3)} kg)</span></p>
                         <p>Rendimento liquido: <span className="font-semibold text-gray-900">{yieldPercentage.toFixed(1)}%</span></p>
                         <p>
                           Agricultura familiar:{' '}
@@ -960,7 +1029,50 @@ export default function Recipes() {
               </button>
             </CardContent>
           </Card>
+        ) : viewMode === 'list' ? (
+          /* ── LIST VIEW ──────────────────────────────────────────────────────── */
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 text-left">
+                  <th className="px-4 py-3 font-semibold text-gray-700">Preparação</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-center hidden sm:table-cell">Porções</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden md:table-cell">Per capita</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden md:table-cell">Kcal/porção</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">Proteína</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">Custo/porção</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecipes.map((recipe, idx) => (
+                  <tr key={recipe.id} className={`border-b last:border-0 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900 leading-tight">{recipe.displayName || recipe.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {recipe.classification}{recipe.recommendedMeal ? ` · ${recipe.recommendedMeal}` : ''}
+                        {recipe.allergens.length > 0 && <span className="ml-2 text-amber-600">⚠ {recipe.allergens.slice(0,2).join(', ')}</span>}
+                      </p>
+                    </td>
+                    <td className="px-3 py-3 text-center text-gray-700 hidden sm:table-cell">{recipe.servings}</td>
+                    <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{(recipe.perCapita * 1000).toFixed(0)} g</td>
+                    <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{recipe.nutrientsPerServing.kcal.toFixed(0)}</td>
+                    <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.protein.toFixed(1)} g</td>
+                    <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">R$ {recipe.costPerServing.toFixed(2)}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex gap-1.5 justify-end">
+                        <button onClick={() => generateRecipePDF(recipe, signerLabel).catch(() => {})} title="Imprimir" className="rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Printer className="h-4 w-4" /></button>
+                        <button onClick={() => openEditRecipe(recipe)} title="Editar" className="rounded p-1.5 text-slate-600 hover:bg-slate-100 transition-colors"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha excluída.'); }} title="Excluir" className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
+          /* ── CARDS VIEW ─────────────────────────────────────────────────────── */
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredRecipes.map((recipe) => (
               <Card key={recipe.id} className="transition-shadow hover:shadow-md flex flex-col">
@@ -979,7 +1091,7 @@ export default function Recipes() {
                     <div><span className="text-muted-foreground">Ingredientes</span><p className="font-medium">{recipe.ingredients.length}</p></div>
                     <div><span className="text-muted-foreground">Porções</span><p className="font-medium">{recipe.servings}</p></div>
                     <div><span className="text-muted-foreground">Custo/porção</span><p className="font-medium">R$ {recipe.costPerServing.toFixed(2)}</p></div>
-                    <div><span className="text-muted-foreground">Per capita</span><p className="font-medium">{recipe.perCapita.toFixed(3)} kg</p></div>
+                    <div><span className="text-muted-foreground">Per capita</span><p className="font-medium">{(recipe.perCapita * 1000).toFixed(0)} g</p></div>
                     <div><span className="text-muted-foreground">Energia</span><p className="font-medium">{recipe.nutrientsPerServing.kcal.toFixed(0)} kcal</p></div>
                     <div><span className="text-muted-foreground">Proteína</span><p className="font-medium">{recipe.nutrientsPerServing.protein.toFixed(1)} g</p></div>
                   </div>
@@ -996,31 +1108,14 @@ export default function Recipes() {
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{recipe.prepTime}</span>
                     )}
                   </div>
-
-                  {/* Action buttons */}
                   <div className="flex gap-2 pt-2 border-t">
-                    <button
-                      onClick={() => { generateRecipePDF(recipe, signerLabel).catch(() => toast.error('Erro ao gerar PDF.')); }}
-                      title="Imprimir ficha técnica"
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-                    >
+                    <button onClick={() => { generateRecipePDF(recipe, signerLabel).catch(() => toast.error('Erro ao gerar PDF.')); }} title="Imprimir ficha técnica" className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
                       <Printer className="h-3.5 w-3.5" /> Imprimir
                     </button>
-                    <button
-                      onClick={() => openEditRecipe(recipe)}
-                      title="Editar ficha técnica"
-                      className="flex items-center justify-center gap-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors"
-                    >
+                    <button onClick={() => openEditRecipe(recipe)} title="Editar ficha técnica" className="flex items-center justify-center gap-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors">
                       <Pencil className="h-3.5 w-3.5" /> Editar
                     </button>
-                    <button
-                      onClick={() => {
-                        deleteRecipe(recipe.id);
-                        toast.success('Ficha técnica excluída.');
-                      }}
-                      title="Excluir ficha técnica"
-                      className="flex items-center justify-center gap-1 rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                    >
+                    <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha técnica excluída.'); }} title="Excluir ficha técnica" className="flex items-center justify-center gap-1 rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors">
                       <Trash2 className="h-3.5 w-3.5" /> Excluir
                     </button>
                   </div>

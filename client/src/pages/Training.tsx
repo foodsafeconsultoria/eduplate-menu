@@ -403,20 +403,16 @@ async function generateCertificatePDF(
   doc.line(CX, Y, pw - 14, Y);
   Y += 6;
 
-  // ── ÁREA DE ASSINATURAS ───────────────────────────────────────────────────────
+  // ── ÁREA DE ASSINATURAS — 2 blocos: Participante (esq) | Nutricionista RT (dir) ──
   const signerName = signer?.name || '';
   const signerCrn  = signer?.crn  || '';
   const signerCity = signer?.city || '';
-  const instrName  = training.instructor || '';
   const emDate = `${signerCity ? signerCity + ', ' : ''}${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`;
 
-  // Número de blocos: participante | instrutor | RT (se tiver)
-  const numSigBlocks = signerName ? 3 : 2;
-  const blkW = CW / numSigBlocks;
-  const alunoX  = CX + blkW * 0 + blkW / 2;
-  const instrX  = CX + blkW * 1 + blkW / 2;
-  const rtX     = CX + blkW * 2 + blkW / 2;
-  const lineY   = Y + 24;
+  const blkW  = CW / 2;
+  const alunoX = CX + blkW * 0 + blkW / 2;
+  const rtX    = CX + blkW * 1 + blkW / 2;
+  const lineY  = Y + 24;
 
   // Data acima do bloco do aluno
   doc.setFontSize(9.5);
@@ -424,10 +420,10 @@ async function generateCertificatePDF(
   doc.setTextColor(...GRAY);
   doc.text(emDate, alunoX, lineY - 10, { align: 'center' });
 
-  // ── Bloco ALUNO (esquerda) — linha em branco para assinar ──
+  // ── Bloco PARTICIPANTE (esquerda) ──
   doc.setDrawColor(...GRAY);
   doc.setLineWidth(0.4);
-  doc.line(alunoX - 35, lineY, alunoX + 35, lineY);
+  doc.line(alunoX - 45, lineY, alunoX + 45, lineY);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
@@ -437,40 +433,25 @@ async function generateCertificatePDF(
   doc.setTextColor(...GRAY);
   doc.text('Participante', alunoX, lineY + 14, { align: 'center' });
 
-  // ── Bloco INSTRUTOR (centro) ──
+  // ── Bloco NUTRICIONISTA RT (direita) — com assinatura digital ──
+  if (sigImg) {
+    const SW = 72; const SH = 24;
+    addImg(sigImg, rtX - SW / 2, lineY - SH - 2, SW, SH);
+  }
   doc.setDrawColor(...GRAY);
   doc.setLineWidth(0.4);
-  doc.line(instrX - 35, lineY, instrX + 35, lineY);
+  doc.line(rtX - 45, lineY, rtX + 45, lineY);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
-  doc.text(instrName, instrX, lineY + 7, { align: 'center' });
+  doc.text(signerName || 'Nutricionista RT', rtX, lineY + 7, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(...GRAY);
-  doc.text('Instrutor(a) Responsável', instrX, lineY + 14, { align: 'center' });
-
-  // ── Bloco NUTRICIONISTA RT (direita) — com assinatura digital ──
-  if (signerName) {
-    if (sigImg) {
-      const SW = 66; const SH = 22;
-      addImg(sigImg, rtX - SW / 2, lineY - SH - 2, SW, SH);
-    }
-    doc.setDrawColor(...GRAY);
-    doc.setLineWidth(0.4);
-    doc.line(rtX - 38, lineY, rtX + 38, lineY);
-    doc.setFontSize(10.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...G_MED);
-    doc.text(signerName, rtX, lineY + 7, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor(...GRAY);
-    doc.text(
-      signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
-      rtX, lineY + 14, { align: 'center' }
-    );
-  }
+  doc.text(
+    signerCrn ? `Nutricionista RT — ${signerCrn}` : 'Nutricionista Responsável Técnica',
+    rtX, lineY + 14, { align: 'center' }
+  );
 
   // Rodapé
   doc.setFontSize(7.5);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Phone, Building2, Bell, Lock, Save, Camera, AlertCircle, CheckCircle2, Copy, KeyRound } from 'lucide-react';
+import { User, Mail, Phone, Building2, Bell, Lock, Save, Camera, AlertCircle, CheckCircle2, Copy, KeyRound, PenLine, Upload } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -22,6 +23,41 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [orgInviteCode, setOrgInviteCode] = useState<string | null>(null);
+
+  const { settings: orgSettings, saveSettings, uploadImage: uploadOrgImage } = useOrgSettings();
+  const [sigUploading, setSigUploading] = useState(false);
+  const [sigName, setSigName] = useState('');
+  const [sigCrn, setSigCrn] = useState('');
+  const sigInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync sigName/sigCrn from orgSettings
+  useEffect(() => {
+    if (orgSettings.nutritionistName !== undefined) setSigName(orgSettings.nutritionistName || '');
+    if (orgSettings.nutritionistCrn  !== undefined) setSigCrn (orgSettings.nutritionistCrn  || '');
+  }, [orgSettings.nutritionistName, orgSettings.nutritionistCrn]);
+
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { toast.error('Imagem deve ter no máximo 3 MB'); return; }
+    setSigUploading(true);
+    try {
+      const url = await uploadOrgImage(file, 'signature');
+      await saveSettings({ signatureUrl: url });
+      toast.success('Assinatura digital salva com sucesso!');
+    } catch { toast.error('Erro ao salvar assinatura.'); }
+    finally { setSigUploading(false); if (sigInputRef.current) sigInputRef.current.value = ''; }
+  };
+
+  const handleSaveSignatureText = async () => {
+    if (!sigName.trim()) { toast.error('Informe o nome completo.'); return; }
+    setSigUploading(true);
+    try {
+      await saveSettings({ nutritionistName: sigName.trim(), nutritionistCrn: sigCrn.trim() });
+      toast.success('Dados da assinatura salvos!');
+    } catch { toast.error('Erro ao salvar.'); }
+    finally { setSigUploading(false); }
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -345,6 +381,95 @@ export default function ProfilePage() {
                     </Button>
                   </>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* ── Assinatura Digital ───────────────────────────────────────── */}
+            <Card className="border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <PenLine className="w-4 h-4 text-green-700" />
+                  Assinatura Digital
+                </CardTitle>
+                <CardDescription>
+                  Usada automaticamente nos certificados de treinamento e qualidade escolar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Preview da assinatura atual */}
+                {orgSettings.signatureDataUrl || orgSettings.signatureUrl ? (
+                  <div className="rounded-lg border border-green-100 bg-green-50/30 p-3 flex items-center justify-center" style={{ minHeight: 80 }}>
+                    <img
+                      src={orgSettings.signatureDataUrl || orgSettings.signatureUrl}
+                      alt="Assinatura atual"
+                      className="max-h-16 max-w-xs object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-400">
+                    Nenhuma assinatura cadastrada ainda
+                  </div>
+                )}
+
+                {/* Upload de imagem */}
+                <div>
+                  <p className="text-sm font-medium mb-2">Opção 1 — Enviar imagem da assinatura</p>
+                  <p className="text-xs text-muted-foreground mb-3">PNG/JPG com fundo branco ou transparente. Recomendado: 400 × 120 px.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-green-300 text-green-700 hover:bg-green-50"
+                    disabled={sigUploading}
+                    onClick={() => sigInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    {sigUploading ? 'Salvando…' : 'Enviar imagem'}
+                  </Button>
+                  <input ref={sigInputRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+                </div>
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground px-2">ou</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {/* Nome + CRN como texto */}
+                <div>
+                  <p className="text-sm font-medium mb-2">Opção 2 — Nome completo + CRN</p>
+                  <p className="text-xs text-muted-foreground mb-3">O nome aparecerá impresso no certificado se não houver imagem.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Nome completo</label>
+                      <input
+                        type="text"
+                        value={sigName}
+                        onChange={e => setSigName(e.target.value)}
+                        placeholder="Ex.: Simone Torres Duarte"
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">CRN</label>
+                      <input
+                        type="text"
+                        value={sigCrn}
+                        onChange={e => setSigCrn(e.target.value)}
+                        placeholder="Ex.: CRN3-73997"
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="mt-3 gap-2 bg-green-700 hover:bg-green-800 text-white"
+                    disabled={sigUploading}
+                    onClick={handleSaveSignatureText}
+                  >
+                    <Save className="w-4 h-4" />
+                    {sigUploading ? 'Salvando…' : 'Salvar nome e CRN'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

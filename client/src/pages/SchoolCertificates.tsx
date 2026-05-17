@@ -212,39 +212,40 @@ async function generateCertificatePDF(
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
-  doc.text('nas verificações de Boas Práticas de Manipulação de Alimentos.', barX, barY + 14);
+  doc.text('nas verificações de Boas Práticas de Manipulação de Alimentos.', barX, barY + 11);
 
-  Y += 14;
+  Y += 22;
 
-  // Chips de informações
+  // Chips de informações — grade fixa 2 colunas × 2 linhas
   const lastInspDate = cert.lastInspectionDate.toLocaleDateString('pt-BR');
   const emDateStr = new Date().toLocaleDateString('pt-BR');
-  const chips: [string, string][] = [
+  const chipsData: [string, string][] = [
     ['ÚLTIMA INSPEÇÃO', lastInspDate],
+    ['DIRETOR(A)', cert.lastInspectionDirector || '—'],
     ['TOTAL INSPEÇÕES', String(cert.totalInspections)],
     ['EMISSÃO', emDateStr],
   ];
-  if (cert.lastInspectionDirector) chips.splice(1, 0, ['DIRETOR(A)', cert.lastInspectionDirector]);
-  let chipX = CX;
-  doc.setFontSize(10);
-  for (const [label, value] of chips) {
-    const lw = doc.getTextWidth(label + ': ');
-    const vw = doc.getTextWidth(value);
-    const chipW = Math.min(lw + vw + 10, 115);
+  const chipColW = (CW - 8) / 2;
+  doc.setFontSize(9.5);
+  for (let i = 0; i < chipsData.length; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cx = CX + col * (chipColW + 8);
+    const cy = Y + row * 14;
+    const [label, value] = chipsData[i];
     doc.setFillColor(245, 250, 247);
     doc.setDrawColor(180, 215, 190);
     doc.setLineWidth(0.3);
-    doc.roundedRect(chipX, Y - 6.5, chipW, 10.5, 2, 2, 'FD');
+    doc.roundedRect(cx, cy - 6.5, chipColW, 10.5, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...G_MED);
-    doc.text(label + ': ', chipX + 3, Y);
+    const lw = doc.getTextWidth(label + ': ');
+    doc.text(label + ': ', cx + 3, cy);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...DARK);
-    doc.text(value, chipX + 3 + lw, Y);
-    chipX += chipW + 6;
-    if (chipX > CX + CW - 60) { chipX = CX; Y += 15; }
+    doc.text(value, cx + 3 + lw, cy);
   }
-  Y += 14;
+  Y += 30;
 
   // Divisória
   doc.setDrawColor(210, 210, 210);
