@@ -24,6 +24,7 @@ import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
+import { apiUrl } from '@/lib/apiUrl';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -485,7 +486,7 @@ export default function Menus() {
     setEmailSending(true);
     try {
       const menuHtml = buildMenuEmailHtml(menu);
-      const res = await fetch('/api/email/send-menu', {
+      const res = await fetch(apiUrl('/api/email/send-menu'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

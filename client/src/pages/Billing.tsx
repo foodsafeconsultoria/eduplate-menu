@@ -4,6 +4,7 @@ import { CreditCard, CheckCircle2, AlertCircle, Clock, XCircle, ExternalLink, Za
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { apiUrl } from '@/lib/apiUrl';
 
 const PLAN_LABELS: Record<string, string> = {
   essencial: 'Básico',
@@ -51,7 +52,7 @@ export default function Billing() {
     if (!user?.organizationId) return;
     try {
       setPortalLoading(true);
-      const res = await fetch('/api/stripe/portal', {
+      const res = await fetch(apiUrl('/api/stripe/portal'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId: user.organizationId }),

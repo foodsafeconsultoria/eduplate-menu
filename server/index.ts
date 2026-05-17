@@ -9,9 +9,36 @@ import aiRouter from "./ai.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Allowed origins for CORS (Firebase Hosting + custom domain)
+const ALLOWED_ORIGINS = [
+  'https://www.eduplate.com.br',
+  'https://eduplate.com.br',
+  'https://gestaoescola-e5f3d.web.app',
+  'https://gestaoescola-e5f3d.firebaseapp.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // ── CORS — allow Firebase Hosting frontend to call this API ──────────────
+  app.use((req, res, next) => {
+    const origin = req.headers.origin || '';
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,stripe-signature');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
 
   // ── Parse JSON for all API routes ────────────────────────────────────────
   // The webhook route uses express.raw() internally (applied per-route),

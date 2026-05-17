@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Trash2, AlertCircle, Wrench, Trophy, Pencil, ClipboardCheck, CalendarDays, Loader2, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, Sparkles, Copy, Check } from 'lucide-react';
+import { Download, Trash2, AlertCircle, Wrench, Trophy, Pencil, ClipboardCheck, CalendarDays, Loader2, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, Check } from 'lucide-react';
 import { Inspection, School, ChecklistItemData, MaintenanceTicket } from '@/types';
 import { checklistSections, sectionLabels } from '@/data/checklist';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
@@ -681,206 +681,7 @@ export default function InspectionPage() {
   const [maintenanceDescription, setMaintenanceDescription] = useState('');
   const [maintenancePriority, setMaintenancePriority] = useState<'low' | 'high'>('low');
 
-  // AI report state
-  const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [aiInspection, setAiInspection] = useState<Inspection | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiReportText, setAiReportText] = useState('');
-  const [aiError, setAiError] = useState('');
-  const [aiCopied, setAiCopied] = useState(false);
 
-  /** Opens the AI dialog. If inspection already has a saved report, shows it immediately. */
-  const handleGenerateAiReport = async (inspection: Inspection, forceRegenerate = false) => {
-    setAiInspection(inspection);
-    setAiError('');
-    setAiDialogOpen(true);
-
-    // If already has a saved report and not forcing regeneration, show it immediately
-    if (inspection.aiReport && !forceRegenerate) {
-      setAiReportText(inspection.aiReport);
-      setAiLoading(false);
-      return;
-    }
-
-    setAiReportText('');
-    setAiLoading(true);
-
-    const checklistSectionsData: Record<string, { question: string; answer: 'yes' | 'no' | 'na' | null; observation?: string }[]> = {};
-    (Object.keys(checklistSections) as SectionKey[]).forEach(k => {
-      const items = (inspection as any)[k];
-      if (Array.isArray(items)) checklistSectionsData[k] = items;
-    });
-
-    try {
-      const res = await fetch('/api/ai/inspection-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolName: inspection.schoolName,
-          nutritionist: inspection.nutritionist,
-          director: inspection.director,
-          inspectionDate: inspection.inspectionDate,
-          overallScore: inspection.overallScore,
-          visitObjective: inspection.visitObjective,
-          guidelines: inspection.guidelines,
-          checklistSections: checklistSectionsData,
-          sectionLabels,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
-      setAiReportText(data.report);
-
-      // Save the report back into the inspection so it's available next time without regenerating
-      const updatedInspection = { ...inspection, aiReport: data.report };
-      setInspections(inspections.map(i => i.id === inspection.id ? updatedInspection : i));
-      setAiInspection(updatedInspection);
-    } catch (err: any) {
-      setAiError(err.message || 'Não foi possível gerar o relatório.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleCopyAiReport = () => {
-    if (!aiReportText) return;
-    navigator.clipboard.writeText(aiReportText).then(() => {
-      setAiCopied(true);
-      setTimeout(() => setAiCopied(false), 2000);
-    });
-  };
-
-  /**
-   * Generates a professional ABNT-formatted PDF from the AI narrative report.
-   * Layout: A4, margins 30/20/38/25 mm (L/R/T/B), ABNT body text.
-   * Header uses the municipal brasão (orgSettings.logoUrl) + nutrition logo.
-   */
-  const handleDownloadAiReportPDF = async () => {
-    if (!aiReportText || !aiInspection) return;
-
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const pw   = doc.internal.pageSize.getWidth();   // 210
-    const ph   = doc.internal.pageSize.getHeight();  // 297
-
-    // ── ABNT margins ────────────────────────────────────────────────────────
-    const marginLeft  = 30;
-    const marginRight = 20;
-    const marginBottom = 25;
-    const bodyWidth   = pw - marginLeft - marginRight;  // 160 mm
-
-    // ── Municipality subtitle ────────────────────────────────────────────────
-    const municipio = orgSettings.municipio || '';
-    const uf        = orgSettings.uf        || '';
-    const municipioLine = municipio
-      ? `SECRETARIA MUNICIPAL DE EDUCAÇÃO — ${municipio.toUpperCase()}${uf ? `/${uf.toUpperCase()}` : ''}`
-      : 'PNAE — Gestão de Nutrição Escolar';
-
-    // ── Header (uses pdfBranding helper) ────────────────────────────────────
-    const { addPdfHeader } = await import('@/lib/pdfBranding');
-    let y = await addPdfHeader(doc, {
-      title: 'RELATÓRIO DE FISCALIZAÇÃO',
-      subtitle: municipioLine,
-      municipality: `Escola: ${aiInspection.schoolName}  ·  ${new Date(aiInspection.inspectionDate).toLocaleDateString('pt-BR')}  ·  Conformidade: ${aiInspection.overallScore}%`,
-      orgLogoUrl: orgSettings.logoUrl,
-    });
-
-    // ── Body text ────────────────────────────────────────────────────────────
-    const lines = aiReportText.split('\n');
-    const isHeader = (line: string) => /^\d+\.\s+[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]+:/.test(line.trim()) || /^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s]{6,}:$/.test(line.trim());
-
-    const addPageIfNeeded = () => {
-      if (y > ph - marginBottom) {
-        addPdfFooter(doc, `PNAE — ${municipioLine}`);
-        doc.addPage();
-        y = 20;
-      }
-    };
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) { y += 3; continue; }
-
-      addPageIfNeeded();
-
-      if (isHeader(line)) {
-        // Section title: green bold
-        y += 3;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(22, 101, 52);
-        const wrapped = doc.splitTextToSize(line, bodyWidth);
-        doc.text(wrapped, marginLeft, y);
-        y += wrapped.length * 5 + 2;
-        // thin green underline
-        doc.setDrawColor(22, 101, 52);
-        doc.setLineWidth(0.3);
-        doc.line(marginLeft, y - 1, marginLeft + bodyWidth, y - 1);
-        y += 2;
-      } else {
-        // Body paragraph
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(31, 41, 55);
-        const wrapped = doc.splitTextToSize(line, bodyWidth);
-        for (const wl of wrapped) {
-          addPageIfNeeded();
-          doc.text(wl, marginLeft, y);
-          y += 5;
-        }
-        y += 1; // small gap after paragraph
-      }
-    }
-
-    // ── Signature block ─────────────────────────────────────────────────────
-    y += 10;
-    addPageIfNeeded();
-
-    const signerName = orgSettings.nutritionistName || aiInspection.nutritionist || '';
-    const signerCrn  = orgSettings.nutritionistCrn  || '';
-    const dateLabel  = `${municipio || 'Local'}, ${new Date(aiInspection.inspectionDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.text(dateLabel, marginLeft, y);
-    y += 14;
-
-    // Signature line
-    const sigX = marginLeft + (bodyWidth - 80) / 2;
-    doc.setDrawColor(80, 80, 80);
-    doc.setLineWidth(0.4);
-    doc.line(sigX, y, sigX + 80, y);
-    y += 4;
-
-    // Try to render the signature image if available
-    if (orgSettings.signatureUrl) {
-      try {
-        const sigData = await urlToDataUrl(orgSettings.signatureUrl);
-        doc.addImage(sigData, 'PNG', sigX + 10, y - 20, 60, 16);
-      } catch (_) { /* no sig image */ }
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(31, 41, 55);
-    doc.text(signerName || 'Nutricionista Responsável Técnico', sigX + 40, y, { align: 'center' });
-    y += 4;
-
-    if (signerCrn) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      doc.text(`CRN: ${signerCrn}`, sigX + 40, y, { align: 'center' });
-    }
-
-    // ── Footer on last page ─────────────────────────────────────────────────
-    addPdfFooter(doc, `PNAE — ${municipioLine}`);
-
-    // ── Save ────────────────────────────────────────────────────────────────
-    const schoolSlug = aiInspection.schoolName.replace(/\s+/g, '_').substring(0, 30);
-    const dateSlug   = new Date(aiInspection.inspectionDate).toISOString().substring(0, 10);
-    doc.save(`Relatorio_IA_${schoolSlug}_${dateSlug}.pdf`);
-  };
 
   // Filtros do histórico
   const [filterSchoolHistory, setFilterSchoolHistory] = useState('all');
@@ -1013,16 +814,9 @@ export default function InspectionPage() {
       });
       toast.success(`Fiscalização ${action}! Conformidade: ${score}%`);
 
-      // Auto-generate AI report after saving (opens dialog automatically)
-      handleGenerateAiReport(savedInspection);
 
       if (score >= 80) {
         setSelectedInspectionForCertificate(savedInspection);
-        // Show certificate dialog after AI dialog is closed
-        setTimeout(() => {
-          setCertificateDialogOpen(true);
-          setSelectedInspectionForCertificate(savedInspection);
-        }, 500);
       }
     } catch (error) {
       console.error(error);
@@ -1433,20 +1227,6 @@ export default function InspectionPage() {
                         <Download className="h-3.5 w-3.5" /> Baixar PDF
                       </Button>
 
-                      {/* AI Report — shows saved report immediately if it exists */}
-                      <Button
-                        variant={inspection.aiReport ? 'default' : 'outline'}
-                        size="sm"
-                        className={inspection.aiReport
-                          ? 'gap-1.5 bg-violet-600 hover:bg-violet-700 text-white'
-                          : 'gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50'
-                        }
-                        onClick={() => handleGenerateAiReport(inspection)}
-                        title={inspection.aiReport ? 'Ver relatório IA salvo' : 'Gerar relatório narrativo com IA'}
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        {inspection.aiReport ? 'Ver Relatório IA' : 'Gerar Relatório IA'}
-                      </Button>
 
                       {/* Maintenance Dialog */}
                       <Dialog open={maintenanceDialogOpen && selectedInspectionForMaintenance?.id === inspection.id}
@@ -1737,83 +1517,6 @@ export default function InspectionPage() {
         </TabsContent>
       </Tabs>
 
-      {/* ── AI Report Dialog ─────────────────────────────────────────────── */}
-      <Dialog open={aiDialogOpen} onOpenChange={open => { if (!open) setAiDialogOpen(false); }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-violet-600" />
-              Relatório Narrativo com IA
-            </DialogTitle>
-            <DialogDescription>
-              {aiInspection ? `${aiInspection.schoolName} — ${new Date(aiInspection.inspectionDate).toLocaleDateString('pt-BR')}` : ''}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {aiLoading && (
-              <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <Loader2 className="h-10 w-10 animate-spin text-violet-600" />
-                <p className="text-sm text-muted-foreground">Gerando relatório com Claude IA…</p>
-                <p className="text-xs text-muted-foreground">Isso pode levar alguns segundos</p>
-              </div>
-            )}
-
-            {aiError && !aiLoading && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                <p className="font-medium mb-1">Erro ao gerar relatório</p>
-                <p>{aiError}</p>
-                {aiError.includes('ANTHROPIC_API_KEY') && (
-                  <p className="mt-2 text-xs text-red-600">
-                    Configure a variável de ambiente <code className="font-mono bg-red-100 px-1 rounded">ANTHROPIC_API_KEY</code> no painel do Railway → Settings → Variables.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {aiReportText && !aiLoading && (
-              <div className="rounded-lg border border-violet-100 bg-violet-50/30 p-5">
-                {aiInspection?.aiReport && (
-                  <p className="text-xs text-violet-400 mb-3 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Relatório salvo — gerado anteriormente
-                  </p>
-                )}
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
-                  {aiReportText}
-                </pre>
-              </div>
-            )}
-          </div>
-
-          {aiReportText && !aiLoading && (
-            <div className="flex flex-wrap gap-2 justify-end border-t pt-4 mt-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={handleCopyAiReport}
-              >
-                {aiCopied ? <><Check className="h-4 w-4 text-green-600" /> Copiado!</> : <><Copy className="h-4 w-4" /> Copiar texto</>}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 border-violet-300 text-violet-700 hover:bg-violet-50"
-                onClick={() => { if (aiInspection) handleGenerateAiReport(aiInspection, true); }}
-              >
-                <Sparkles className="h-4 w-4" /> Regenerar
-              </Button>
-              <Button
-                size="sm"
-                className="gap-2 bg-green-700 hover:bg-green-800 text-white"
-                onClick={handleDownloadAiReportPDF}
-              >
-                <Download className="h-4 w-4" /> Baixar PDF
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

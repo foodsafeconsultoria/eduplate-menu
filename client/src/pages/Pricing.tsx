@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/apiUrl';
 
 type PlanKey = 'essencial' | 'pro' | 'enterprise';
 
@@ -133,7 +134,7 @@ export default function Pricing() {
       }
       try {
         setLoading(planKey);
-        const res = await fetch('/api/stripe/checkout', {
+        const res = await fetch(apiUrl('/api/stripe/checkout'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -166,7 +167,7 @@ export default function Pricing() {
     if (!planKey || !emailInput.trim()) return;
     try {
       setLoading(planKey);
-      const res = await fetch('/api/stripe/checkout-new', {
+      const res = await fetch(apiUrl('/api/stripe/checkout-new'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailInput.trim(), plan: planKey }),

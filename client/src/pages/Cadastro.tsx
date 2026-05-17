@@ -13,6 +13,7 @@ import { auth, db } from '@/lib/firebase';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2, Loader2, Lock, User } from 'lucide-react';
 import EduPlateLogo from '@/components/EduPlateLogo';
+import { apiUrl } from '@/lib/apiUrl';
 
 type Status = 'loading' | 'ready' | 'creating' | 'done' | 'error';
 
@@ -37,7 +38,7 @@ export default function Cadastro() {
       setStatus('error');
       return;
     }
-    fetch(`/api/stripe/setup?token=${encodeURIComponent(token)}&orgId=${encodeURIComponent(orgId)}`)
+    fetch(apiUrl(`/api/stripe/setup?token=${encodeURIComponent(token)}&orgId=${encodeURIComponent(orgId)}`))
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Token inválido.');
@@ -72,14 +73,14 @@ export default function Cadastro() {
       });
 
       // 3. Clear setupToken from org (mark account as fully created)
-      await fetch('/api/stripe/setup/complete', {
+      await fetch(apiUrl('/api/stripe/setup/complete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, orgId }),
       });
 
       // 4. Send welcome email (fire-and-forget — não bloqueia o fluxo)
-      fetch('/api/email/welcome', {
+      fetch(apiUrl('/api/email/welcome'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email, plan }),
