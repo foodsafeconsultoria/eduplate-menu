@@ -138,19 +138,6 @@ async function generateCertificatePDF(
   doc.text('QUALIDADE', SIDE / 2, LOGO_CY + LOGO_R + 14, { align: 'center' });
   doc.setCharSpace(0);
 
-  // Score badge circular no centro do sidebar
-  const scoreCY = ph / 2 + 8;
-  doc.setFillColor(255, 255, 255);
-  doc.circle(SIDE / 2, scoreCY, 17, 'F');
-  doc.setDrawColor(...scoreRgb);
-  doc.setLineWidth(1.5);
-  doc.circle(SIDE / 2, scoreCY, 17, 'D');
-  doc.setLineWidth(0.3);
-  doc.setFontSize(15);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...scoreRgb);
-  doc.text(`${cert.averageConformity}%`, SIDE / 2, scoreCY + 5, { align: 'center' });
-
   // PNAE label rodapé do sidebar
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
@@ -172,8 +159,8 @@ async function generateCertificatePDF(
   doc.setCharSpace(0);
 
   // Título
-  Y += 16;
-  doc.setFontSize(46);
+  Y += 14;
+  doc.setFontSize(40);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text('CERTIFICADO', CX, Y);
@@ -181,35 +168,35 @@ async function generateCertificatePDF(
   // Sublinhado dourado
   Y += 3;
   doc.setFillColor(...GOLD);
-  doc.rect(CX, Y, 110, 2.5, 'F');
+  doc.rect(CX, Y, 100, 2.5, 'F');
 
   // "Certificamos que..."
-  Y += 14;
-  doc.setFontSize(13);
+  Y += 12;
+  doc.setFontSize(11.5);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...GRAY);
   doc.text('Certificamos que a unidade de alimentação escolar da instituição', CX, Y);
 
   // Nome da escola
-  Y += 12;
-  const nameFontSize = cert.schoolName.length > 50 ? 18 : 26;
+  Y += 11;
+  const nameFontSize = cert.schoolName.length > 50 ? 16 : 22;
   doc.setFontSize(nameFontSize);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
   const nameLines = doc.splitTextToSize(cert.schoolName.toUpperCase(), CW);
   doc.text(nameLines, CX, Y);
-  Y += nameLines.length * (nameFontSize === 18 ? 8 : 11);
+  Y += nameLines.length * (nameFontSize === 16 ? 7 : 9);
 
   // Texto de conformidade
   Y += 4;
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
   doc.text('atingiu a conformidade média de', CX, Y);
 
   // Score grande
-  Y += 12;
-  doc.setFontSize(36);
+  Y += 11;
+  doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...scoreRgb);
   doc.text(`${cert.averageConformity}%`, CX, Y);

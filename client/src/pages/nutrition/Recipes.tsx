@@ -11,7 +11,7 @@ import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Food, RecipeClassification, RecipeIngredient } from '@/types/nutrition';
-import { FileText, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { Download, FileText, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -19,6 +19,7 @@ import type { Recipe } from '@/types/nutrition';
 import { addPdfHeader } from '@/lib/pdfBranding';
 import { getDefaultCorrectionFactor } from '@/data/correctionFactors';
 import { detectAllergens } from '@/data/allergenMapping';
+import { DEFAULT_RECIPES } from '@/data/defaultRecipes';
 
 const emptyNutrients = {
   kcal: 0,
@@ -251,7 +252,31 @@ export default function Recipes() {
   }, [orgId]);
   const { foods } = useFoods();
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
+  const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const importDefaultRecipes = async () => {
+    setImporting(true);
+    try {
+      const existingNames = new Set(recipes.map((r) => r.name.toLowerCase()));
+      const toImport = DEFAULT_RECIPES.filter((r) => !existingNames.has(r.name.toLowerCase()));
+      if (toImport.length === 0) {
+        toast.info('Todas as fichas PNAE já estão cadastradas.');
+        return;
+      }
+      for (const recipe of toImport) {
+        addRecipe(recipe);
+        // small yield so React can process intermediate state
+        await new Promise((res) => setTimeout(res, 30));
+      }
+      toast.success(`${toImport.length} ficha(s) PNAE importada(s) com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao importar fichas PNAE.');
+    } finally {
+      setImporting(false);
+    }
+  };
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -560,6 +585,16 @@ export default function Recipes() {
           </div>
 
           <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={importDefaultRecipes}
+              disabled={importing}
+              className="border-green-300 text-green-700 hover:bg-green-50"
+              title="Importar 50 fichas técnicas padrão do PNAE"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {importing ? 'Importando…' : 'Fichas PNAE'}
+            </Button>
             {recipes.length > 0 && (
               <Button
                 variant="outline"

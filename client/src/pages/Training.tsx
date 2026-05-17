@@ -313,8 +313,8 @@ async function generateCertificatePDF(
   doc.setCharSpace(0);
 
   // Título
-  Y += 16;
-  doc.setFontSize(46);
+  Y += 14;
+  doc.setFontSize(40);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...G_MED);
   doc.text('CERTIFICADO', CX, Y);
@@ -322,23 +322,23 @@ async function generateCertificatePDF(
   // Sublinhado dourado
   Y += 3;
   doc.setFillColor(...GOLD);
-  doc.rect(CX, Y, 110, 2.5, 'F');
+  doc.rect(CX, Y, 100, 2.5, 'F');
 
   // "Certificamos que"
-  Y += 14;
-  doc.setFontSize(13);
+  Y += 12;
+  doc.setFontSize(11.5);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(...GRAY);
   doc.text('Certificamos que', CX, Y);
 
   // Nome
-  Y += 12;
-  doc.setFontSize(28);
+  Y += 11;
+  doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
   const nameLines = doc.splitTextToSize(attendee.name.toUpperCase(), CW);
   doc.text(nameLines, CX, Y);
-  Y += nameLines.length * 11;
+  Y += nameLines.length * 10;
 
   // CPF pill
   doc.setFillColor(...G_TINT);
