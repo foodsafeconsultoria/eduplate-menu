@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { Recipe } from '@/types/nutrition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_nutrition_recipes';
 const COLLECTION_NAME = 'nutrition_recipes';
@@ -84,12 +85,13 @@ function normalizeRecipes(raw: unknown): Recipe[] {
 
 export function useRecipes() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({

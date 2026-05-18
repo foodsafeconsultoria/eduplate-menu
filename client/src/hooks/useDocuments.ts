@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { OrgDocument } from '@/types';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_org_documents';
 const COLLECTION_NAME = 'org_documents';
@@ -35,13 +36,16 @@ function normalizeDocuments(raw: unknown): OrgDocument[] {
 
 export const useDocuments = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [documents, setDocuments] = useState<OrgDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
+
     let mounted = true;
+    setLoading(true);
     loadHybridCollection({
       orgId,
       collectionName: COLLECTION_NAME,

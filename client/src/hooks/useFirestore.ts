@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { EPI, Inspection, Schedule, School } from '@/types';
 import { loadHybridCollection, persistHybridSnapshot, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const LEGACY_ORG_ID = 'pnae-default-org';
 
@@ -244,12 +245,13 @@ function normalizeSchedules(raw: unknown): Schedule[] {
 
 export const useSchools = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [schools, setSchoolsState] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({
@@ -281,12 +283,13 @@ export const useSchools = () => {
 
 export const useInspections = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [inspections, setInspectionsState] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({
@@ -320,12 +323,13 @@ export const useInspections = () => {
 
 export const useEPIs = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [epis, setEpisState] = useState<EPI[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({
@@ -357,12 +361,13 @@ export const useEPIs = () => {
 
 export const useSchedules = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [schedules, setSchedulesState] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({

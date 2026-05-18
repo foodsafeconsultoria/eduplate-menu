@@ -18,6 +18,7 @@ import { db, storage } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 export interface OrgSettings {
   logoUrl?: string;
@@ -48,7 +49,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export function useOrgSettings() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [settings, setSettings] = useState<OrgSettings>(() => {
     try {
@@ -61,6 +62,7 @@ export function useOrgSettings() {
 
   // ── Load from Firestore on mount ───────────────────────────────────────────
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
     const load = async () => {
       try {

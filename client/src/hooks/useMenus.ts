@@ -3,6 +3,7 @@ import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, sync
 import { toast } from 'sonner';
 import type { Menu, MenuInsumo, MenuSlot, MenuStatus, NutritionNutrientSet } from '@/types/nutrition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_nutrition_menus';
 const COLLECTION_NAME = 'nutrition_menus';
@@ -129,12 +130,13 @@ function normalizeMenus(raw: unknown): Menu[] {
 
 export function useMenus() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
 

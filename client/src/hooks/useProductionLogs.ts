@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { ProductionLog } from '@/types/nutrition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const LEGACY_ORG_ID = 'pnae-default-org';
 function toDate(val: unknown): Date {
@@ -51,12 +52,13 @@ function normalizeProductionLogs(raw: unknown): ProductionLog[] {
 
 export function useProductionLogs() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [productionLogs, setProductionLogs] = useState<ProductionLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { SpecialDiet } from '@/types/nutrition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_nutrition_special_diets';
 const COLLECTION_NAME = 'nutrition_special_diets';
@@ -52,12 +53,13 @@ function normalizeSpecialDiets(raw: unknown): SpecialDiet[] {
 
 export function useSpecialDiets() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [specialDiets, setSpecialDiets] = useState<SpecialDiet[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
 

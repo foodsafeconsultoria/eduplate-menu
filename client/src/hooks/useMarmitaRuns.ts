@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { MarmitaRun } from '@/types/nutrition';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_marmita_runs';
 const COLLECTION_NAME = 'marmita_runs';
@@ -37,12 +38,13 @@ export type CreateMarmitaRunInput = Omit<MarmitaRun, 'id' | 'createdAt' | 'updat
 
 export function useMarmitaRuns() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [runs, setRuns] = useState<MarmitaRun[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
     loadHybridCollection({

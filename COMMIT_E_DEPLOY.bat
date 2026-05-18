@@ -43,9 +43,22 @@ git add client\public\icon-512.png
 git add server\stripe.ts
 git add server\email.ts
 git add server\index.ts
+git add client\src\hooks\useOrgId.ts
+git add client\src\hooks\useDocuments.ts
+git add client\src\hooks\useFirestore.ts
+git add client\src\hooks\useSpecialDiets.ts
+git add client\src\hooks\useMenus.ts
+git add client\src\hooks\useRestoIngestaRecords.ts
+git add client\src\hooks\useMarmitaRuns.ts
+git add client\src\hooks\useRecipes.ts
+git add client\src\hooks\useMaintenanceTickets.ts
+git add client\src\hooks\useFoods.ts
+git add client\src\hooks\useProductionLogs.ts
+git add client\src\hooks\useOrgSettings.ts
+git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: trial de 3 meses com cartao obrigatorio"
+git commit -m "fix: aguardar auth antes de consultar Firestore em todos os hooks"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { Acceptability } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const LEGACY_ORG_ID = 'pnae-default-org';
 
@@ -49,12 +50,13 @@ function normalizeRecords(raw: unknown): Acceptability[] {
 
 export function useAcceptabilityRecords() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [records, setRecords] = useState<Acceptability[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
 
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MaintenanceTicket } from '@/types';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrgId } from '@/hooks/useOrgId';
 
 const STORAGE_KEY = 'pnae_maintenance_tickets';
 const COLLECTION_NAME = 'maintenance_tickets';
@@ -39,12 +40,13 @@ function normalizeTickets(raw: unknown): MaintenanceTicket[] {
 
 export const useMaintenanceTickets = () => {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = useOrgId();
 
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orgId) { setLoading(false); return; }
     let mounted = true;
     loadHybridCollection({
       orgId,
