@@ -26,15 +26,14 @@ async function startServer() {
   // ── CORS — allow Firebase Hosting frontend to call this API ──────────────
   app.use((req, res, next) => {
     const origin = req.headers.origin || '';
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Vary', 'Origin');
-    }
+    const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    res.setHeader('Access-Control-Allow-Origin', allowed);
+    res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,stripe-signature');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
-      res.sendStatus(204);
+      res.status(204).end();
       return;
     }
     next();
