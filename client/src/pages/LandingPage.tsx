@@ -30,7 +30,7 @@ const FAQS = [
   { q: 'O EduPlate Menu funciona para escolas particulares também?', a: 'Sim. O sistema atende tanto redes públicas (PNAE) quanto escolas particulares. Nutricionistas de colégios privados usam para organizar cardápios, dietas especiais de alunos, documentação e treinamentos da equipe de cozinha — sem precisar da parte de SIGPC/FNDE.' },
   { q: 'O EduPlate Menu funciona para qualquer município?', a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes, com planos adequados para redes menores, maiores e operações em consórcio.' },
   { q: 'Preciso instalar algum software?', a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.' },
-  { q: 'Como funciona o período de 14 dias grátis?', a: 'Você acessa todas as funcionalidades do plano escolhido por 14 dias sem custo. Não solicitamos cartão de crédito para iniciar o teste.' },
+  { q: 'Como funciona os 3 meses grátis?', a: 'Você acessa todas as funcionalidades do plano escolhido por 3 meses sem custo. Solicitamos um cartão para garantir a continuidade após o trial — mas você não paga nada se cancelar antes do 3º mês.' },
   { q: 'Quem pode usar o sistema além da nutricionista RT?', a: 'Cada organização conta com perfis de nutricionista RT e agente escolar. Os dados são isolados por organização, com segurança LGPD.' },
   { q: 'Os dados estão seguros? O sistema segue a LGPD?', a: 'Sim. O sistema opera em nuvem com autenticação segura, isolamento de dados por organização e práticas alinhadas à LGPD.' },
   { q: 'E se eu precisar cancelar?', a: 'Você pode cancelar a qualquer momento, sem burocracia e sem multa. Os dados ficam disponíveis para exportação conforme nossa política de retenção.' },
@@ -381,12 +381,12 @@ export default function LandingPage() {
               </p>
               <div className="lp-btn-row">
                 <button className="lp-btn lp-btn-primary" onClick={goToRegister}>
-                  Começar 14 dias grátis <ArrowRight size={18} />
+                  Começar 3 meses grátis <ArrowRight size={18} />
                 </button>
                 <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
               </div>
               <div className="lp-hero-meta">
-                <span className="lp-pill">Sem cartão de crédito</span>
+                <span className="lp-pill">Cartão necessário · Sem cobranças por 3 meses</span>
                 <span className="lp-pill">Cancele a qualquer momento</span>
                 <span className="lp-pill">Dados seguros na nuvem</span>
               </div>
@@ -410,7 +410,7 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="lp-container lp-stats">
             {[
-              { icon: <Clock size={20} color="#4CAF50" />, big:'14 dias', label:'de acesso grátis' },
+              { icon: <Clock size={20} color="#4CAF50" />, big:'3 meses', label:'de acesso grátis com cartão' },
               { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
               { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'600+', label:'alimentos TACO com nutrientes calculados automaticamente' },
               { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
@@ -842,7 +842,7 @@ export default function LandingPage() {
             <span className="lp-eyebrow">Planos e preços</span>
             <h2 style={{ marginTop:18 }}>Planos pensados para o porte da sua rede</h2>
             <p className="lp-lead" style={{ marginTop:18 }}>
-              14 dias grátis em qualquer plano. Sem cartão de crédito. Sem taxa de setup.
+              3 meses grátis em qualquer plano. Cartão necessário, sem cobranças por 3 meses. Sem taxa de setup.
             </p>
             {/* ── Banner oferta limitada ──────────────────────────── */}
             <div style={{
@@ -879,7 +879,7 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 14 dias grátis</button>
+                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 3 meses grátis</button>
                 </div>
               </article>
               {/* Essencial */}
@@ -897,7 +897,7 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 14 dias grátis</button>
+                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 3 meses grátis</button>
                 </div>
               </article>
               {/* Consórcio */}
@@ -1003,7 +1003,7 @@ export default function LandingPage() {
                 <span className="lp-cta-eyebrow">Pronto para profissionalizar a gestão do PNAE</span>
                 <h2>Seu município merece uma gestão do PNAE mais organizada, segura e profissional</h2>
                 <p>
-                  Experimente o EduPlate Menu por 14 dias e veja como a rotina da alimentação
+                  Experimente o EduPlate Menu por 3 meses gratuitamente e veja como a rotina da alimentação
                   escolar pode funcionar com mais controle, visibilidade e padronização.
                 </p>
                 <div className="lp-btn-row" style={{ marginTop:30 }}>

@@ -173,7 +173,7 @@ function buildWelcomeHtml({ name, email, plan }: { name: string; email: string; 
               Sua conta no <strong style="color:#1B2A4A;">EduPlate Menu</strong> foi criada com sucesso.
               ${plan
                 ? `Você está no plano <strong style="color:#4CAF50;">${plan}</strong>. Acesso completo liberado!`
-                : `Seu período de avaliação gratuita de <strong style="color:#4CAF50;">14 dias</strong> começa agora. Sem precisar de cartão — explore tudo à vontade!`
+                : `Seu período de avaliação gratuita de <strong style="color:#4CAF50;">3 meses</strong> foi ativado! Você não será cobrado por 3 meses — explore tudo à vontade e cancele quando quiser.`
               }
             </p>
           </td>

@@ -83,8 +83,8 @@ const PLANS: Plan[] = [
 
 const FAQS = [
   {
-    q: 'Preciso de cartão de crédito para começar o período grátis?',
-    a: 'Não. Os 14 dias de avaliação são totalmente gratuitos e sem necessidade de cadastrar cartão ou dados de pagamento. Você só escolhe um plano se quiser continuar após o período.',
+    q: 'Preciso de cartão de crédito para começar os 3 meses grátis?',
+    a: 'Sim. Solicitamos o cartão para garantir a continuidade automática após o trial — mas você não paga nada pelos primeiros 3 meses. Cancele antes do 3º mês e nenhum valor será cobrado.',
   },
   {
     q: 'A prefeitura pode pagar com empenho ou nota de empenho?',
@@ -189,7 +189,7 @@ export default function Pricing() {
       <div style={{ background: '#1B2A4A' }} className="py-16 px-4 text-center">
         <span className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
           style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50', border: '1px solid rgba(76,175,80,0.3)' }}>
-          14 dias grátis · Sem cartão
+          3 meses grátis · Cartão necessário
         </span>
         <h1 className="text-4xl font-extrabold text-white mt-2">Planos para cada etapa</h1>
         <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>

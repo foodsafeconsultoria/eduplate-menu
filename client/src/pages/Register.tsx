@@ -1,10 +1,11 @@
 /**
- * /registro — Trial registration page (14 days free, no credit card)
- * Uses AuthContext.register() which creates a new org with trialEndsAt = now + 14 days.
+ * /registro — Trial registration page
+ * Flow: collect name/email/phone/password → create Firebase account + org
+ *       → redirect to Stripe checkout (card required, 3-month trial, no charge now)
  */
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Eye, EyeOff, Loader2, CheckCircle2, Phone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, Phone, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import EduPlateLogo from '@/components/EduPlateLogo';
@@ -26,7 +27,7 @@ function validatePhone(phone: string): boolean {
 }
 
 export default function Register() {
-  const { register, error: authError } = useAuth();
+  const { register, user, error: authError } = useAuth();
   const [, navigate] = useLocation();
 
   const [name, setName] = useState('');
@@ -54,27 +55,67 @@ export default function Register() {
         setLoading(false);
         return;
       }
+
+      // Create Firebase account + org (trial status set in Firestore)
       await register(email.trim(), password, name.trim(), 'admin', undefined, phoneDigits);
+
       // Send welcome email (fire-and-forget)
       fetch(apiUrl('/api/email/welcome'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim() }),
       }).catch(() => {});
-      navigate('/');
+
+      // Redirect to Stripe checkout to collect card (3-month trial, no charge now)
+      // We need the orgId — it's set in the user context after register()
+      // Give auth state a moment to propagate, then call checkout
+      await redirectToStripe(email.trim());
+
     } catch (err: any) {
       setErrorMsg(authError || err.message || 'Erro ao criar conta. Tente novamente.');
-    } finally {
       setLoading(false);
     }
   };
 
+  const redirectToStripe = async (userEmail: string) => {
+    try {
+      // Fetch the user's orgId from Firestore
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', userEmail));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        // Fallback: go to dashboard if org lookup fails
+        navigate('/');
+        return;
+      }
+      const userData = snap.docs[0].data();
+      const orgId = userData.organizationId;
+      const userId = snap.docs[0].id;
+
+      const res = await fetch(apiUrl('/api/stripe/checkout-new'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, userId, plan: 'essencial' }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        // If Stripe redirect fails, go to dashboard — trial still works
+        navigate('/');
+      }
+    } catch {
+      navigate('/');
+    }
+  };
+
   const BENEFITS = [
-    '14 dias grátis, sem cartão',
+    '3 meses grátis — sem cobranças agora',
+    'Cartão necessário para ativar o trial',
     'Cardápios, fichas técnicas e dietas especiais',
     'Fiscalização de escolas e relatórios SIGPC',
     'Acesso a todos os módulos durante o trial',
-    'Cancele a qualquer momento',
+    'Cancele a qualquer momento antes do 3º mês',
   ];
 
   return (
@@ -103,10 +144,13 @@ export default function Register() {
 
           <div className="mt-10 w-full rounded-2xl p-4" style={{ background:'rgba(76,175,80,0.1)', border:'1px solid rgba(76,175,80,0.2)' }}>
             <p className="text-xs text-center" style={{ color:'rgba(255,255,255,0.5)' }}>
-              Após os 14 dias, escolha um plano a partir de
+              Após os 3 meses, a partir de
             </p>
             <p className="text-2xl font-extrabold text-center mt-1" style={{ color:'#4CAF50' }}>
               R$ 49,90<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
+            </p>
+            <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.35)' }}>
+              Cancele antes do 3º mês e não paga nada
             </p>
           </div>
         </div>
@@ -122,14 +166,23 @@ export default function Register() {
         <div className="w-full max-w-md">
           <div className="mb-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
             style={{ background:'rgba(76,175,80,0.1)', color:'#2E7D32', border:'1px solid rgba(76,175,80,0.3)' }}>
-            🎉 14 dias grátis · Sem cartão
+            3 meses grátis · Cancele quando quiser
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mt-2">Criar conta grátis</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Comece agora e explore todos os recursos por 14 dias.
+            Preencha seus dados e você será direcionado para informar seu cartão.<br/>
+            <strong className="text-gray-600">Nenhuma cobrança pelos primeiros 3 meses.</strong>
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+          {/* Card notice */}
+          <div className="mt-4 flex items-start gap-2 p-3 rounded-xl" style={{ background:'rgba(26,115,232,0.06)', border:'1px solid rgba(26,115,232,0.15)' }}>
+            <CreditCard className="w-4 h-4 mt-0.5 shrink-0" style={{ color:'#1A73E8' }} />
+            <p className="text-xs" style={{ color:'#1A73E8' }}>
+              O cartão é solicitado para garantir a continuidade após o trial. Você pode cancelar antes do 3º mês e <strong>não será cobrado nada</strong>.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nome completo</label>
               <Input
@@ -204,7 +257,7 @@ export default function Register() {
               style={{ background: '#4CAF50' }}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? 'Criando conta…' : 'Criar conta grátis →'}
+              {loading ? 'Criando conta…' : 'Criar conta e ativar 3 meses grátis →'}
             </button>
 
             <p className="text-xs text-center text-gray-400 mt-2">

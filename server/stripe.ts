@@ -100,7 +100,10 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
       success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
       metadata: { orgId, plan, setupToken },
-      subscription_data: { metadata: { orgId, plan } },
+      subscription_data: {
+        trial_period_days: 90,       // 3 meses grátis com cartão
+        metadata: { orgId, plan },
+      },
       locale: 'pt-BR',
       billing_address_collection: 'required',
       allow_promotion_codes: true,
@@ -261,6 +264,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
       cancel_url: `${appUrl}/planos?canceled=1`,
       metadata: { orgId, userId, plan },
       subscription_data: {
+        trial_period_days: 90,       // 3 meses grátis com cartão
         metadata: { orgId, userId, plan },
       },
       locale: 'pt-BR',
@@ -335,26 +339,39 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
   try {
     switch (event.type) {
 
-      // ── Payment succeeded → activate subscription ──────────────────────────
+      // ── Checkout completed → ativa assinatura (com ou sem trial) ─────────────
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const orgId = session.metadata?.orgId;
         const plan = session.metadata?.plan as PlanKey | undefined;
         if (!orgId) break;
 
-        await db.collection('organizations').doc(orgId).update({
-          subscriptionStatus: 'active',
+        // Retrieve subscription to check if it's in trial
+        let subscriptionStatus: string = 'active';
+        let trialEndsAt: Date | null = null;
+        if (session.subscription) {
+          try {
+            const sub = await getStripe().subscriptions.retrieve(session.subscription as string);
+            if (sub.status === 'trialing') {
+              subscriptionStatus = 'trial';
+              trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+            }
+          } catch (_) { /* se falhar, mantém 'active' */ }
+        }
+
+        await db.collection('organizations').doc(orgId).set({
+          subscriptionStatus,
           plan: plan || 'essencial',
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
           activatedAt: new Date(),
-          // Keep setupToken — cleared after account creation in /cadastro
-        });
-        console.log(`[Stripe] Org ${orgId} activated on plan ${plan}`);
+          ...(trialEndsAt ? { trialEndsAt } : {}),
+        }, { merge: true });
+        console.log(`[Stripe] Org ${orgId} → ${subscriptionStatus} (plan: ${plan})`);
         break;
       }
 
-      // ── Subscription updated (upgrade/downgrade/renewal) ──────────────────
+      // ── Subscription updated (upgrade/downgrade/trial→ativo) ─────────────
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription;
         const orgId = sub.metadata?.orgId;
@@ -365,9 +382,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
           : sub.status === 'trialing' ? 'trial'
           : 'canceled';
 
+        const trialEndsAt = sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+
         await db.collection('organizations').doc(orgId).update({
           subscriptionStatus: status,
           stripeSubscriptionId: sub.id,
+          ...(trialEndsAt ? { trialEndsAt } : {}),
         });
         console.log(`[Stripe] Org ${orgId} subscription updated to ${status}`);
         break;

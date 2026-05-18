@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // `request.resource.data.ownerEmail == request.auth.token.email` passes.
         orgId = crypto.randomUUID();
         const newInviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // +14 days
+        const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // +90 days (3 meses)
         await setDoc(doc(db, 'organizations', orgId), {
           id: orgId,
           inviteCode: newInviteCode,
