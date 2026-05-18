@@ -95,10 +95,10 @@ export default function Login() {
             style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.35)' }}
           >
             <p style={{ fontSize: 30, fontWeight: 800, color: '#4CAF50', margin: 0, lineHeight: 1.1 }}>
-              14 dias grátis
+              3 meses grátis
             </p>
             <p className="mt-1 text-sm" style={{ color: 'rgba(76,175,80,0.7)', margin: '6px 0 0', fontWeight: 600 }}>
-              Acesso completo · Sem cartão de crédito
+              Acesso completo · Cartão necessário
             </p>
           </div>
 

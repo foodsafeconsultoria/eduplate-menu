@@ -221,7 +221,6 @@ export default function Register() {
                   className="h-11 pl-9"
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1">Um número por conta — evita duplicatas.</p>
             </div>
 
             <div>

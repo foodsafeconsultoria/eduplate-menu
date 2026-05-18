@@ -8,6 +8,7 @@ cd /d "%~dp0"
 
 echo [0/2] Corrigindo git index corrompido...
 if exist ".git\index.lock" del /f ".git\index.lock"
+if exist ".git\HEAD.lock" del /f ".git\HEAD.lock"
 git reset HEAD
 echo.
 
@@ -31,7 +32,6 @@ git add client\src\pages\Profile.tsx
 git add client\src\components\OnboardingModal.tsx
 git add client\src\pages\LandingPage.tsx
 git add client\src\pages\Notifications.tsx
-git add client\src\pages\Billing.tsx
 git add client\src\pages\Register.tsx
 git add client\src\pages\ForgotPassword.tsx
 git add client\src\pages\Login.tsx
@@ -45,7 +45,7 @@ git add server\email.ts
 git add server\index.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "deploy: atualizacoes EduPlate"
+git commit -m "feat: trial de 3 meses com cartao obrigatorio"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
