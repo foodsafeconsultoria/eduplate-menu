@@ -4,11 +4,26 @@
  */
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import { apiUrl } from '@/lib/apiUrl';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+// Format phone as (XX) XXXXX-XXXX
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+}
+
+function validatePhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, '');
+  return digits.length === 11 && /^[1-9]{2}[9][0-9]{8}$/.test(digits);
+}
 
 export default function Register() {
   const { register, error: authError } = useAuth();
@@ -16,6 +31,7 @@ export default function Register() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,11 +40,21 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { setErrorMsg('Informe seu nome.'); return; }
+    if (!validatePhone(phone)) { setErrorMsg('Informe um celular válido com DDD. Ex: (11) 99999-8888'); return; }
     if (password.length < 6) { setErrorMsg('A senha deve ter ao menos 6 caracteres.'); return; }
     setErrorMsg('');
     setLoading(true);
     try {
-      await register(email.trim(), password, name.trim(), 'admin');
+      // Check for duplicate phone in Firestore
+      const phoneDigits = phone.replace(/\D/g, '');
+      const usersRef = collection(db, 'users');
+      const snap = await getDocs(query(usersRef, where('phone', '==', phoneDigits)));
+      if (!snap.empty) {
+        setErrorMsg('Este número de celular já está cadastrado. Faça login ou use outro número.');
+        setLoading(false);
+        return;
+      }
+      await register(email.trim(), password, name.trim(), 'admin', undefined, phoneDigits);
       // Send welcome email (fire-and-forget)
       fetch(apiUrl('/api/email/welcome'), {
         method: 'POST',
@@ -127,6 +153,22 @@ export default function Register() {
                 required
                 className="h-11"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Celular com DDD <span style={{ color: '#EF4444' }}>*</span></label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="tel"
+                  placeholder="(11) 99999-8888"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  required
+                  className="h-11 pl-9"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Um número por conta — evita duplicatas.</p>
             </div>
 
             <div>

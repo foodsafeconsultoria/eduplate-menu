@@ -36,6 +36,10 @@ git add client\src\pages\Register.tsx
 git add client\src\pages\ForgotPassword.tsx
 git add client\src\pages\Login.tsx
 git add client\src\App.tsx
+git add client\src\contexts\AuthContext.tsx
+git add client\public\manifest.json
+git add client\public\icon-192.png
+git add client\public\icon-512.png
 git add server\stripe.ts
 git add server\email.ts
 git add server\index.ts

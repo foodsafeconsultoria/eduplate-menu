@@ -38,7 +38,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F5F7FA' }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F5F7FA', colorScheme: 'light' }}>
       <div className="w-full max-w-md">
 
         {/* Logo */}
@@ -46,7 +46,7 @@ export default function ForgotPassword() {
           <EduPlateLogo className="w-48" />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div style={{ background: '#ffffff', borderRadius: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #E5E7EB', padding: '2rem' }}>
 
           {sent ? (
             /* ── Success state ── */
@@ -56,12 +56,12 @@ export default function ForgotPassword() {
                   <CheckCircle2 className="w-8 h-8" style={{ color: '#4CAF50' }} />
                 </div>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">E-mail enviado!</h1>
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>E-mail enviado!</h1>
+              <p style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: 8, lineHeight: 1.6 }}>
                 Enviamos um link de recuperação para<br />
                 <strong className="text-gray-700">{email}</strong>
               </p>
-              <p className="text-xs text-gray-400 mt-3">
+              <p style={{ fontSize: '0.75rem', color: '#9CA3AF', marginTop: 12 }}>
                 Não recebeu? Verifique a pasta de spam ou aguarde alguns minutos.
               </p>
               <button
@@ -75,16 +75,16 @@ export default function ForgotPassword() {
           ) : (
             /* ── Form state ── */
             <>
-              <div className="mb-6">
-                <h1 className="text-xl font-bold text-gray-900">Esqueceu sua senha?</h1>
-                <p className="text-sm text-gray-500 mt-1">
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>Esqueceu sua senha?</h1>
+                <p style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: 4 }}>
                   Informe seu e-mail e enviaremos um link para você criar uma nova senha.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: 6 }}>
                     E-mail da conta
                   </label>
                   <div className="relative">
@@ -123,7 +123,7 @@ export default function ForgotPassword() {
         {/* Back to login */}
         <button
           onClick={() => navigate('/login')}
-          className="mt-5 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mx-auto transition-colors"
+          style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', marginRight: 'auto' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar ao login

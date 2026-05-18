@@ -25,7 +25,7 @@ interface AuthContextType {
    * inviteCode: 6-char code of an existing org to join.
    * If omitted, a brand-new org is created for this user.
    */
-  register: (email: string, password: string, displayName: string, role: string, inviteCode?: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, role: string, inviteCode?: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, password: string, displayName: string, role: string, inviteCode?: string) => {
+  const register = async (email: string, password: string, displayName: string, role: string, inviteCode?: string, phone?: string) => {
     setError(null);
     let firebaseUser: import('firebase/auth').User | null = null;
     try {
@@ -139,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         organizationId: orgId,
         createdAt: new Date(),
         uid: res.user.uid,
+        ...(phone ? { phone } : {}),
       };
       await setDoc(doc(db, 'users', res.user.uid), userData);
       // Explicitly set user state so the dashboard loads with the correct org,
