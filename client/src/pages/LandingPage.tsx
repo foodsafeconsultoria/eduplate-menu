@@ -434,14 +434,14 @@ export default function LandingPage() {
               Redes públicas, particulares ou consórcios — onde há nutrição escolar, há lugar para o EduPlate Menu.
             </p>
 
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20, marginTop:32 }}>
+            <div className="lp-who-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20, marginTop:32 }}>
 
               {/* Card 1 — PNAE */}
               <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
                 <div style={{ height:200, overflow:'hidden', position:'relative' }}>
                   <img
-                    src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80&auto=format&fit=crop"
-                    alt="Merenda escolar saudável"
+                    src="/foto-consorcio.png"
+                    alt="Pratos saudáveis para crianças"
                     style={{ width:'100%', height:'100%', objectFit:'cover' }}
                   />
                   <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
@@ -459,8 +459,8 @@ export default function LandingPage() {
               <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
                 <div style={{ height:200, overflow:'hidden', position:'relative' }}>
                   <img
-                    src="https://images.unsplash.com/photo-1567062801786-17b4b6a18571?w=600&q=80&auto=format&fit=crop"
-                    alt="Crianças na escola particular"
+                    src="/foto-escolas.png"
+                    alt="Crianças almoçando na escola"
                     style={{ width:'100%', height:'100%', objectFit:'cover' }}
                   />
                   <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
@@ -478,8 +478,8 @@ export default function LandingPage() {
               <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
                 <div style={{ height:200, overflow:'hidden', position:'relative' }}>
                   <img
-                    src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80&auto=format&fit=crop"
-                    alt="Nutricionista trabalhando"
+                    src="/foto-nutricionista.png"
+                    alt="Nutricionista RT no consultório"
                     style={{ width:'100%', height:'100%', objectFit:'cover' }}
                   />
                   <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />

@@ -790,8 +790,9 @@
 }
 
 @media (max-width: 640px) {
-  .lp-hero { padding-top: 28px; }
-  .lp-section { padding: 64px 0; }
+  .lp-hero { padding-top: 28px; padding-bottom: 40px; }
+  .lp-section { padding: 52px 0; }
+  .lp-section-sm { padding: 36px 0; }
   .lp-grid-3,
   .lp-grid-2,
   .lp-pricing,
@@ -799,9 +800,24 @@
   .lp-stats,
   .lp-compare { grid-template-columns: 1fr; }
   .lp-btn-row { flex-direction: column; }
-  .lp-btn { width: 100%; justify-content: center; }
-  .lp-cta-box { padding: 32px 24px; }
-  .lp-footer-inner { flex-direction: column; align-items: flex-start; }
+  .lp-btn { width: 100%; justify-content: center; font-size: 14px; padding: 13px 18px; }
+  .lp-cta-box { padding: 28px 20px; border-radius: 22px; }
+  .lp-cta-box h2 { font-size: 1.5rem; }
+  .lp-footer-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .lp-footer-links { gap: 12px; font-size: 13px; }
+  .lp-price-card { padding: 22px 18px; }
+  .lp-price { font-size: 1.8rem; }
+  .lp-problem-panel { padding: 22px 18px; }
+  .lp-hero-meta { gap: 7px; }
+  .lp-pill { font-size: 12px; padding: 7px 12px; }
+  .lp-eyebrow { font-size: 12px; padding: 7px 13px; }
+  .lp-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .lp-stat { padding: 16px; border-radius: 16px; }
+  .lp-stat-big { font-size: 1.5rem; }
+  .lp-faq-q { font-size: 14px; padding: 15px 16px; }
+  .lp-faq-a { padding: 0 16px 14px; padding-top: 12px; }
+  .lp-nav { min-height: 62px; }
+  .lp-container { width: calc(100% - 24px); }
 }
 
 /* ── WhatsApp pulse animation ─────────────────────────── */
