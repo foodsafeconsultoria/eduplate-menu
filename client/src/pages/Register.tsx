@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import EduPlateLogo from '@/components/EduPlateLogo';
+import { apiUrl } from '@/lib/apiUrl';
 
 export default function Register() {
   const { register, error: authError } = useAuth();
@@ -28,6 +29,12 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email.trim(), password, name.trim(), 'admin');
+      // Send welcome email (fire-and-forget)
+      fetch(apiUrl('/api/email/welcome'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+      }).catch(() => {});
       navigate('/');
     } catch (err: any) {
       setErrorMsg(authError || err.message || 'Erro ao criar conta. Tente novamente.');

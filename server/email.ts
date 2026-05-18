@@ -171,8 +171,10 @@ function buildWelcomeHtml({ name, email, plan }: { name: string; email: string; 
             <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1B2A4A;">Olá, ${name}! 🎉</p>
             <p style="margin:0;font-size:15px;color:#6b7280;line-height:1.7;">
               Sua conta no <strong style="color:#1B2A4A;">EduPlate Menu</strong> foi criada com sucesso.
-              ${plan ? `Você está no plano <strong style="color:#4CAF50;">${plan}</strong>.` : ''}
-              Agora você tem acesso completo à plataforma.
+              ${plan
+                ? `Você está no plano <strong style="color:#4CAF50;">${plan}</strong>. Acesso completo liberado!`
+                : `Seu período de avaliação gratuita de <strong style="color:#4CAF50;">14 dias</strong> começa agora. Sem precisar de cartão — explore tudo à vontade!`
+              }
             </p>
           </td>
         </tr>
@@ -201,7 +203,7 @@ function buildWelcomeHtml({ name, email, plan }: { name: string; email: string; 
         <!-- CTA -->
         <tr>
           <td style="padding:32px 40px;">
-            <a href="https://app.eduplate.com.br" style="display:inline-block;background:#4CAF50;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;">
+            <a href="https://www.eduplate.com.br" style="display:inline-block;background:#4CAF50;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;">
               Acessar o EduPlate →
             </a>
           </td>
@@ -211,7 +213,7 @@ function buildWelcomeHtml({ name, email, plan }: { name: string; email: string; 
           <td style="padding:20px 40px 28px;border-top:1px solid #f3f4f6;">
             <p style="margin:0;font-size:12px;color:#d1d5db;">
               Conta registrada para <strong>${email}</strong> · EduPlate Menu · Avaré — SP<br/>
-              Dúvidas? Responda este e-mail ou acesse <a href="https://app.eduplate.com.br" style="color:#4CAF50;">app.eduplate.com.br</a>
+              Dúvidas? Responda este e-mail ou acesse <a href="https://www.eduplate.com.br" style="color:#4CAF50;">www.eduplate.com.br</a>
             </p>
           </td>
         </tr>

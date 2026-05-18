@@ -172,7 +172,7 @@ export default function Login() {
                   <label className="text-sm font-medium text-gray-700">Senha</label>
                   <button
                     type="button"
-                    onClick={() => { setShowReset(true); setResetEmail(loginEmail); setResetSent(false); }}
+                    onClick={() => setLocation('/esqueci-senha')}
                     className="text-xs font-medium transition-colors"
                     style={{ color: '#4CAF50' }}
                   >
@@ -255,14 +255,15 @@ export default function Login() {
           )}
 
           {/* Ainda não tem conta */}
-          <div className="mt-6 text-center">
-            <a
-              href="/landing"
-              className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+          <div className="mt-6 pt-5 border-t border-gray-100 text-center text-sm text-gray-500">
+            Ainda não tem conta?{' '}
+            <button
+              onClick={() => setLocation('/registro')}
+              className="font-semibold hover:underline"
               style={{ color: '#4CAF50' }}
             >
-              Ainda não tem conta? Conheça os planos →
-            </a>
+              Criar conta grátis →
+            </button>
           </div>
 
           <p className="text-center text-xs text-gray-300 mt-4">

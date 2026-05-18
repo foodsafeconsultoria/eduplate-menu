@@ -33,8 +33,11 @@ git add client\src\pages\LandingPage.tsx
 git add client\src\pages\Notifications.tsx
 git add client\src\pages\Billing.tsx
 git add client\src\pages\Register.tsx
+git add client\src\pages\ForgotPassword.tsx
+git add client\src\pages\Login.tsx
 git add client\src\App.tsx
 git add server\stripe.ts
+git add server\email.ts
 git add server\index.ts
 git add COMMIT_E_DEPLOY.bat
 git status
