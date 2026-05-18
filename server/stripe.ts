@@ -90,7 +90,7 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
       email,
       metadata: { orgId, firebaseProjectId: 'gestaoescola-e5f3d' },
     });
-    await db.collection('organizations').doc(orgId).update({ stripeCustomerId: customer.id });
+    await db.collection('organizations').doc(orgId).set({ stripeCustomerId: customer.id }, { merge: true });
 
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
@@ -207,8 +207,11 @@ router.post('/checkout', async (req: Request, res: Response) => {
         metadata: { orgId, userId, firebaseProjectId: 'gestaoescola-e5f3d' },
       });
       customerId = customer.id;
-      // Save customer ID immediately so we don't create duplicates
-      await db.collection('organizations').doc(orgId).update({ stripeCustomerId: customerId });
+      // Save customer ID — use set+merge so it works even if doc doesn't exist yet
+      await db.collection('organizations').doc(orgId).set(
+        { stripeCustomerId: customerId },
+        { merge: true }
+      );
     }
 
     const session = await stripe.checkout.sessions.create({
