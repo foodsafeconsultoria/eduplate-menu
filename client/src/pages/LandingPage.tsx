@@ -1076,7 +1076,8 @@ export default function LandingPage() {
               <EduPlateLogo variant="light" style={{ height:32, marginBottom:8 }} />
               <p className="lp-footer-copy" style={{ marginTop:8 }}>
                 Plataforma especialista em PNAE · 100% online<br />
-                CNPJ: — · Avaré — SP · contato@eduplate.com.br
+                Rua João Colella, 46 · São Judas II · CEP 18705-489 · Avaré — SP<br />
+                contato@eduplate.com.br
               </p>
             </div>
             <div className="lp-footer-links">
