@@ -224,7 +224,6 @@ router.post('/checkout', async (req: Request, res: Response) => {
       metadata: { orgId, userId, plan },
       subscription_data: {
         metadata: { orgId, userId, plan },
-        trial_period_days: 0,
       },
       locale: 'pt-BR',
       allow_promotion_codes: true,

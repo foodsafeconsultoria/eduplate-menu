@@ -280,8 +280,8 @@ export default function Pricing() {
             <span className="font-medium">Boleto Bancário</span> e{' '}
             <span className="font-medium">Cartão de Crédito</span>.
             {' '}Para pagamento via empenho municipal, entre em contato: {' '}
-            <a href="mailto:contato@sistema-pnae.com.br" className="text-green-700 underline">
-              contato@sistema-pnae.com.br
+            <a href="mailto:contato@eduplate.com.br" className="text-green-700 underline">
+              contato@eduplate.com.br
             </a>
           </p>
         </div>
