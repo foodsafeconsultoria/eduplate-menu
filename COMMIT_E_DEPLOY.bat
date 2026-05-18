@@ -31,6 +31,10 @@ git add client\src\pages\Profile.tsx
 git add client\src\components\OnboardingModal.tsx
 git add client\src\pages\LandingPage.tsx
 git add client\src\pages\Notifications.tsx
+git add client\src\pages\Billing.tsx
+git add client\src\pages\Register.tsx
+git add client\src\App.tsx
+git add server\stripe.ts
 git add server\index.ts
 git add COMMIT_E_DEPLOY.bat
 git status

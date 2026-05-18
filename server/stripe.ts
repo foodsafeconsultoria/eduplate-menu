@@ -114,6 +114,44 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/stripe/verify-session?sessionId=XXX&orgId=YYY ──────────────────
+// Fallback sync: called by Billing.tsx after returning from Stripe Checkout.
+// Verifies the session was paid and updates Firestore if the webhook missed it.
+router.get('/verify-session', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, orgId } = req.query as { sessionId: string; orgId: string };
+    if (!sessionId || !orgId) {
+      return res.status(400).json({ error: 'sessionId e orgId são obrigatórios.' });
+    }
+
+    const stripe = getStripe();
+    const db = getAdminDb();
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid' && session.metadata?.orgId === orgId) {
+      const plan = (session.metadata?.plan as PlanKey) || 'essencial';
+      await db.collection('organizations').doc(orgId).set({
+        subscriptionStatus: 'active',
+        plan,
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: session.subscription as string,
+        activatedAt: new Date(),
+      }, { merge: true });
+      console.log(`[Stripe /verify-session] Org ${orgId} synced to active (plan: ${plan})`);
+      return res.json({ status: 'active', plan });
+    }
+
+    // Session not paid yet — return current org status
+    const orgDoc = await db.collection('organizations').doc(orgId).get();
+    const data = orgDoc.data() || {};
+    return res.json({ status: data.subscriptionStatus || 'unknown', plan: data.plan || null });
+  } catch (err: any) {
+    console.error('[Stripe /verify-session error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/stripe/setup?token=XXX&orgId=YYY ────────────────────────────────
 // Verifies a post-payment setup token and returns org info.
 router.get('/setup', async (req: Request, res: Response) => {

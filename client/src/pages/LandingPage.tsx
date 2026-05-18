@@ -311,6 +311,7 @@ export default function LandingPage() {
   const [activeTab, setActiveTab] = useState(0);
 
   const goToPlans = () => navigate('/planos');
+  const goToRegister = () => navigate('/registro');
   const goToLogin = () => navigate('/login');
 
   const SCREENS = [
@@ -341,7 +342,7 @@ export default function LandingPage() {
             </div>
             <div className="lp-nav-actions">
               <button className="lp-link-plain" onClick={goToLogin}>Entrar</button>
-              <button className="lp-btn lp-btn-primary" onClick={goToPlans} style={{ padding:'10px 20px', fontSize:14 }}>
+              <button className="lp-btn lp-btn-primary" onClick={goToRegister} style={{ padding:'10px 20px', fontSize:14 }}>
                 Teste grátis
               </button>
               <button className="lp-hamburger" onClick={() => setMobileOpen(v => !v)} aria-label="Menu">
@@ -379,7 +380,7 @@ export default function LandingPage() {
                 responsáveis técnicas de municípios, consórcios e escolas particulares.
               </p>
               <div className="lp-btn-row">
-                <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
+                <button className="lp-btn lp-btn-primary" onClick={goToRegister}>
                   Começar 14 dias grátis <ArrowRight size={18} />
                 </button>
                 <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
@@ -878,7 +879,7 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToPlans}>Começar 14 dias grátis</button>
+                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 14 dias grátis</button>
                 </div>
               </article>
               {/* Essencial */}
@@ -896,7 +897,7 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToPlans}>Começar 14 dias grátis</button>
+                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 14 dias grátis</button>
                 </div>
               </article>
               {/* Consórcio */}
@@ -1006,7 +1007,7 @@ export default function LandingPage() {
                   escolar pode funcionar com mais controle, visibilidade e padronização.
                 </p>
                 <div className="lp-btn-row" style={{ marginTop:30 }}>
-                  <button className="lp-btn lp-btn-primary" onClick={goToPlans}>
+                  <button className="lp-btn lp-btn-primary" onClick={goToRegister}>
                     Começar grátis agora <ArrowRight size={18} />
                   </button>
                   <a className="lp-btn" href="mailto:contato@eduplate.com.br"

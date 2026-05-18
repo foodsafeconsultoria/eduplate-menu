@@ -40,13 +40,32 @@ export default function Billing() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const [portalLoading, setPortalLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  // Show success toast when returning from Stripe Checkout
+  // Auto-sync subscription status when returning from Stripe Checkout
   useEffect(() => {
-    if (search.includes('status=success')) {
-      toast.success('Assinatura ativada! Bem-vindo(a) ao Sistema PNAE.');
+    if (!search.includes('status=success')) return;
+    const params = new URLSearchParams(search);
+    const sessionId = params.get('session_id');
+    const orgId = user?.organizationId;
+    if (!sessionId || !orgId) {
+      toast.success('Assinatura ativada! Bem-vindo(a) ao EduPlate Menu.');
+      return;
     }
-  }, [search]);
+    // Call verify-session to ensure Firestore is in sync
+    setSyncing(true);
+    fetch(apiUrl(`/api/stripe/verify-session?sessionId=${encodeURIComponent(sessionId)}&orgId=${encodeURIComponent(orgId)}`))
+      .then(async (r) => {
+        const data = await r.json();
+        if (data.status === 'active') {
+          toast.success('Assinatura ativada com sucesso! Bem-vindo(a) ao EduPlate Menu. 🎉');
+        } else {
+          toast.info('Pagamento recebido. Aguarde alguns instantes e atualize a página.');
+        }
+      })
+      .catch(() => toast.success('Pagamento confirmado! Atualize a página em instantes.'))
+      .finally(() => setSyncing(false));
+  }, [search, user?.organizationId]);
 
   const openPortal = async () => {
     if (!user?.organizationId) return;
@@ -67,10 +86,11 @@ export default function Billing() {
     }
   };
 
-  if (loading) {
+  if (loading || syncing) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+        {syncing && <p className="text-sm text-gray-500">Confirmando pagamento…</p>}
       </div>
     );
   }
@@ -182,8 +202,8 @@ export default function Billing() {
         {/* Help */}
         <p className="text-center text-xs text-gray-400">
           Dúvidas sobre faturamento?{' '}
-          <a href="mailto:contato@sistema-pnae.com.br" className="text-green-700 underline">
-            contato@sistema-pnae.com.br
+          <a href="mailto:contato@eduplate.com.br" className="text-green-700 underline">
+            contato@eduplate.com.br
           </a>
         </p>
 

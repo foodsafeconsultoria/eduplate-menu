@@ -28,6 +28,7 @@ import Billing from '@/pages/Billing';
 import Cadastro from '@/pages/Cadastro';
 import Documents from '@/pages/Documents';
 import Team from '@/pages/Team';
+import Register from '@/pages/Register';
 import LandingPage from '@/pages/LandingPage';
 import TrialBanner from '@/components/TrialBanner';
 import TrialGate from '@/components/TrialGate';
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/termos" component={TermsOfUse} />
       <Route path="/planos" component={Pricing} />
       <Route path="/cadastro" component={Cadastro} />
+      <Route path="/registro" component={Register} />
       <Route path="/training/attend/:token" component={TrainingAttend} />
       <Route path="/landing" component={LandingPage} />
 
