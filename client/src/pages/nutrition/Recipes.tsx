@@ -254,7 +254,8 @@ export default function Recipes() {
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('list');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // ── Match a default recipe ingredient to a real food by name ────────────────
   const enrichWithRealFoods = useMemo(() => (recipe: typeof DEFAULT_RECIPES[0]) => {
@@ -696,16 +697,6 @@ export default function Recipes() {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            <Button
-              variant="outline"
-              onClick={importDefaultRecipes}
-              disabled={importing || cleaning}
-              className="border-green-300 text-green-700 hover:bg-green-50"
-              title="Importar fichas técnicas padrão do PNAE"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {importing ? 'Importando…' : 'Fichas PNAE'}
-            </Button>
             {hasDuplicates && (
               <Button
                 variant="outline"
@@ -1093,34 +1084,129 @@ export default function Recipes() {
                   <th className="px-3 py-3 font-semibold text-gray-700 text-center hidden sm:table-cell">Porções</th>
                   <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden md:table-cell">Per capita</th>
                   <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden md:table-cell">Kcal/porção</th>
-                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">Proteína</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">Ptn</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">CHO</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden xl:table-cell">Lip</th>
+                  <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden xl:table-cell">Fibra</th>
                   <th className="px-3 py-3 font-semibold text-gray-700 text-right hidden lg:table-cell">Custo/porção</th>
                   <th className="px-3 py-3 font-semibold text-gray-700 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecipes.map((recipe, idx) => (
-                  <tr key={recipe.id} className={`border-b last:border-0 hover:bg-gray-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 leading-tight">{recipe.displayName || recipe.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {recipe.classification}{recipe.recommendedMeal ? ` · ${recipe.recommendedMeal}` : ''}
-                        {recipe.allergens.length > 0 && <span className="ml-2 text-amber-600">⚠ {recipe.allergens.slice(0,2).join(', ')}</span>}
-                      </p>
-                    </td>
-                    <td className="px-3 py-3 text-center text-gray-700 hidden sm:table-cell">{recipe.servings}</td>
-                    <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{(recipe.perCapita * 1000).toFixed(0)} g</td>
-                    <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{recipe.nutrientsPerServing.kcal.toFixed(0)}</td>
-                    <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.protein.toFixed(1)} g</td>
-                    <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">R$ {recipe.costPerServing.toFixed(2)}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex gap-1.5 justify-end">
-                        <button onClick={() => generateRecipePDF(recipe, signerLabel).catch(() => {})} title="Imprimir" className="rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Printer className="h-4 w-4" /></button>
-                        <button onClick={() => openEditRecipe(recipe)} title="Editar" className="rounded p-1.5 text-slate-600 hover:bg-slate-100 transition-colors"><Pencil className="h-4 w-4" /></button>
-                        <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha excluída.'); }} title="Excluir" className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
+                  <>
+                    <tr
+                      key={recipe.id}
+                      className={`border-b transition-colors cursor-pointer hover:bg-green-50/40 ${expandedRow === recipe.id ? 'bg-green-50/60' : idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}
+                      onClick={() => setExpandedRow(expandedRow === recipe.id ? null : recipe.id)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-gray-400 text-xs transition-transform ${expandedRow === recipe.id ? 'rotate-90' : ''}`}>▶</span>
+                          <div>
+                            <p className="font-medium text-gray-900 leading-tight">{recipe.displayName || recipe.name}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {recipe.classification}{recipe.recommendedMeal ? ` · ${recipe.recommendedMeal}` : ''}
+                              {recipe.allergens.length > 0 && <span className="ml-2 text-amber-600">⚠ {recipe.allergens.slice(0,2).join(', ')}</span>}
+                              {recipe.usesFamilyFarm && <span className="ml-2 text-green-600">🌱 AF</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center text-gray-700 hidden sm:table-cell">{recipe.servings}</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{(recipe.perCapita * 1000).toFixed(0)} g</td>
+                      <td className="px-3 py-3 text-right font-medium text-orange-600 hidden md:table-cell">{recipe.nutrientsPerServing.kcal.toFixed(0)}</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.protein.toFixed(1)} g</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.carbohydrates.toFixed(1)} g</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden xl:table-cell">{recipe.nutrientsPerServing.lipids.toFixed(1)} g</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden xl:table-cell">{recipe.nutrientsPerServing.fiber.toFixed(1)} g</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">R$ {recipe.costPerServing.toFixed(2)}</td>
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-1.5 justify-end">
+                          <button onClick={() => generateRecipePDF(recipe, signerLabel).catch(() => {})} title="Imprimir" className="rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Printer className="h-4 w-4" /></button>
+                          <button onClick={() => openEditRecipe(recipe)} title="Editar" className="rounded p-1.5 text-slate-600 hover:bg-slate-100 transition-colors"><Pencil className="h-4 w-4" /></button>
+                          <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha excluída.'); }} title="Excluir" className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedRow === recipe.id && (
+                      <tr key={`${recipe.id}-expanded`} className="bg-green-50/30 border-b">
+                        <td colSpan={10} className="px-6 py-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Tabela nutricional completa */}
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tabela Nutricional / porção</p>
+                              <div className="space-y-1">
+                                {[
+                                  { label: 'Energia', value: `${recipe.nutrientsPerServing.kcal.toFixed(0)} kcal` },
+                                  { label: 'Proteínas', value: `${recipe.nutrientsPerServing.protein.toFixed(1)} g` },
+                                  { label: 'Carboidratos', value: `${recipe.nutrientsPerServing.carbohydrates.toFixed(1)} g` },
+                                  { label: 'Lipídeos', value: `${recipe.nutrientsPerServing.lipids.toFixed(1)} g` },
+                                  { label: 'Fibras', value: `${recipe.nutrientsPerServing.fiber.toFixed(1)} g` },
+                                ].map(({ label, value }) => (
+                                  <div key={label} className="flex justify-between text-xs border-b border-gray-100 py-0.5">
+                                    <span className="text-gray-500">{label}</span>
+                                    <span className="font-medium text-gray-800">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Minerais / porção</p>
+                              <div className="space-y-1">
+                                {[
+                                  { label: 'Cálcio', value: `${recipe.nutrientsPerServing.calcium.toFixed(1)} mg` },
+                                  { label: 'Ferro', value: `${recipe.nutrientsPerServing.iron.toFixed(2)} mg` },
+                                  { label: 'Zinco', value: `${recipe.nutrientsPerServing.zinc.toFixed(2)} mg` },
+                                  { label: 'Vitamina A', value: `${recipe.nutrientsPerServing.vitaminA.toFixed(0)} µg` },
+                                  { label: 'Vitamina C', value: `${recipe.nutrientsPerServing.vitaminC.toFixed(1)} mg` },
+                                ].map(({ label, value }) => (
+                                  <div key={label} className="flex justify-between text-xs border-b border-gray-100 py-0.5">
+                                    <span className="text-gray-500">{label}</span>
+                                    <span className="font-medium text-gray-800">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Dados da Preparação</p>
+                              <div className="space-y-1">
+                                {[
+                                  { label: 'Rendimento', value: `${recipe.yieldPercentage.toFixed(1)}%` },
+                                  { label: 'Peso bruto total', value: `${recipe.totalGrossWeight.toFixed(3)} kg` },
+                                  { label: 'Peso líquido total', value: `${recipe.totalNetWeight.toFixed(3)} kg` },
+                                  { label: 'Custo total', value: `R$ ${recipe.costTotal.toFixed(2)}` },
+                                  { label: 'Agr. Familiar', value: recipe.usesFamilyFarm ? '✓ Sim' : 'Não' },
+                                ].map(({ label, value }) => (
+                                  <div key={label} className="flex justify-between text-xs border-b border-gray-100 py-0.5">
+                                    <span className="text-gray-500">{label}</span>
+                                    <span className={`font-medium ${label === 'Agr. Familiar' && recipe.usesFamilyFarm ? 'text-green-600' : 'text-gray-800'}`}>{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ingredientes ({recipe.ingredients.length})</p>
+                              <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                                {recipe.ingredients.map((ing) => (
+                                  <div key={ing.id} className="flex justify-between text-xs border-b border-gray-100 py-0.5">
+                                    <span className="text-gray-600 truncate mr-2">{ing.foodName}</span>
+                                    <span className="text-gray-500 whitespace-nowrap">{(ing.grossWeight * 1000).toFixed(0)} g</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {recipe.preparationMethod && (
+                            <div className="mt-3 pt-3 border-t border-green-100">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Modo de Preparo</p>
+                              <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">{recipe.preparationMethod}</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

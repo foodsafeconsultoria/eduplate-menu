@@ -58,7 +58,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: aguardar auth antes de consultar Firestore em todos os hooks"
+git commit -m "feat: fichas tecnicas — lista padrao, tabela nutricional expandivel, remover botao importar"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
