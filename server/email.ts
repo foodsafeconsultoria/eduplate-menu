@@ -19,11 +19,13 @@ function getResend() {
 // Body: { schools: { name, email }[], menuTitle: string, menuHtml: string, senderName: string }
 router.post('/send-menu', async (req: Request, res: Response) => {
   try {
-    const { schools, menuTitle, menuHtml, senderName } = req.body as {
+    const { schools, menuTitle, menuHtml, senderName, pdfBase64, pdfFilename } = req.body as {
       schools: { name: string; email: string }[];
       menuTitle: string;
       menuHtml: string;
       senderName: string;
+      pdfBase64?: string;
+      pdfFilename?: string;
     };
 
     if (!schools?.length) return res.status(400).json({ error: 'Nenhuma escola selecionada.' });
@@ -46,6 +48,9 @@ router.post('/send-menu', async (req: Request, res: Response) => {
           to: [school.email],
           subject: `📋 ${menuTitle} — ${school.name}`,
           html: buildEmailHtml({ schoolName: school.name, menuTitle, menuHtml, senderName: fromName }),
+          ...(pdfBase64 && pdfFilename
+            ? { attachments: [{ filename: pdfFilename, content: pdfBase64 }] }
+            : {}),
         });
         results.push({ school: school.name, status: 'sent' });
       } catch (err: any) {

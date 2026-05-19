@@ -691,8 +691,8 @@ export default function InspectionPage() {
   // Photos state
   const [photos, setPhotos] = useState<string[]>([]);
 
-  // Signature
-  const [signatureUrl] = useState<string | undefined>(() => localStorage.getItem('pnae_signature') || undefined);
+  // Signature — read from orgSettings (Firestore) with localStorage fallback for legacy data
+  const signatureUrl: string | undefined = orgSettings?.signatureUrl || localStorage.getItem('pnae_signature') || undefined;
 
   // Inicializar checklist
   useEffect(() => {

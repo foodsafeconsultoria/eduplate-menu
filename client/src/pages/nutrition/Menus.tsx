@@ -167,7 +167,8 @@ async function generateMenuPDF(
   menu: Menu,
   schoolNames: string[],
   meals: string[],
-) {
+  returnBase64 = false,
+): Promise<string | void> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -338,6 +339,9 @@ async function generateMenuPDF(
   ].filter(Boolean);
   doc.text(footerParts.join('  ·  '), pw / 2, ph - 5, { align: 'center' });
 
+  if (returnBase64) {
+    return doc.output('datauristring').split(',')[1]; // base64 only
+  }
   doc.save(`Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`);
 }
 
@@ -486,6 +490,24 @@ export default function Menus() {
     setEmailSending(true);
     try {
       const menuHtml = buildMenuEmailHtml(menu);
+
+      // Generate PDF as base64 to attach to the email
+      let pdfBase64: string | undefined;
+      let pdfFilename: string | undefined;
+      try {
+        const schoolNamesForPdf = selectedSchoolObjects.map(s => s.name);
+        const mealsForPdf = menu.category === 'Creche'
+          ? ['Desjejum', 'Almoço', 'Lanche Tarde']
+          : ['Almoço', 'Lanche Tarde'];
+        const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true);
+        if (b64) {
+          pdfBase64 = b64;
+          pdfFilename = `Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`;
+        }
+      } catch (pdfErr) {
+        console.warn('[Email] PDF generation failed, sending without attachment:', pdfErr);
+      }
+
       const res = await fetch(apiUrl('/api/email/send-menu'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -494,6 +516,8 @@ export default function Menus() {
           menuTitle: menu.title,
           menuHtml,
           senderName: user?.displayName || 'Nutricionista',
+          pdfBase64,
+          pdfFilename,
         }),
       });
       const data = await res.json();

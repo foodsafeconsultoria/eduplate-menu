@@ -43,6 +43,7 @@ git add client\public\icon-512.png
 git add server\stripe.ts
 git add server\email.ts
 git add server\index.ts
+git add client\src\pages\Inspection.tsx
 git add client\src\hooks\useOrgId.ts
 git add client\src\hooks\useDocuments.ts
 git add client\src\hooks\useFirestore.ts
@@ -58,7 +59,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: fichas tecnicas — lista padrao, tabela nutricional expandivel, remover botao importar"
+git commit -m "feat: email com PDF anexo, assinatura via orgSettings, fichas tecnicas melhoradas"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
