@@ -336,6 +336,7 @@ export default function Recipes() {
   // ── Cleanup: delete duplicates + re-seed with correct food IDs ───────────────
   // Needed for accounts that were seeded before foods were loaded (v1/v2 bug).
   const [cleaning, setCleaning] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const hasDuplicates = useMemo(() => {
     const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
     const counts = new Map<string, number>();
@@ -345,6 +346,71 @@ export default function Recipes() {
     }
     return [...counts.values()].some((c) => c > 1);
   }, [recipes]);
+
+  // ── Recalculate nutrients for ALL existing recipes from their ingredients ────
+  const recipesWithZeroNutrients = useMemo(
+    () => recipes.filter((r) => r.ingredients.length > 0 && r.nutrientsPerServing.kcal === 0),
+    [recipes],
+  );
+
+  const recalcAllRecipes = async () => {
+    if (!foods.length || !recipesWithZeroNutrients.length) return;
+    setRecalculating(true);
+    let updated = 0;
+    for (const recipe of recipesWithZeroNutrients) {
+      const t = recipe.ingredients.reduce(
+        (acc, ing) => {
+          const food =
+            foods.find((f) => f.id === ing.foodId) ||
+            foods.find((f) => f.name.toLowerCase().trim() === ing.foodName.toLowerCase().trim()) ||
+            foods.find((f) => f.name.toLowerCase().includes(ing.foodName.toLowerCase().split(',')[0].trim()));
+          if (!food) return acc;
+          const factor = ing.netWeight > 0 ? ing.netWeight * 10 : ing.grossWeight * 10;
+          const cost =
+            food.price > 0
+              ? food.unit === 'unit'
+                ? food.price * (ing.grossWeight / 0.1)
+                : food.price * ing.grossWeight
+              : ing.estimatedCost;
+          return {
+            costTotal: acc.costTotal + cost,
+            kcal: acc.kcal + food.nutrients.kcal * factor,
+            protein: acc.protein + food.nutrients.protein * factor,
+            lipids: acc.lipids + food.nutrients.lipids * factor,
+            carbohydrates: acc.carbohydrates + food.nutrients.carbohydrates * factor,
+            fiber: acc.fiber + food.nutrients.fiber * factor,
+            calcium: acc.calcium + food.nutrients.calcium * factor,
+            iron: acc.iron + food.nutrients.iron * factor,
+            zinc: acc.zinc + food.nutrients.zinc * factor,
+            vitaminA: acc.vitaminA + food.nutrients.vitaminA * factor,
+            vitaminC: acc.vitaminC + food.nutrients.vitaminC * factor,
+          };
+        },
+        { costTotal: 0, kcal: 0, protein: 0, lipids: 0, carbohydrates: 0, fiber: 0, calcium: 0, iron: 0, zinc: 0, vitaminA: 0, vitaminC: 0 },
+      );
+      const s = recipe.servings || 1;
+      updateRecipe(recipe.id, {
+        costTotal: t.costTotal,
+        costPerServing: t.costTotal / s,
+        nutrientsPerServing: {
+          kcal: t.kcal / s,
+          protein: t.protein / s,
+          lipids: t.lipids / s,
+          carbohydrates: t.carbohydrates / s,
+          fiber: t.fiber / s,
+          calcium: t.calcium / s,
+          iron: t.iron / s,
+          zinc: t.zinc / s,
+          vitaminA: t.vitaminA / s,
+          vitaminC: t.vitaminC / s,
+        },
+      });
+      updated++;
+      await new Promise((res) => setTimeout(res, 30));
+    }
+    toast.success(`${updated} ficha${updated !== 1 ? 's' : ''} atualizada${updated !== 1 ? 's' : ''} com dados nutricionais!`);
+    setRecalculating(false);
+  };
 
   const cleanupAndReseed = async () => {
     if (!orgId || orgId === 'pnae-default-org') return;
@@ -1046,6 +1112,23 @@ export default function Recipes() {
           </Dialog>
           </div>
         </div>
+
+        {/* ── Banner: fichas com nutrientes zerados ────────────────────────── */}
+        {!loading && recipesWithZeroNutrients.length > 0 && !foodsLoading && foods.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <span className="text-amber-700 text-sm flex-1">
+              ⚠️ <strong>{recipesWithZeroNutrients.length} ficha{recipesWithZeroNutrients.length !== 1 ? 's' : ''}</strong> sem dados nutricionais — os ingredientes não foram vinculados à lista de alimentos.
+            </span>
+            <Button
+              size="sm"
+              onClick={recalcAllRecipes}
+              disabled={recalculating}
+              className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+            >
+              {recalculating ? 'Calculando…' : '⚡ Recalcular Nutrientes'}
+            </Button>
+          </div>
+        )}
 
         {/* ── Filter bar ─────────────────────────────────────────────────────── */}
         {!loading && recipes.length > 0 && (

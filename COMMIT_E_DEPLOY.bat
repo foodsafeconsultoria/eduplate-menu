@@ -73,7 +73,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: mobile responsivo em todos os modulos, email PDF 413 resolvido (body limit 10mb), fichas tecnicas custo editavel + tabela nutricional, PDF com data, sem onboarding"
+git commit -m "perf+fix: lazy loading por rota (carregamento rapido), email PDF 413 resolvido, mobile responsivo em todos modulos, fichas tecnicas custo editavel + tabela nutricional, PDF com data, sem onboarding"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
