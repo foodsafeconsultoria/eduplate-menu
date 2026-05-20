@@ -171,7 +171,7 @@ export default function SchedulePage() {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white/80 p-1">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 rounded-2xl bg-white/80 p-1">
             <TabsTrigger value="calendar">Calendário</TabsTrigger>
             <TabsTrigger value="list">Lista</TabsTrigger>
             <TabsTrigger value="add">Agendar visita</TabsTrigger>

@@ -124,7 +124,7 @@ export default function Foods() {
                 Novo Alimento
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Alimento</DialogTitle>
                 <DialogDescription>

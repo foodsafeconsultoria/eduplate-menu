@@ -18,6 +18,14 @@ git add client\src\pages\Training.tsx
 git add client\src\hooks\useOrgSettings.ts
 git add package.json
 git add client\src\pages\nutrition\Recipes.tsx
+git add client\src\pages\nutrition\Foods.tsx
+git add client\src\pages\nutrition\Production.tsx
+git add client\src\pages\nutrition\SigpcReport.tsx
+git add client\src\pages\nutrition\SpecialDiets.tsx
+git add client\src\pages\PPEs.tsx
+git add client\src\pages\Schedule.tsx
+git add client\src\pages\Reports.tsx
+git add client\src\pages\Team.tsx
 git add client\src\data\defaultRecipes.ts
 git add client\src\data\nutritionFoods.ts
 git add client\public\sw.js
@@ -65,7 +73,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: mobile responsivo, fichas tecnicas custo editavel + tabela nutricional completa, PDF com data, sem onboarding"
+git commit -m "fix: mobile responsivo em todos os modulos, email PDF 413 resolvido (body limit 10mb), fichas tecnicas custo editavel + tabela nutricional, PDF com data, sem onboarding"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

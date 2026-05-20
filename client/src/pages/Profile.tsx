@@ -285,7 +285,7 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="informacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
             <TabsTrigger value="informacoes" className="flex items-center gap-2">
               <User className="w-4 h-4" /> Informações
             </TabsTrigger>

@@ -248,7 +248,7 @@ export default function PPEs() {
   );
 
   return (
-    <div className="flex-1 p-8">
+    <div className="flex-1 p-3 md:p-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">
           <h1 className="mb-2 text-4xl font-bold text-gray-900">Gestao de EPIs</h1>
@@ -294,7 +294,7 @@ export default function PPEs() {
                   <DialogDescription>Selecione os EPIs entregues e as quantidades</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddEPI} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="mb-2 block text-sm font-medium">Escola *</label>
                       <Select value={selectedSchool} onValueChange={setSelectedSchool}>

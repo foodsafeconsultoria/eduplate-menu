@@ -334,7 +334,7 @@ export default function Reports() {
         </div>
 
         <Tabs defaultValue="nutrition" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white/80 p-1">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 rounded-2xl bg-white/80 p-1">
             <TabsTrigger value="nutrition">Alimentação</TabsTrigger>
             <TabsTrigger value="quality">Qualidade</TabsTrigger>
             <TabsTrigger value="inspection">Fiscalização</TabsTrigger>

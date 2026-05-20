@@ -107,7 +107,7 @@ export default function Team() {
 
   if (loading) {
     return (
-      <div className="flex-1 p-8 bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="flex-1 p-3 md:p-8 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto" />
           <p className="text-gray-400 text-sm">Carregando equipe…</p>

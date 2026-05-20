@@ -266,7 +266,7 @@ export default function Production() {
             <div className="space-y-4">
 
               {/* Date + Dish */}
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div>
                   <Label>Data</Label>
                   <Input
@@ -288,7 +288,7 @@ export default function Production() {
               </div>
 
               {/* Quantities */}
-              <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div>
                   <Label>Total produzido (kg)</Label>
                   <Input

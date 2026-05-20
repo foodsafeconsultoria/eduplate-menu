@@ -901,7 +901,7 @@ export default function SigpcReport() {
             </div>
 
             {spent > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 <div className="rounded-lg bg-gray-50 border p-3 text-center">
                   <p className="text-gray-500">Saldo</p>
                   <p className={`text-lg font-bold mt-0.5 ${rec - spent >= 0 ? 'text-gray-900' : 'text-red-700'}`}>

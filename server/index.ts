@@ -42,7 +42,7 @@ async function startServer() {
   // ── Parse JSON for all API routes ────────────────────────────────────────
   // The webhook route uses express.raw() internally (applied per-route),
   // so it's safe to have express.json() here globally.
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // ── Stripe routes ─────────────────────────────────────────────────────────
   app.use('/api/stripe', stripeRouter);

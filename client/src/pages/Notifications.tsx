@@ -193,17 +193,17 @@ export default function Notifications() {
   // ── JSX ─────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 p-8">
+    <div className="flex-1 p-3 md:p-8">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-foreground">Notificações</h1>
+        <div className="mb-6">
+          <h1 className="mb-2 text-2xl md:text-4xl font-bold text-foreground">Notificações</h1>
           <p className="text-muted-foreground">
             Central de alertas em tempo real — visitas, manutenção e fluxo de cardápios
           </p>
         </div>
 
         <Tabs defaultValue="workflow" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="workflow" className="relative">
               Fluxo de Cardápios
               {visibleWorkflowAlerts.length > 0 && (
@@ -259,7 +259,7 @@ export default function Notifications() {
                               : 'border-green-200 bg-green-50'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h4 className="font-semibold text-gray-900">{alert.title}</h4>
                             <p className="mt-1 text-sm text-gray-700">{alert.message}</p>
@@ -304,7 +304,7 @@ export default function Notifications() {
                   <div className="space-y-3">
                     {visibleUpcomingVisits.map((visit) => (
                       <div key={visit.id} className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h4 className="font-semibold text-gray-900">{visit.schoolName}</h4>
                             <p className="mt-1 text-sm text-gray-600">
@@ -352,7 +352,7 @@ export default function Notifications() {
                   <div className="space-y-3">
                     {visibleOpenTickets.map((ticket) => (
                       <div key={ticket.id} className="rounded-lg border border-red-200 bg-red-50 p-4">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <h4 className="font-semibold text-gray-900">{ticket.schoolName}</h4>
                             <p className="mt-1 text-sm text-gray-600">

@@ -447,7 +447,7 @@ export default function SpecialDiets() {
 
         {/* Dialog */}
         <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-full max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Editar' : 'Nova'} Dieta Especial</DialogTitle>
               <DialogDescription>
