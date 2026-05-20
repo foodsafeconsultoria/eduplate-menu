@@ -14,6 +14,8 @@ export interface CreateMenuInput {
   category: string;
   targetCategories: string[];
   referenceMonth: string;
+  weekStartDate?: string;
+  studentCount?: number;
   schoolIds?: string[];
   /** New composition-based slots */
   slots: MenuSlot[];
@@ -95,6 +97,8 @@ function normalizeMenus(raw: unknown): Menu[] {
         ? menu.targetCategories
         : [menu.category || 'Fundamental 1'],
       referenceMonth: menu.referenceMonth || '',
+      weekStartDate: menu.weekStartDate || undefined,
+      studentCount:  menu.studentCount != null ? Number(menu.studentCount) : undefined,
       schoolIds: Array.isArray(menu.schoolIds) ? menu.schoolIds : [],
       items:  Array.isArray(menu.items)  ? menu.items  : [],
       slots:  Array.isArray(menu.slots)

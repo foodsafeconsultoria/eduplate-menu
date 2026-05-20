@@ -469,18 +469,25 @@ export default function Recipes() {
           netWeight = Number((grossWeight / correctionFactor).toFixed(4));
         }
 
-        const food = foods.find((item) => item.id === ingredient.foodId);
-        let estimatedCost = 0;
-        if (food) {
-          // grossWeight in kg; price in R$/kg (or R$/unit)
+        const food = foods.find((item) => item.id === ingredient.foodId)
+          || foods.find((item) => item.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim());
+        // Auto-calc cost from food price; preserve manual cost if food not found
+        let estimatedCost = ingredient.estimatedCost;
+        if (food && food.price > 0) {
           estimatedCost =
             food.unit === 'unit'
-              ? food.price * (grossWeight / 0.1) // ~100g reference per unit
+              ? food.price * (grossWeight / 0.1)
               : food.price * grossWeight;
         }
 
         return { ...updated, grossWeight, netWeight, correctionFactor, estimatedCost };
       }),
+    );
+  };
+
+  const updateIngredientCost = (ingredientId: string, value: number) => {
+    setIngredients((prev) =>
+      prev.map((ing) => ing.id === ingredientId ? { ...ing, estimatedCost: value } : ing),
     );
   };
 
@@ -491,7 +498,9 @@ export default function Recipes() {
   const totals = useMemo(() => {
     return ingredients.reduce(
       (acc, ingredient) => {
-        const food = foods.find((item) => item.id === ingredient.foodId);
+        // Primary lookup by ID; fallback to name match for default/seeded recipes
+        const food = foods.find((item) => item.id === ingredient.foodId)
+          || foods.find((item) => item.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim());
         if (!food) return acc;
 
         // netWeight is in kg; nutrients are per 100g (= 0.1 kg) → multiply by 10
@@ -728,7 +737,7 @@ export default function Recipes() {
                 Nova Ficha
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+            <DialogContent className="w-full max-w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingRecipeId ? 'Editar Ficha Técnica' : 'Nova Ficha Técnica'}</DialogTitle>
                 <DialogDescription>
@@ -855,6 +864,7 @@ export default function Recipes() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -905,7 +915,21 @@ export default function Recipes() {
                                   title="Preenchido automaticamente (bruto ÷ FC). Edite para ajuste manual."
                                 />
                               </TableCell>
-                              <TableCell className="text-right text-sm">R$ {ingredient.estimatedCost.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="text-xs text-gray-500">R$</span>
+                                  <Input
+                                    type="number"
+                                    value={ingredient.estimatedCost || ''}
+                                    onChange={(e) => updateIngredientCost(ingredient.id, Number(e.target.value))}
+                                    className="ml-auto w-24 text-right"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    title="Custo total deste ingrediente (R$). Preenchido automaticamente se o alimento tiver preço cadastrado."
+                                  />
+                                </div>
+                              </TableCell>
                               <TableCell className="text-right">
                                 <button onClick={() => removeIngredient(ingredient.id)} className="text-red-600 hover:text-red-700">
                                   <Trash2 className="h-4 w-4" />
@@ -915,12 +939,13 @@ export default function Recipes() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 ) : null}
 
                 {ingredients.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-3 md:grid-rows-[auto] grid-rows-1">
                     <Card>
                       <CardHeader>
                         <CardTitle>Resumo de custo</CardTitle>
@@ -934,15 +959,47 @@ export default function Recipes() {
                       </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="md:col-span-2">
                       <CardHeader>
-                        <CardTitle>Nutrientes por porcao</CardTitle>
+                        <CardTitle>Tabela Nutricional por Porção</CardTitle>
+                        <CardDescription>Porção: {(perCapita * 1000).toFixed(0)} g ({servingsCount} porções)</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-2 text-sm text-gray-600">
-                        <p><span className="font-semibold text-gray-900">{(totals.nutrients.kcal / servingsCount).toFixed(0)}</span> kcal</p>
-                        <p><span className="font-semibold text-gray-900">{(totals.nutrients.protein / servingsCount).toFixed(1)} g</span> de proteina</p>
-                        <p><span className="font-semibold text-gray-900">{(totals.nutrients.lipids / servingsCount).toFixed(1)} g</span> de lipideos</p>
-                        <p><span className="font-semibold text-gray-900">{(totals.nutrients.carbohydrates / servingsCount).toFixed(1)} g</span> de carboidratos</p>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-200 bg-gray-50">
+                                <th className="py-1.5 px-2 text-left font-semibold text-gray-700">Nutriente</th>
+                                <th className="py-1.5 px-2 text-right font-semibold text-gray-700">Por porção</th>
+                                <th className="py-1.5 px-2 text-right font-semibold text-gray-700">Total receita</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {[
+                                { label: 'Energia (kcal)', key: 'kcal', unit: 'kcal', dec: 0 },
+                                { label: 'Carboidratos', key: 'carbohydrates', unit: 'g', dec: 1 },
+                                { label: 'Proteínas', key: 'protein', unit: 'g', dec: 1 },
+                                { label: 'Lipídeos', key: 'lipids', unit: 'g', dec: 1 },
+                                { label: 'Fibra alimentar', key: 'fiber', unit: 'g', dec: 1 },
+                                { label: 'Cálcio', key: 'calcium', unit: 'mg', dec: 1 },
+                                { label: 'Ferro', key: 'iron', unit: 'mg', dec: 2 },
+                                { label: 'Zinco', key: 'zinc', unit: 'mg', dec: 2 },
+                                { label: 'Vitamina A', key: 'vitaminA', unit: 'µg', dec: 1 },
+                                { label: 'Vitamina C', key: 'vitaminC', unit: 'mg', dec: 1 },
+                              ].map(({ label, key, unit, dec }) => {
+                                const total = totals.nutrients[key as keyof typeof totals.nutrients];
+                                const perServ = servingsCount > 0 ? total / servingsCount : 0;
+                                return (
+                                  <tr key={key} className="hover:bg-gray-50">
+                                    <td className="py-1 px-2 text-gray-700">{label}</td>
+                                    <td className="py-1 px-2 text-right font-semibold text-gray-900">{perServ.toFixed(dec)} {unit}</td>
+                                    <td className="py-1 px-2 text-right text-gray-500">{total.toFixed(dec)} {unit}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </CardContent>
                     </Card>
 

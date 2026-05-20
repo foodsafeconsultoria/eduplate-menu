@@ -231,7 +231,7 @@ export default function RestoIngestaPage() {
                       Novo Registro
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl">
+                  <DialogContent className="w-full max-w-[95vw] sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Novo Registro Resto/Ingesta</DialogTitle>
                       <DialogDescription>

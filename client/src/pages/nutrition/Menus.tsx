@@ -949,9 +949,17 @@ export default function Menus() {
 
   // ── Diet alerts (active special diets in the targeted schools + categories) ──
 
+  // Meals for which diet alerts are relevant (lunch/dinner only — breakfast goes separately)
+  const LUNCH_DINNER_MEALS = ['almoço', 'jantar', 'refeição'];
+
   const dietAlerts = useMemo(() => {
     // Only show alerts when the menu has content
     if (!slots.some((s) => s.composicao.length > 0)) return [];
+
+    // Only show for lunch/dinner — not for Desjejum, Café da Manhã, Lanche, etc.
+    const mealLower = targetMeal.toLowerCase();
+    const isLunchOrDinner = LUNCH_DINNER_MEALS.some((m) => mealLower.includes(m));
+    if (!isLunchOrDinner) return [];
 
     return specialDiets.filter((diet) => {
       if (diet.status !== 'active') return false;
@@ -963,7 +971,7 @@ export default function Menus() {
         !diet.category || targetCategories.length === 0 || targetCategories.includes(diet.category);
       return schoolMatch && categoryMatch;
     });
-  }, [specialDiets, targetSchoolIds, targetCategories, slots]);
+  }, [specialDiets, targetSchoolIds, targetCategories, slots, targetMeal]);
 
   // ── Gallery filters ───────────────────────────────────────────────────────────
 

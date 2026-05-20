@@ -79,7 +79,7 @@ export default function MaintenancePage() {
   const openCount = tickets.filter(t => t.status === 'open').length;
 
   return (
-    <div className="flex-1 p-8">
+    <div className="flex-1 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Manutenção</h1>
@@ -121,7 +121,7 @@ export default function MaintenancePage() {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={filterPriority === 'all' ? 'default' : 'outline'}
                 onClick={() => setFilterPriority('all')}
@@ -157,9 +157,9 @@ export default function MaintenancePage() {
             filteredTickets.map(ticket => (
               <Card key={ticket.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
                         <h4 className="font-semibold text-lg">{ticket.schoolName}</h4>
                         <Badge
                           variant={ticket.priority === 'high' ? 'destructive' : 'secondary'}
@@ -186,7 +186,7 @@ export default function MaintenancePage() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 sm:ml-4 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"

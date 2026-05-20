@@ -291,7 +291,7 @@ export default function AcceptabilityPage() {
                       Novo Teste
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl">
+                  <DialogContent className="w-full max-w-[95vw] sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Novo Teste de Aceitabilidade</DialogTitle>
                       <DialogDescription>

@@ -145,7 +145,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-6 md:px-10 py-10 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-10 py-6 md:py-10 space-y-8">
 
         {/* Header */}
         <div className="flex items-end justify-between">
