@@ -18,6 +18,8 @@ git add client\src\pages\Training.tsx
 git add client\src\hooks\useOrgSettings.ts
 git add package.json
 git add client\src\pages\nutrition\Recipes.tsx
+git add client\src\pages\Inspection.tsx
+git add client\index.html
 git add client\src\pages\nutrition\Foods.tsx
 git add client\src\pages\nutrition\Production.tsx
 git add client\src\pages\nutrition\SigpcReport.tsx
@@ -73,7 +75,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "perf+fix: lazy loading por rota (carregamento rapido), email PDF 413 resolvido, mobile responsivo em todos modulos, fichas tecnicas custo editavel + tabela nutricional, PDF com data, sem onboarding"
+git commit -m "perf+fix: lazy loading, email PDF 413 resolvido, mobile em todos modulos + fiscalizacao, fichas tecnicas recalculo nutrientes, Google Analytics, sem onboarding"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

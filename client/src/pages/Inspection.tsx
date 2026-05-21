@@ -903,7 +903,7 @@ export default function InspectionPage() {
   return (
     <div className="flex-1 p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="brand-chip text-xs font-semibold">PNAE · Controle de Qualidade</span>
@@ -923,7 +923,7 @@ export default function InspectionPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-lg">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full sm:max-w-lg h-auto sm:h-10">
           <TabsTrigger value="form" className="gap-2">
             <ClipboardCheck className="h-4 w-4" /> Nova Fiscalização
           </TabsTrigger>
@@ -975,7 +975,7 @@ export default function InspectionPage() {
                   <Input type="time" value={inspectionTime} onChange={e => setInspectionTime(e.target.value)} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Alunos Regulares</label>
                     <Input type="number" placeholder="0" value={regularStudents} onChange={e => setRegularStudents(e.target.value)} />
@@ -1126,7 +1126,7 @@ export default function InspectionPage() {
           )}
 
           {/* Score preview + Save */}
-          <div className="flex items-center justify-between rounded-xl border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
             <div>
               <p className="text-sm text-muted-foreground">Conformidade estimada</p>
               <span className={`text-2xl font-bold ${scoreColor(currentScore)}`}>{currentScore}%</span>
@@ -1212,7 +1212,7 @@ export default function InspectionPage() {
                     {inspection.photos && inspection.photos.length > 0 && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-2">Fotos ({inspection.photos.length})</p>
-                        <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-1.5">
                           {inspection.photos.map((photo, idx) => (
                             <img key={idx} src={photo} alt={`Foto ${idx + 1}`}
                               className="w-full h-14 object-cover rounded-md border hover:border-accent cursor-pointer transition"
