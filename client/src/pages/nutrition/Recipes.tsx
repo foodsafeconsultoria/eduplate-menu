@@ -252,7 +252,6 @@ export default function Recipes() {
   }, [orgId]);
   const { foods, loading: foodsLoading } = useFoods();
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
-  const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('list');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -280,58 +279,10 @@ export default function Recipes() {
     return { ...recipe, ingredients: enrichedIngredients };
   }, [foods]);
 
-  // ── Auto-seed default recipes for new orgs (runs once per org) ──────────────
-  // v3: waits for BOTH recipes AND foods to load before seeding so that
-  // enrichWithRealFoods has real food IDs available (fixes blank nutritional data).
+  // Auto-seed removido — fichas são criadas manualmente pela nutricionista.
   const SEED_FLAG = `pnae_default_v3_seeded_${orgId}`;
-  useEffect(() => {
-    if (loading) return;           // wait for recipes
-    if (foodsLoading) return;      // wait for foods
-    if (!orgId || orgId === 'pnae-default-org') return; // wait for real org
-    if (!foods.length) return;    // no foods = nothing to match against
-    if (localStorage.getItem(SEED_FLAG)) return;
-    const existingNames = new Set(recipes.map((r) => r.name.toLowerCase()));
-    const toSeed = DEFAULT_RECIPES.filter((r) => !existingNames.has(r.name.toLowerCase()));
-    if (toSeed.length === 0) {
-      localStorage.setItem(SEED_FLAG, '1');
-      return;
-    }
-    (async () => {
-      for (const recipe of toSeed) {
-        addRecipe(enrichWithRealFoods(recipe));
-        await new Promise((res) => setTimeout(res, 25));
-      }
-      localStorage.setItem(SEED_FLAG, '1');
-      if (toSeed.length >= 5) {
-        toast.success(`${toSeed.length} fichas técnicas PNAE carregadas automaticamente!`);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, foodsLoading, orgId, foods.length]);
 
-  // ── Manual import button handler ─────────────────────────────────────────────
-  const importDefaultRecipes = async () => {
-    setImporting(true);
-    try {
-      const existingNames = new Set(recipes.map((r) => r.name.toLowerCase()));
-      const toImport = DEFAULT_RECIPES.filter((r) => !existingNames.has(r.name.toLowerCase()));
-      if (toImport.length === 0) {
-        toast.info('Todas as fichas PNAE já estão cadastradas.');
-        return;
-      }
-      for (const recipe of toImport) {
-        addRecipe(enrichWithRealFoods(recipe));
-        await new Promise((res) => setTimeout(res, 30));
-      }
-      localStorage.removeItem(SEED_FLAG);
-      toast.success(`${toImport.length} ficha(s) PNAE importada(s) com sucesso!`);
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao importar fichas PNAE.');
-    } finally {
-      setImporting(false);
-    }
-  };
+  // importDefaultRecipes removido — fichas são criadas manualmente.
 
   // ── Cleanup: delete duplicates + re-seed with correct food IDs ───────────────
   // Needed for accounts that were seeded before foods were loaded (v1/v2 bug).
@@ -1074,7 +1025,7 @@ export default function Recipes() {
                         <CardTitle>Painel PNAE</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm text-gray-700">
-                        <p>Per capita estimado: <span className="font-semibold text-gray-900">{(perCapita * 1000).toFixed(0)} g ({perCapita.toFixed(3)} kg)</span></p>
+                        <p>Per capita estimado: <span className="font-semibold text-gray-900">{perCapita.toFixed(3)} kg</span></p>
                         <p>Rendimento liquido: <span className="font-semibold text-gray-900">{yieldPercentage.toFixed(1)}%</span></p>
                         <p>
                           Agricultura familiar:{' '}
@@ -1254,7 +1205,7 @@ export default function Recipes() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-center text-gray-700 hidden sm:table-cell">{recipe.servings}</td>
-                      <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{(recipe.perCapita * 1000).toFixed(0)} g</td>
+                      <td className="px-3 py-3 text-right text-gray-700 hidden md:table-cell">{recipe.perCapita.toFixed(3)} kg</td>
                       <td className="px-3 py-3 text-right font-medium text-orange-600 hidden md:table-cell">{recipe.nutrientsPerServing.kcal.toFixed(0)}</td>
                       <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.protein.toFixed(1)} g</td>
                       <td className="px-3 py-3 text-right text-gray-700 hidden lg:table-cell">{recipe.nutrientsPerServing.carbohydrates.toFixed(1)} g</td>
@@ -1331,7 +1282,7 @@ export default function Recipes() {
                                 {recipe.ingredients.map((ing) => (
                                   <div key={ing.id} className="flex justify-between text-xs border-b border-gray-100 py-0.5">
                                     <span className="text-gray-600 truncate mr-2">{ing.foodName}</span>
-                                    <span className="text-gray-500 whitespace-nowrap">{(ing.grossWeight * 1000).toFixed(0)} g</span>
+                                    <span className="text-gray-500 whitespace-nowrap">{ing.grossWeight.toFixed(3)} kg</span>
                                   </div>
                                 ))}
                               </div>
@@ -1371,7 +1322,7 @@ export default function Recipes() {
                     <div><span className="text-muted-foreground">Ingredientes</span><p className="font-medium">{recipe.ingredients.length}</p></div>
                     <div><span className="text-muted-foreground">Porções</span><p className="font-medium">{recipe.servings}</p></div>
                     <div><span className="text-muted-foreground">Custo/porção</span><p className="font-medium">R$ {recipe.costPerServing.toFixed(2)}</p></div>
-                    <div><span className="text-muted-foreground">Per capita</span><p className="font-medium">{(recipe.perCapita * 1000).toFixed(0)} g</p></div>
+                    <div><span className="text-muted-foreground">Per capita</span><p className="font-medium">{recipe.perCapita.toFixed(3)} kg</p></div>
                     <div><span className="text-muted-foreground">Energia</span><p className="font-medium">{recipe.nutrientsPerServing.kcal.toFixed(0)} kcal</p></div>
                     <div><span className="text-muted-foreground">Proteína</span><p className="font-medium">{recipe.nutrientsPerServing.protein.toFixed(1)} g</p></div>
                   </div>

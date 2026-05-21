@@ -39,10 +39,13 @@ async function startServer() {
     next();
   });
 
-  // ── Parse JSON for all API routes ────────────────────────────────────────
-  // The webhook route uses express.raw() internally (applied per-route),
-  // so it's safe to have express.json() here globally.
-  app.use(express.json({ limit: '10mb' }));
+  // ── Parse JSON for all API routes except Stripe webhook ─────────────────
+  // The webhook MUST receive the raw body for signature verification.
+  // All other routes get the JSON parser with a generous 10 MB limit.
+  app.use((req, res, next) => {
+    if (req.path === '/api/stripe/webhook') return next();
+    express.json({ limit: '10mb' })(req, res, next);
+  });
 
   // ── Stripe routes ─────────────────────────────────────────────────────────
   app.use('/api/stripe', stripeRouter);
