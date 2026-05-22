@@ -135,8 +135,8 @@ function normalizeSchools(raw: unknown): School[] {
     const normalized: School = {
       id: school.id || `school-imported-${index}`,
       name: school.name || 'Escola sem nome',
-      createdAt: school.createdAt ? new Date(school.createdAt) : new Date(),
-      updatedAt: school.updatedAt ? new Date(school.updatedAt) : new Date(),
+      createdAt: toDate(school.createdAt),  // toDate() handles Firestore Timestamp + ISO string
+      updatedAt: toDate(school.updatedAt),
     };
     if (school.email) normalized.email = school.email;
     if (school.address) normalized.address = school.address;
