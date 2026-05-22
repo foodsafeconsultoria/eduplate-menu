@@ -25,7 +25,6 @@ const PPEs               = lazy(() => import('@/pages/PPEs'));
 const Profile            = lazy(() => import('@/pages/Profile'));
 const RestoIngesta       = lazy(() => import('@/pages/RestoIngesta'));
 const Schedule           = lazy(() => import('@/pages/Schedule'));
-const SchoolCertificates = lazy(() => import('@/pages/SchoolCertificates'));
 const Schools            = lazy(() => import('@/pages/Schools'));
 const Training           = lazy(() => import('@/pages/Training'));
 const TrainingAttend     = lazy(() => import('@/pages/TrainingAttend'));
@@ -129,7 +128,6 @@ function Router() {
                   <Route path="/resto-ingesta" component={RestoIngesta} />
                   <Route path="/acceptability" component={Acceptability} />
                   <Route path="/maintenance" component={Maintenance} />
-                  <Route path="/certificates" component={SchoolCertificates} />
                   <Route path="/training" component={Training} />
                   <Route path="/notifications" component={Notifications} />
                   <Route path="/profile" component={Profile} />

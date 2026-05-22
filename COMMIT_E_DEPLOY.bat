@@ -76,9 +76,11 @@ git add client\src\hooks\useProductionLogs.ts
 git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add client\src\pages\Schools.tsx
+git add client\src\components\TopNav.tsx
+git rm --cached client\src\pages\SchoolCertificates.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: escolas salvas individualmente no Firestore (email/endereco nao some), remove logo-nutricao PDFs, watermark restaurado, lazy loading, mobile, GA4, stripe webhook"
+git commit -m "fix: certificado inspeção igual ao modulo certificados, remove modulo Certificados, escolas salvas no Firestore, PDF cardapio com refeicoes corretas, Invalid Date corrigido"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

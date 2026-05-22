@@ -281,7 +281,6 @@ export default function TopNav() {
 
           {topItem('Documentos',   '/documents',   <FileText className="h-4 w-4" />, expiringDocCount || undefined)}
           {topItem('Treinamentos', '/training',     <GraduationCap className="h-4 w-4" />)}
-          {topItem('Certificados', '/certificates', <Trophy className="h-4 w-4" />)}
           {topItem('Manutenção',   '/maintenance',  <Wrench className="h-4 w-4" />, maintenanceAlertCount || undefined)}
         </div>
 
@@ -351,7 +350,6 @@ export default function TopNav() {
             <div className="py-1 px-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Outros</div>
             {topItem('Documentos',   '/documents',   <FileText className="h-5 w-5" />, expiringDocCount || undefined)}
             {topItem('Treinamentos', '/training',     <GraduationCap className="h-5 w-5" />)}
-            {topItem('Certificados', '/certificates', <Trophy className="h-5 w-5" />)}
             {topItem('Manutenção',   '/maintenance',  <Wrench className="h-5 w-5" />, maintenanceAlertCount || undefined)}
             {topItem('Notificações', '/notifications',<Bell className="h-5 w-5" />, notificationsCount || undefined)}
             {topItem('Meu Perfil',   '/profile',      <User className="h-5 w-5" />)}
