@@ -506,9 +506,8 @@ export default function Menus() {
       let pdfFilename: string | undefined;
       try {
         const schoolNamesForPdf = selectedSchoolObjects.map(s => s.name);
-        const mealsForPdf = menu.category === 'Creche'
-          ? ['Desjejum', 'Almoço', 'Lanche Tarde']
-          : ['Almoço', 'Lanche Tarde'];
+        // Use the same mealMap as the UI so slot labels match exactly
+        const mealsForPdf = mealMap[menu.category as keyof typeof mealMap] ?? ['Almoço/Jantar', 'Lanche'];
         const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true, orgSettings?.logoDataUrl);
         if (b64) {
           pdfBase64 = b64;

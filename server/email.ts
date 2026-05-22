@@ -30,11 +30,17 @@ router.post('/send-menu', async (req: Request, res: Response) => {
 
     if (!schools?.length) return res.status(400).json({ error: 'Nenhuma escola selecionada.' });
     if (!menuTitle) return res.status(400).json({ error: 'Título do cardápio é obrigatório.' });
-    console.log(`[Email /send-menu] PDF base64 length: ${pdfBase64?.length ?? 0} chars, filename: ${pdfFilename ?? 'none'}`);
-
     const resend = getResend();
     const fromName = senderName || 'EduPlate Menu';
     const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
+
+    // Decode and validate PDF
+    let pdfBuffer: Buffer | undefined;
+    if (pdfBase64 && pdfFilename) {
+      pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      const header = pdfBuffer.slice(0, 5).toString('ascii');
+      console.log(`[Email /send-menu] PDF: ${pdfBuffer.length} bytes, header="${header}", valid=${header.startsWith('%PDF')}`);
+    }
 
     const results: { school: string; status: 'sent' | 'error'; error?: string }[] = [];
 
@@ -49,8 +55,8 @@ router.post('/send-menu', async (req: Request, res: Response) => {
           to: [school.email],
           subject: `📋 ${menuTitle} — ${school.name}`,
           html: buildEmailHtml({ schoolName: school.name, menuTitle, menuHtml, senderName: fromName }),
-          ...(pdfBase64 && pdfFilename
-            ? { attachments: [{ filename: pdfFilename, content: Buffer.from(pdfBase64, 'base64') }] }
+          ...(pdfBuffer && pdfFilename
+            ? { attachments: [{ filename: pdfFilename, content: pdfBuffer }] }
             : {}),
         });
         results.push({ school: school.name, status: 'sent' });
