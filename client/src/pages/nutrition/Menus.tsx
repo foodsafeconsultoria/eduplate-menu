@@ -341,7 +341,15 @@ async function generateMenuPDF(
   doc.text(footerParts.join('  ·  '), pw / 2, ph - 5, { align: 'center' });
 
   if (returnBase64) {
-    return doc.output('datauristring').split(',')[1]; // base64 only
+    // Use arraybuffer → btoa for reliable base64 without relying on datauristring
+    const ab = doc.output('arraybuffer');
+    const bytes = new Uint8Array(ab);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...Array.from(bytes.slice(i, i + chunkSize)));
+    }
+    return btoa(binary);
   }
   doc.save(`Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`);
 }

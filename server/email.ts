@@ -30,6 +30,7 @@ router.post('/send-menu', async (req: Request, res: Response) => {
 
     if (!schools?.length) return res.status(400).json({ error: 'Nenhuma escola selecionada.' });
     if (!menuTitle) return res.status(400).json({ error: 'Título do cardápio é obrigatório.' });
+    console.log(`[Email /send-menu] PDF base64 length: ${pdfBase64?.length ?? 0} chars, filename: ${pdfFilename ?? 'none'}`);
 
     const resend = getResend();
     const fromName = senderName || 'EduPlate Menu';
@@ -48,8 +49,9 @@ router.post('/send-menu', async (req: Request, res: Response) => {
           to: [school.email],
           subject: `📋 ${menuTitle} — ${school.name}`,
           html: buildEmailHtml({ schoolName: school.name, menuTitle, menuHtml, senderName: fromName }),
+          // Resend v4: passa base64 string diretamente + encoding para garantir decodificação correta
           ...(pdfBase64 && pdfFilename
-            ? { attachments: [{ filename: pdfFilename, content: Buffer.from(pdfBase64, 'base64') }] }
+            ? { attachments: [{ filename: pdfFilename, content: pdfBase64, encoding: 'base64' }] }
             : {}),
         });
         results.push({ school: school.name, status: 'sent' });
