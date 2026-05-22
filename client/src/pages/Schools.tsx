@@ -78,7 +78,6 @@ export default function Schools() {
 
     try {
       setSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       const newSchool: School = {
         id: `school-${crypto.randomUUID()}`,
@@ -91,7 +90,6 @@ export default function Schools() {
 
       const updatedSchools = [newSchool, ...schools];
       setSchools(updatedSchools);
-      localStorage.setItem('pnae_schools', JSON.stringify(updatedSchools));
 
       setNewSchoolName('');
       setNewSchoolEmail('');
@@ -112,9 +110,9 @@ export default function Schools() {
     }
 
     try {
+      const removed = schools.filter(s => s.id === schoolId);
       const updatedSchools = schools.filter(s => s.id !== schoolId);
-      setSchools(updatedSchools);
-      localStorage.setItem('pnae_schools', JSON.stringify(updatedSchools));
+      setSchools(updatedSchools, removed);
       toast.success('Escola removida com sucesso');
     } catch (error) {
       console.error('Erro ao deletar escola:', error);
@@ -146,7 +144,6 @@ export default function Schools() {
       };
       const updatedSchools = schools.map(s => s.id === updated.id ? updated : s);
       setSchools(updatedSchools);
-      localStorage.setItem('pnae_schools', JSON.stringify(updatedSchools));
       setEditSchool(null);
       toast.success('Escola atualizada com sucesso');
     } catch {

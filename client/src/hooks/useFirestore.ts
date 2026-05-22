@@ -132,13 +132,15 @@ function normalizeSchools(raw: unknown): School[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
     const school = item as Partial<School>;
-    return {
+    const normalized: School = {
       id: school.id || `school-imported-${index}`,
       name: school.name || 'Escola sem nome',
-      email: school.email || '',
       createdAt: school.createdAt ? new Date(school.createdAt) : new Date(),
       updatedAt: school.updatedAt ? new Date(school.updatedAt) : new Date(),
     };
+    if (school.email) normalized.email = school.email;
+    if (school.address) normalized.address = school.address;
+    return normalized;
   });
 }
 
@@ -272,10 +274,15 @@ export const useSchools = () => {
     };
   }, [orgId]);
 
-  const setSchools = (next: School[]) => {
+  const setSchools = (next: School[], deleted?: School[]) => {
     setSchoolsState(next);
     persistHybridSnapshot(`pnae_schools_${orgId}`, next);
-    void syncHybridCollectionSnapshot(orgId, 'schools', next);
+    // Sync each school individually — more reliable than full snapshot
+    next.forEach((school) => void syncHybridDocument(orgId, 'schools', school));
+    // Delete removed schools from Firestore
+    if (deleted?.length) {
+      deleted.forEach((school) => void removeHybridDocument(orgId, 'schools', school.id));
+    }
   };
 
   return { schools, loading, setSchools };

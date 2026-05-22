@@ -75,9 +75,10 @@ git add client\src\hooks\useFoods.ts
 git add client\src\hooks\useProductionLogs.ts
 git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
+git add client\src\pages\Schools.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: remove logo-nutricao dos PDFs, watermark restaurado na fiscalizacao, logo org em certificados, email PDF com Buffer, fichas tecnicas limpas, lazy loading, mobile, GA4, stripe webhook"
+git commit -m "fix: escolas salvas individualmente no Firestore (email/endereco nao some), remove logo-nutricao PDFs, watermark restaurado, lazy loading, mobile, GA4, stripe webhook"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
