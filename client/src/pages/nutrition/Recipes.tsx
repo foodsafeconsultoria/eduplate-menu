@@ -11,7 +11,7 @@ import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Food, RecipeClassification, RecipeIngredient } from '@/types/nutrition';
-import { Download, FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -280,23 +280,34 @@ export default function Recipes() {
   }, [foods]);
 
   // Auto-seed removido — fichas são criadas manualmente pela nutricionista.
-  const SEED_FLAG = `pnae_default_v3_seeded_${orgId}`;
+  // ── One-time cleanup: remove all seeded default recipes ──────────────────────
+  const CLEANUP_FLAG = `pnae_defaults_removed_${orgId}`;
+  useEffect(() => {
+    if (loading) return;
+    if (!orgId || orgId === 'pnae-default-org') return;
+    if (localStorage.getItem(CLEANUP_FLAG)) return;
+    if (!recipes.length) return;
 
-  // importDefaultRecipes removido — fichas são criadas manualmente.
-
-  // ── Cleanup: delete duplicates + re-seed with correct food IDs ───────────────
-  // Needed for accounts that were seeded before foods were loaded (v1/v2 bug).
-  const [cleaning, setCleaning] = useState(false);
-  const [recalculating, setRecalculating] = useState(false);
-  const hasDuplicates = useMemo(() => {
     const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
-    const counts = new Map<string, number>();
-    for (const r of recipes) {
-      const k = r.name.toLowerCase();
-      if (defaultNameSet.has(k)) counts.set(k, (counts.get(k) ?? 0) + 1);
+    const toDelete = recipes.filter((r) => defaultNameSet.has(r.name.toLowerCase()));
+    if (toDelete.length === 0) {
+      localStorage.setItem(CLEANUP_FLAG, '1');
+      return;
     }
-    return [...counts.values()].some((c) => c > 1);
-  }, [recipes]);
+    (async () => {
+      for (const r of toDelete) {
+        deleteRecipe(r.id);
+        await new Promise((res) => setTimeout(res, 20));
+      }
+      localStorage.setItem(CLEANUP_FLAG, '1');
+      if (toDelete.length > 0) {
+        toast.info(`${toDelete.length} ficha${toDelete.length !== 1 ? 's' : ''} padrão removida${toDelete.length !== 1 ? 's' : ''}.`);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, orgId, recipes.length]);
+
+  const [recalculating, setRecalculating] = useState(false);
 
   // ── Recalculate nutrients for ALL existing recipes from their ingredients ────
   const recipesWithZeroNutrients = useMemo(
@@ -363,30 +374,6 @@ export default function Recipes() {
     setRecalculating(false);
   };
 
-  const cleanupAndReseed = async () => {
-    if (!orgId || orgId === 'pnae-default-org') return;
-    setCleaning(true);
-    try {
-      const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
-      // Delete every recipe matching a default name (all copies, then re-add fresh)
-      const toDelete = recipes.filter((r) => defaultNameSet.has(r.name.toLowerCase()));
-      for (const r of toDelete) {
-        deleteRecipe(r.id);
-        await new Promise((res) => setTimeout(res, 20));
-      }
-      // Clear LS recipe cache + all seed flags so next load fetches fresh from Firestore
-      localStorage.removeItem(`pnae_nutrition_recipes_${orgId}`);
-      ['v1', 'v2', 'v3'].forEach((v) =>
-        localStorage.removeItem(`pnae_default_${v}_seeded_${orgId}`)
-      );
-      toast.success('Fichas PNAE limpas! Recarregando com dados corretos…');
-      setTimeout(() => window.location.reload(), 1800);
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao limpar fichas.');
-      setCleaning(false);
-    }
-  };
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -723,18 +710,6 @@ export default function Recipes() {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            {hasDuplicates && (
-              <Button
-                variant="outline"
-                onClick={cleanupAndReseed}
-                disabled={cleaning}
-                className="border-orange-300 text-orange-700 hover:bg-orange-50 animate-pulse"
-                title="Foram detectadas fichas duplicadas — clique para corrigir"
-              >
-                <X className="mr-2 h-4 w-4" />
-                {cleaning ? 'Limpando…' : 'Corrigir Duplicatas'}
-              </Button>
-            )}
             {recipes.length > 0 && (
               <Button
                 variant="outline"
