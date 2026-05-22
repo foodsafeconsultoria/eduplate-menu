@@ -49,7 +49,7 @@ router.post('/send-menu', async (req: Request, res: Response) => {
           subject: `📋 ${menuTitle} — ${school.name}`,
           html: buildEmailHtml({ schoolName: school.name, menuTitle, menuHtml, senderName: fromName }),
           ...(pdfBase64 && pdfFilename
-            ? { attachments: [{ filename: pdfFilename, content: pdfBase64 }] }
+            ? { attachments: [{ filename: pdfFilename, content: Buffer.from(pdfBase64, 'base64') }] }
             : {}),
         });
         results.push({ school: school.name, status: 'sent' });

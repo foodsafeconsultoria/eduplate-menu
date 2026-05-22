@@ -19,6 +19,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add package.json
 git add client\src\pages\nutrition\Recipes.tsx
 git add client\src\pages\Inspection.tsx
+git add client\src\pages\nutrition\Menus.tsx
 git add client\index.html
 git add client\src\pages\nutrition\Foods.tsx
 git add client\src\pages\nutrition\Production.tsx
@@ -32,6 +33,7 @@ git add client\src\data\defaultRecipes.ts
 git add client\src\data\nutritionFoods.ts
 git add client\public\sw.js
 git add client\src\lib\apiUrl.ts
+git add client\src\lib\pdfBranding.ts
 git add client\.env.production
 git add .env.production
 git add client\src\pages\Billing.tsx
@@ -75,7 +77,7 @@ git add client\src\hooks\useOrgSettings.ts
 git add client\src\hooks\useAcceptabilityRecords.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "perf+fix: lazy loading, email PDF 413 resolvido, mobile em todos modulos + fiscalizacao, fichas tecnicas recalculo nutrientes, Google Analytics, sem onboarding"
+git commit -m "fix: remove logo-nutricao dos PDFs, watermark restaurado na fiscalizacao, logo org em certificados, email PDF com Buffer, fichas tecnicas limpas, lazy loading, mobile, GA4, stripe webhook"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

@@ -43,7 +43,7 @@ import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 type SectionKey = keyof typeof checklistSections;
 
-// ── Canvas watermark helpers ────────────────────────────────────────────────
+// ── Canvas watermark helpers (fundo sutil dos PDFs) ─────────────────────────
 function drawAppleCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.save();
   ctx.beginPath();
@@ -84,19 +84,6 @@ function drawCarrotCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, s
   ctx.restore();
 }
 
-function drawLeafCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(Math.PI / 4);
-  ctx.beginPath();
-  ctx.moveTo(0, -size);
-  ctx.bezierCurveTo(size * 0.8, -size * 0.5, size * 0.8, size * 0.5, 0, size);
-  ctx.bezierCurveTo(-size * 0.8, size * 0.5, -size * 0.8, -size * 0.5, 0, -size);
-  ctx.fillStyle = 'rgba(21,128,61,0.17)';
-  ctx.fill();
-  ctx.restore();
-}
-
 function buildWatermarkDataUrl(pdfWmm: number, pdfHmm: number): string {
   const scale = 3.7795;
   const cw = Math.round(pdfWmm * scale);
@@ -130,6 +117,20 @@ function buildWatermarkDataUrl(pdfWmm: number, pdfHmm: number): string {
   return canvas.toDataURL('image/png');
 }
 
+function drawLeafCanvas(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.beginPath();
+  ctx.moveTo(0, -size);
+  ctx.bezierCurveTo(size * 0.8, -size * 0.5, size * 0.8, size * 0.5, 0, size);
+  ctx.bezierCurveTo(-size * 0.8, size * 0.5, -size * 0.8, -size * 0.5, 0, -size);
+  ctx.fillStyle = 'rgba(21,128,61,0.17)';
+  ctx.fill();
+  ctx.restore();
+}
+
+
 // ── Score helpers ────────────────────────────────────────────────────────────
 function scoreColor(score: number): string {
   if (score >= 80) return 'text-green-600';
@@ -150,29 +151,22 @@ function scoreBgClass(score: number): string {
 }
 
 // ── PDF helpers ──────────────────────────────────────────────────────────────
-let _brasaoCache:    string | null = null;
-let _nutricaoCache:  string | null = null;
-let _brasaoTried    = false;
-let _nutricaoTried  = false;
-async function tryLoad(path: string): Promise<string | null> {
-  try { return await assetToDataUrl(path); } catch { return null; }
-}
-async function pdfLoadLogos() {
-  if (!_brasaoTried)   { _brasaoTried   = true; _brasaoCache   = await tryLoad('/brasao-itai.png'); }
-  if (!_nutricaoTried) { _nutricaoTried = true; _nutricaoCache = await tryLoad('/logo-nutricao.png'); }
-  return { brasao: _brasaoCache, nutricao: _nutricaoCache };
-}
-
-async function pdfAddGreenHeader(doc: jsPDF, title: string, subtitle: string): Promise<number> {
+async function pdfAddGreenHeader(
+  doc: jsPDF,
+  title: string,
+  subtitle: string,
+  orgLogoDataUrl?: string,
+): Promise<number> {
   const pw = doc.internal.pageSize.getWidth();
   doc.setFillColor(22, 101, 52);
   doc.rect(0, 0, pw, 32, 'F');
   doc.setFillColor(21, 128, 61);
   doc.rect(0, 29, pw, 3, 'F');
 
-  const { brasao, nutricao } = await pdfLoadLogos();
-  if (brasao)   doc.addImage(brasao,   'PNG', 6,       6, 20, 20);
-  if (nutricao) doc.addImage(nutricao, 'PNG', pw - 26, 6, 20, 20);
+  // Logo esquerdo: logo personalizado do assinante (se disponível)
+  if (orgLogoDataUrl) {
+    try { doc.addImage(orgLogoDataUrl, 'PNG', 6, 6, 20, 20); } catch { /* skip */ }
+  }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -181,19 +175,20 @@ async function pdfAddGreenHeader(doc: jsPDF, title: string, subtitle: string): P
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text(subtitle, pw / 2, 20, { align: 'center' });
-  // municipality line is now optional — passed by caller
   doc.setTextColor(31, 41, 55);
   return 38;
 }
 
-async function generateInspectionPDF(inspection: Inspection) {
+async function generateInspectionPDF(inspection: Inspection, orgLogoDataUrl?: string) {
   const doc = new jsPDF();
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const wmUrl = buildWatermarkDataUrl(210, 297);
 
-  doc.addImage(wmUrl, 'PNG', 0, 0, 210, 297);
-  let y = await pdfAddGreenHeader(doc, 'RELATÓRIO DE FISCALIZAÇÃO', 'PNAE — Gestão de Nutrição Escolar');
+  // Watermark sutil PNAE
+  const wmUrl = buildWatermarkDataUrl(pw, ph);
+  doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
+
+  let y = await pdfAddGreenHeader(doc, 'RELATÓRIO DE FISCALIZAÇÃO', 'PNAE — Gestão de Nutrição Escolar', orgLogoDataUrl);
 
   // Info table
   const infoData = [
@@ -279,7 +274,7 @@ async function generateInspectionPDF(inspection: Inspection) {
     });
   });
   if (nonConf.length > 0) {
-    if (y > ph - 40) { doc.addPage(); doc.addImage(wmUrl, 'PNG', 0, 0, 210, 297); y = 15; }
+    if (y > ph - 40) { doc.addPage(); y = 15; }
     autoTable(doc, {
       startY: y,
       head: [['Seção', 'Pergunta', 'Não Conformidade']],
@@ -293,12 +288,11 @@ async function generateInspectionPDF(inspection: Inspection) {
   // Photos
   if (inspection.photos && inspection.photos.length > 0) {
     doc.addPage();
-    doc.addImage(wmUrl, 'PNG', 0, 0, 210, 297);
-    await pdfAddGreenHeader(doc, 'FOTOS DA INSPEÇÃO', inspection.schoolName);
+    await pdfAddGreenHeader(doc, 'FOTOS DA INSPEÇÃO', inspection.schoolName, orgLogoDataUrl);
     let px = 10, py = 38;
     const imgW = (pw - 20) / 2, imgH = 58;
     inspection.photos.forEach((photo, idx) => {
-      if (py + imgH + 15 > ph - 10) { doc.addPage(); doc.addImage(wmUrl, 'PNG', 0, 0, 210, 297); py = 15; px = 10; }
+      if (py + imgH + 15 > ph - 10) { doc.addPage(); py = 15; px = 10; }
       try {
         doc.addImage(photo, 'JPEG', px, py, imgW, imgH);
         doc.setFontSize(7);
@@ -494,16 +488,14 @@ async function generatePanelPDF(stats: PanelStats) {
   doc.save(`Painel_Fiscalizacoes_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-async function generateSchoolCertificatePDF(inspection: Inspection, signatureUrl?: string) {
+async function generateSchoolCertificatePDF(inspection: Inspection, signatureUrl?: string, orgLogoDataUrl?: string) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const wmUrl = buildWatermarkDataUrl(pw, ph);
 
-  // Ivory background
+  // Fundo marfim limpo
   doc.setFillColor(255, 253, 244);
   doc.rect(0, 0, pw, ph, 'F');
-  doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
 
   // Outer green border
   doc.setDrawColor(22, 101, 52);
@@ -518,10 +510,10 @@ async function generateSchoolCertificatePDF(inspection: Inspection, signatureUrl
   doc.setFillColor(22, 101, 52);
   doc.rect(12, 12, pw - 24, 30, 'F');
 
-  // Logos inside header band
-  const { brasao: b2, nutricao: n2 } = await pdfLoadLogos();
-  if (b2) doc.addImage(b2, 'PNG', 16,      14, 22, 22);
-  if (n2) doc.addImage(n2, 'PNG', pw - 38, 14, 22, 22);
+  // Logo esquerdo: logo personalizado do assinante
+  if (orgLogoDataUrl) {
+    try { doc.addImage(orgLogoDataUrl, 'PNG', 16, 14, 22, 22); } catch { /* skip */ }
+  }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -808,7 +800,7 @@ export default function InspectionPage() {
       setInspectionTime(''); setVisitObjective(''); setGuidelines(''); setPhotos([]);
 
       const action = editingInspectionId ? 'atualizada' : 'salva';
-      generateInspectionPDF(savedInspection).catch((err) => {
+      generateInspectionPDF(savedInspection, orgSettings?.logoDataUrl).catch((err) => {
         console.error('Erro ao gerar PDF:', err);
         toast.error('Fiscalização salva, mas houve erro ao gerar o PDF.');
       });
@@ -1223,7 +1215,7 @@ export default function InspectionPage() {
                     )}
 
                     <div className="flex gap-2 flex-wrap pt-1">
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { generateInspectionPDF(inspection).catch(() => {}); }}>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { generateInspectionPDF(inspection, orgSettings?.logoDataUrl).catch(() => {}); }}>
                         <Download className="h-3.5 w-3.5" /> Baixar PDF
                       </Button>
 
@@ -1310,7 +1302,7 @@ export default function InspectionPage() {
                                 className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground"
                                 onClick={() => {
                                   if (selectedInspectionForCertificate) {
-                                    generateSchoolCertificatePDF(selectedInspectionForCertificate, signatureUrl).catch(() => {});
+                                    generateSchoolCertificatePDF(selectedInspectionForCertificate, signatureUrl, orgSettings?.logoDataUrl).catch(() => {});
                                     setCertificateDialogOpen(false);
                                     toast.success('Certificado gerado!');
                                   }

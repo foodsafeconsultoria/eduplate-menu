@@ -13,6 +13,7 @@ import { useMenus } from '@/hooks/useMenus';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useSpecialDiets } from '@/hooks/useSpecialDiets';
 import { assetToDataUrl } from '@/lib/pdfBranding';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 import { DIET_LABEL_MAP } from '@/data/dietLabels';
 import type { Food, Menu, MenuInsumo, MenuSlot, NutritionNutrientSet, Recipe } from '@/types/nutrition';
 import {
@@ -168,6 +169,7 @@ async function generateMenuPDF(
   schoolNames: string[],
   meals: string[],
   returnBase64 = false,
+  orgLogoDataUrl?: string,
 ): Promise<string | void> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.getWidth();
@@ -181,11 +183,10 @@ async function generateMenuPDF(
   doc.setFillColor(...green);
   doc.rect(0, 36, pw, 2, 'F');
 
-  try {
-    const brasao = await assetToDataUrl('/brasao-itai.png');
-    doc.addImage(brasao, 'PNG', margin, 3, 30, 30);
-  } catch { /* logos optional */ }
-
+  // Logo esquerdo: logo personalizado do assinante
+  if (orgLogoDataUrl) {
+    try { doc.addImage(orgLogoDataUrl, 'PNG', margin, 3, 30, 30); } catch { /* skip */ }
+  }
   doc.setTextColor(20, 20, 20);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
@@ -429,6 +430,7 @@ export default function Menus() {
   const { recipes } = useRecipes();
   const { menus, loading, addMenu, updateMenu, deleteMenu } = useMenus();
   const { specialDiets } = useSpecialDiets();
+  const { settings: orgSettings } = useOrgSettings();
 
   // ── Form meta ────────────────────────────────────────────────────────────────
   const [open, setOpen] = useState(false);
@@ -499,7 +501,7 @@ export default function Menus() {
         const mealsForPdf = menu.category === 'Creche'
           ? ['Desjejum', 'Almoço', 'Lanche Tarde']
           : ['Almoço', 'Lanche Tarde'];
-        const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true);
+        const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true, orgSettings?.logoDataUrl);
         if (b64) {
           pdfBase64 = b64;
           pdfFilename = `Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`;
@@ -1811,7 +1813,7 @@ export default function Menus() {
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-700 hover:bg-green-50"
                             title="Imprimir PDF"
-                            onClick={() => generateMenuPDF(menu, schoolNames, ml).catch(() => toast.error('Erro ao gerar PDF.'))}>
+                            onClick={() => generateMenuPDF(menu, schoolNames, ml, false, orgSettings?.logoDataUrl).catch(() => toast.error('Erro ao gerar PDF.'))}>
                             <Printer className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50"
@@ -1919,7 +1921,7 @@ export default function Menus() {
                           const names = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
                           const cat   = menu.category as (typeof categories)[number];
                           const ml    = mealMap[cat] ?? ['Refeição'];
-                          generateMenuPDF(menu, names, ml).catch(() => toast.error('Erro ao gerar PDF.'));
+                          generateMenuPDF(menu, names, ml, false, orgSettings?.logoDataUrl).catch(() => toast.error('Erro ao gerar PDF.'));
                         }}
                       >
                         <Printer className="h-4 w-4" />

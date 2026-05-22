@@ -34,19 +34,6 @@ export async function urlToDataUrl(url: string): Promise<string> {
   });
 }
 
-/** Cache loaded logos so we don't re-fetch on every PDF call. */
-let _rightLogoUrl: string | null = null;
-let _rightLogoTried = false;
-
-async function tryLoadLogo(path: string): Promise<string | null> {
-  try { return await assetToDataUrl(path); } catch { return null; }
-}
-
-async function loadRightLogo(): Promise<string | null> {
-  if (!_rightLogoTried) { _rightLogoTried = true; _rightLogoUrl = await tryLoadLogo('/logo-nutricao.png'); }
-  return _rightLogoUrl;
-}
-
 /**
  * Adds a standardised PNAE green header to any jsPDF document.
  *
@@ -76,11 +63,8 @@ export async function addPdfHeader(
 ): Promise<number> {
   const pw = doc.internal.pageSize.getWidth();
 
-  // Try to load org logo (left side) and default right logo
-  const [orgLogo, nutricaoLogo] = await Promise.all([
-    orgLogoUrl ? urlToDataUrl(orgLogoUrl).catch(() => null) : Promise.resolve(null),
-    loadRightLogo(),
-  ]);
+  // Try to load org logo (left side)
+  const orgLogo = orgLogoUrl ? await urlToDataUrl(orgLogoUrl).catch(() => null) : null;
 
   // ── white header band ─────────────────────────────────────────────────────
   doc.setFillColor(255, 255, 255);
@@ -90,11 +74,10 @@ export async function addPdfHeader(
   doc.setFillColor(...color);
   doc.rect(0, 30, pw, 2, 'F');
 
-  // ── logos (same size: 22×22 mm, centred vertically at y=5) ───────────────
+  // ── logo esquerdo: logo personalizado do assinante ───────────────────────
   const logoSize = 22;
   const logoY    = 4;
-  if (orgLogo)      doc.addImage(orgLogo,      'PNG', 6,                 logoY, logoSize, logoSize);
-  if (nutricaoLogo) doc.addImage(nutricaoLogo, 'PNG', pw - 6 - logoSize, logoY, logoSize, logoSize);
+  if (orgLogo) doc.addImage(orgLogo, 'PNG', 6, logoY, logoSize, logoSize);
 
   // ── title ─────────────────────────────────────────────────────────────────
   doc.setTextColor(...color);
