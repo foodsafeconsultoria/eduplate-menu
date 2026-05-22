@@ -512,7 +512,13 @@ export default function Menus() {
         const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true, orgSettings?.logoDataUrl);
         if (b64) {
           pdfBase64 = b64;
-          pdfFilename = `Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`;
+          // Sanitize filename: remove accents + special chars (comma breaks MIME headers)
+          const safeTitle = menu.title
+            .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
+            .replace(/[^a-zA-Z0-9_\-]/g, '_')                // replace anything else with _
+            .replace(/_+/g, '_')                              // collapse repeated underscores
+            .replace(/^_|_$/g, '');                           // trim leading/trailing _
+          pdfFilename = `Cardapio_${safeTitle}.pdf`;
         }
       } catch (pdfErr) {
         console.warn('[Email] PDF generation failed, sending without attachment:', pdfErr);

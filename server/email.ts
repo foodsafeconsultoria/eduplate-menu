@@ -49,9 +49,8 @@ router.post('/send-menu', async (req: Request, res: Response) => {
           to: [school.email],
           subject: `📋 ${menuTitle} — ${school.name}`,
           html: buildEmailHtml({ schoolName: school.name, menuTitle, menuHtml, senderName: fromName }),
-          // Resend v4: passa base64 string diretamente + encoding para garantir decodificação correta
           ...(pdfBase64 && pdfFilename
-            ? { attachments: [{ filename: pdfFilename, content: pdfBase64, encoding: 'base64' }] }
+            ? { attachments: [{ filename: pdfFilename, content: Buffer.from(pdfBase64, 'base64') }] }
             : {}),
         });
         results.push({ school: school.name, status: 'sent' });
