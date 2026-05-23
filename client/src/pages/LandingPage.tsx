@@ -309,6 +309,7 @@ export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [billingPeriod, setBillingPeriod] = useState<'mensal' | 'semestral' | 'anual'>('semestral');
 
   const goToPlans = () => navigate('/planos');
   const goToRegister = () => navigate('/registro');
@@ -381,12 +382,12 @@ export default function LandingPage() {
               </p>
               <div className="lp-btn-row">
                 <button className="lp-btn lp-btn-primary" onClick={goToRegister}>
-                  Começar 3 meses grátis <ArrowRight size={18} />
+                  Começar 1 mês grátis <ArrowRight size={18} />
                 </button>
                 <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
               </div>
               <div className="lp-hero-meta">
-                <span className="lp-pill">Sem cobranças por 3 meses</span>
+                <span className="lp-pill">Sem cobranças por 1 mês</span>
                 <span className="lp-pill">Cancele a qualquer momento</span>
                 <span className="lp-pill">Dados seguros na nuvem</span>
               </div>
@@ -410,7 +411,7 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="lp-container lp-stats">
             {[
-              { icon: <Clock size={20} color="#4CAF50" />, big:'3 meses', label:'de acesso grátis com cartão' },
+              { icon: <Clock size={20} color="#4CAF50" />, big:'1 mês', label:'de acesso grátis para testar' },
               { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
               { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'600+', label:'alimentos TACO com nutrientes calculados automaticamente' },
               { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
@@ -821,7 +822,7 @@ export default function LandingPage() {
             </p>
             <div className="lp-steps">
               {[
-                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis — nenhuma cobrança nos primeiros 3 meses.' },
+                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis — nenhuma cobrança no primeiro mês.' },
                 { n:'02', title:'Configure em minutos', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
                 { n:'03', title:'Use de qualquer lugar', desc:'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.' },
               ].map(s => (
@@ -841,36 +842,87 @@ export default function LandingPage() {
             <span className="lp-eyebrow">Planos e preços</span>
             <h2 style={{ marginTop:18 }}>Planos pensados para o porte da sua rede</h2>
             <p className="lp-lead" style={{ marginTop:18 }}>
-              3 meses grátis em qualquer plano. Cartão necessário, sem cobranças por 3 meses. Sem taxa de setup.
+              1 mês grátis em qualquer plano. Sem taxa de setup.
             </p>
-            {/* ── Banner oferta limitada ──────────────────────────── */}
-            <div style={{
-              background: 'linear-gradient(135deg, #FF5722, #FF7043)',
-              borderRadius: 16,
-              padding: '14px 22px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginBottom: 4,
-              boxShadow: '0 8px 24px rgba(255,87,34,0.25)',
-            }}>
-              <span style={{ fontSize: 22 }}>⏳</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Oferta de lançamento — vagas limitadas</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
-                  Preços especiais para os primeiros municípios que assinarem. Garanta agora.
-                </div>
+
+            {/* ── Toggle de período ─────────────────────────────────── */}
+            <div style={{ display:'flex', justifyContent:'center', marginTop:28 }}>
+              <div style={{ display:'flex', gap:4, background:'#F1F5F9', borderRadius:99, padding:4 }}>
+                {(['mensal','semestral','anual'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setBillingPeriod(p)}
+                    style={{
+                      padding:'9px 22px', borderRadius:99, fontSize:13, fontWeight:700,
+                      border:'none', cursor:'pointer', position:'relative',
+                      background: billingPeriod === p ? '#fff' : 'transparent',
+                      color: billingPeriod === p ? '#1B2A4A' : '#64748B',
+                      boxShadow: billingPeriod === p ? '0 2px 8px rgba(27,42,74,0.12)' : 'none',
+                      transition:'all 0.18s',
+                    }}
+                  >
+                    {p === 'mensal' ? 'Mensal' : p === 'semestral' ? 'Semestral' : 'Anual'}
+                    {p === 'semestral' && (
+                      <span style={{
+                        position:'absolute', top:-9, right:-2,
+                        background: billingPeriod === 'semestral' ? '#4CAF50' : '#4CAF50',
+                        color:'#fff', fontSize:9, fontWeight:800,
+                        borderRadius:99, padding:'2px 6px', whiteSpace:'nowrap',
+                      }}>Recomendado</span>
+                    )}
+                    {p === 'anual' && billingPeriod !== 'anual' && (
+                      <span style={{
+                        position:'absolute', top:-9, right:-2,
+                        background:'#1A73E8', color:'#fff', fontSize:9,
+                        fontWeight:800, borderRadius:99, padding:'2px 6px',
+                      }}>−30%</span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="lp-pricing">
+            {/* ── Banner oferta — só para períodos com desconto ─────── */}
+            {billingPeriod !== 'mensal' && (
+              <div style={{
+                background:'linear-gradient(135deg,#FF5722,#FF7043)',
+                borderRadius:16, padding:'14px 22px',
+                display:'flex', alignItems:'center', gap:12,
+                marginTop:20, marginBottom:4,
+                boxShadow:'0 8px 24px rgba(255,87,34,0.25)',
+              }}>
+                <span style={{ fontSize:22 }}>⏳</span>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>Oferta de lançamento — vagas limitadas</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)', marginTop:2 }}>
+                    Preços especiais para os primeiros municípios que assinarem. Garanta agora.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="lp-pricing" style={{ marginTop: billingPeriod !== 'mensal' ? 16 : 28 }}>
+
               {/* Básico */}
               <article className="lp-price-card">
                 <h3>Básico</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Ideal para municípios com até 10 escolas.</p>
-                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
-                <span className="lp-price-original">De R$ 79/mês</span>
-                <div className="lp-price">R$ 49 <small>/mês</small></div>
+                {billingPeriod !== 'mensal' && (
+                  <>
+                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
+                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 294' : 'De R$ 588'}</span>
+                  </>
+                )}
+                <div className="lp-price">
+                  {billingPeriod === 'mensal' && <>R$ 49 <small>/mês</small></>}
+                  {billingPeriod === 'semestral' && <>R$ 250 <small>/semestre</small></>}
+                  {billingPeriod === 'anual' && <>R$ 412 <small>/ano</small></>}
+                </div>
+                {billingPeriod !== 'mensal' && (
+                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
+                    {billingPeriod === 'semestral' ? '≈ R$ 41,67/mês' : '≈ R$ 34,33/mês'}
+                  </p>
+                )}
                 <ul className="lp-price-list">
                   {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Relatório SIGPC/FNDE','Suporte por e-mail'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
@@ -878,17 +930,31 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 3 meses grátis</button>
+                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 1 mês grátis</button>
                 </div>
               </article>
+
               {/* Essencial */}
               <article className="lp-price-card popular">
                 <span className="lp-popular-badge">Mais popular</span>
                 <h3>Essencial</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para municípios com até 30 escolas.</p>
-                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
-                <span className="lp-price-original">De R$ 129/mês</span>
-                <div className="lp-price">R$ 99 <small>/mês</small></div>
+                {billingPeriod !== 'mensal' && (
+                  <>
+                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
+                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 594' : 'De R$ 1.188'}</span>
+                  </>
+                )}
+                <div className="lp-price">
+                  {billingPeriod === 'mensal' && <>R$ 99 <small>/mês</small></>}
+                  {billingPeriod === 'semestral' && <>R$ 505 <small>/semestre</small></>}
+                  {billingPeriod === 'anual' && <>R$ 832 <small>/ano</small></>}
+                </div>
+                {billingPeriod !== 'mensal' && (
+                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
+                    {billingPeriod === 'semestral' ? '≈ R$ 84,17/mês' : '≈ R$ 69,33/mês'}
+                  </p>
+                )}
                 <ul className="lp-price-list">
                   {['Tudo do plano Básico','Usuários ilimitados','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
@@ -896,16 +962,30 @@ export default function LandingPage() {
                 </ul>
                 <div className="lp-spacer" />
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 3 meses grátis</button>
+                  <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 1 mês grátis</button>
                 </div>
               </article>
+
               {/* Consórcio */}
               <article className="lp-price-card">
                 <h3>Consórcio</h3>
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para redes regionais com múltiplos municípios.</p>
-                <span className="lp-price-badge">🔥 Oferta de lançamento</span>
-                <span className="lp-price-original">De R$ 449/mês</span>
-                <div className="lp-price" style={{ fontSize:'1.5rem' }}>a partir de <strong>R$ 399</strong><small>/mês</small></div>
+                {billingPeriod !== 'mensal' && (
+                  <>
+                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
+                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 2.394' : 'De R$ 4.788'}</span>
+                  </>
+                )}
+                <div className="lp-price" style={{ fontSize:'1.5rem' }}>
+                  {billingPeriod === 'mensal' && <>a partir de <strong>R$ 399</strong><small>/mês</small></>}
+                  {billingPeriod === 'semestral' && <>R$ 2.035 <small>/semestre</small></>}
+                  {billingPeriod === 'anual' && <>R$ 3.352 <small>/ano</small></>}
+                </div>
+                {billingPeriod !== 'mensal' && (
+                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
+                    {billingPeriod === 'semestral' ? '≈ R$ 339,17/mês' : '≈ R$ 279,33/mês'}
+                  </p>
+                )}
                 <ul className="lp-price-list">
                   {['Tudo do plano Essencial','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
@@ -918,6 +998,7 @@ export default function LandingPage() {
                   </a>
                 </div>
               </article>
+
             </div>
           </div>
         </section>

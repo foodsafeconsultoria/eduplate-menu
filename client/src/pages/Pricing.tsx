@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useLocation } from 'wouter';
 import { Check, Zap, Building2, Network, X, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,28 +7,32 @@ import { Input } from '@/components/ui/input';
 import { apiUrl } from '@/lib/apiUrl';
 
 type PlanKey = 'essencial' | 'pro' | 'enterprise';
+type BillingPeriod = 'mensal' | 'semestral' | 'anual';
+
+interface PlanPricing {
+  price: string;
+  label: string;
+  old: string | null;
+  equiv: string | null;
+  discount: string | null;
+}
 
 interface Plan {
   key: PlanKey;
   name: string;
-  price: number;
-  priceLabel: string;
   description: string;
   icon: React.ReactNode;
-  color: string;
-  features: string[];
   highlight: boolean;
+  features: string[];
+  pricing: Record<BillingPeriod, PlanPricing>;
 }
 
 const PLANS: Plan[] = [
   {
     key: 'essencial',
     name: 'Básico',
-    price: 49.9,
-    priceLabel: 'R$ 49,90',
     description: 'Para municípios em início de implantação',
     icon: <Zap className="w-5 h-5" />,
-    color: 'border-gray-200',
     highlight: false,
     features: [
       '1 município / organização',
@@ -40,15 +43,17 @@ const PLANS: Plan[] = [
       'Testes de aceitabilidade',
       'Suporte por e-mail (72h)',
     ],
+    pricing: {
+      mensal:    { price: 'R$ 49',    label: '/mês',      old: null,         equiv: null,              discount: null },
+      semestral: { price: 'R$ 250',   label: '/semestre', old: 'De R$ 294',  equiv: '≈ R$ 41,67/mês',  discount: '15% OFF' },
+      anual:     { price: 'R$ 412',   label: '/ano',      old: 'De R$ 588',  equiv: '≈ R$ 34,33/mês',  discount: '30% OFF' },
+    },
   },
   {
     key: 'pro',
     name: 'Essencial',
-    price: 99,
-    priceLabel: 'R$ 99',
     description: 'Para secretarias com operação ativa',
     icon: <Building2 className="w-5 h-5" />,
-    color: 'border-green-600 ring-2 ring-green-600',
     highlight: true,
     features: [
       '1 município / organização',
@@ -59,15 +64,17 @@ const PLANS: Plan[] = [
       'Relatórios e exportação SIGPC',
       'Suporte prioritário (48h)',
     ],
+    pricing: {
+      mensal:    { price: 'R$ 99',    label: '/mês',      old: null,          equiv: null,              discount: null },
+      semestral: { price: 'R$ 505',   label: '/semestre', old: 'De R$ 594',   equiv: '≈ R$ 84,17/mês',  discount: '15% OFF' },
+      anual:     { price: 'R$ 832',   label: '/ano',      old: 'De R$ 1.188', equiv: '≈ R$ 69,33/mês',  discount: '30% OFF' },
+    },
   },
   {
     key: 'enterprise',
     name: 'Consórcio',
-    price: 399,
-    priceLabel: 'R$ 399',
     description: 'Para consórcios intermunicipais',
     icon: <Network className="w-5 h-5" />,
-    color: 'border-gray-200',
     highlight: false,
     features: [
       'Municípios ilimitados',
@@ -78,13 +85,22 @@ const PLANS: Plan[] = [
       'Suporte dedicado (WhatsApp)',
       'Onboarding e treinamento incluso',
     ],
+    pricing: {
+      mensal:    { price: 'R$ 399',   label: '/mês',      old: null,           equiv: null,               discount: null },
+      semestral: { price: 'R$ 2.035', label: '/semestre', old: 'De R$ 2.394',  equiv: '≈ R$ 339,17/mês',  discount: '15% OFF' },
+      anual:     { price: 'R$ 3.352', label: '/ano',      old: 'De R$ 4.788',  equiv: '≈ R$ 279,33/mês',  discount: '30% OFF' },
+    },
   },
 ];
 
 const FAQS = [
   {
-    q: 'Preciso de cartão de crédito para começar os 3 meses grátis?',
-    a: 'Sim. Solicitamos o cartão para garantir a continuidade automática após o trial — mas você não paga nada pelos primeiros 3 meses. Cancele antes do 3º mês e nenhum valor será cobrado.',
+    q: 'Preciso de cartão de crédito para o 1 mês grátis?',
+    a: 'Sim. Solicitamos o cartão para garantir a continuidade automática após o trial — mas você não paga nada no primeiro mês. Cancele antes do fim do trial e nenhum valor será cobrado.',
+  },
+  {
+    q: 'Qual a diferença entre o plano semestral e anual?',
+    a: 'No semestral você paga a cada 6 meses com 15% de desconto em relação ao mensal. No anual, paga uma vez por ano com 30% de desconto — a opção mais econômica. Ambos incluem o mês de trial gratuito.',
   },
   {
     q: 'A prefeitura pode pagar com empenho ou nota de empenho?',
@@ -96,7 +112,7 @@ const FAQS = [
   },
   {
     q: 'Quantos usuários posso cadastrar?',
-    a: 'No plano Básico, até 2 usuários (ideal para nutricionistas RT e um agente). No plano Profissional e Consórcio, usuários ilimitados — toda a equipe da secretaria pode ter acesso com perfis e permissões diferentes.',
+    a: 'No plano Básico, até 2 usuários (ideal para nutricionistas RT e um agente). No plano Essencial e Consórcio, usuários ilimitados — toda a equipe da secretaria pode ter acesso com perfis e permissões diferentes.',
   },
   {
     q: 'Os dados de cada município ficam separados e seguros?',
@@ -106,18 +122,14 @@ const FAQS = [
     q: 'Posso cancelar quando quiser?',
     a: 'Sim, sem multa e sem burocracia. Você cancela diretamente pelo painel em qualquer momento. Após o cancelamento, seus dados ficam disponíveis para exportação por 30 dias.',
   },
-  {
-    q: 'Há desconto para pagamento anual?',
-    a: 'Sim — assinatura anual tem 2 meses grátis (equivalente a ~17% de desconto). Entre em contato para contratar o plano anual e receber a proposta.',
-  },
 ];
 
 export default function Pricing() {
   const { user, loading: authLoading } = useAuth();
   const { status, plan: currentPlan } = useSubscription();
-  const [, navigate] = useLocation();
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('semestral');
 
   // Email modal for non-logged-in visitors
   const [emailModal, setEmailModal] = useState<{ open: boolean; planKey: PlanKey | null }>({ open: false, planKey: null });
@@ -126,7 +138,6 @@ export default function Pricing() {
   const handleSubscribe = async (planKey: PlanKey) => {
     if (authLoading) return;
 
-    // Logged-in user: upgrade / change plan
     if (user) {
       if (currentPlan === planKey && status === 'active') {
         toast.info('Você já está neste plano.');
@@ -140,6 +151,7 @@ export default function Pricing() {
           body: JSON.stringify({
             orgId: user.organizationId,
             plan: planKey,
+            period: billingPeriod,
             userId: user.uid,
             userEmail: user.email,
             orgName: user.organizationId,
@@ -156,7 +168,6 @@ export default function Pricing() {
       return;
     }
 
-    // Not logged in: ask for email first
     setEmailModal({ open: true, planKey });
     setEmailInput('');
   };
@@ -170,7 +181,7 @@ export default function Pricing() {
       const res = await fetch(apiUrl('/api/stripe/checkout-new'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput.trim(), plan: planKey }),
+        body: JSON.stringify({ email: emailInput.trim(), plan: planKey, period: billingPeriod }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
@@ -189,7 +200,7 @@ export default function Pricing() {
       <div style={{ background: '#1B2A4A' }} className="py-16 px-4 text-center">
         <span className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
           style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50', border: '1px solid rgba(76,175,80,0.3)' }}>
-          3 meses grátis · Cartão necessário
+          1 mês grátis · Cartão necessário
         </span>
         <h1 className="text-4xl font-extrabold text-white mt-2">Planos para cada etapa</h1>
         <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -211,17 +222,72 @@ export default function Pricing() {
 
       <div className="max-w-5xl mx-auto px-4 -mt-6 pb-20">
 
+        {/* ── Toggle de período ─────────────────────────────────────── */}
+        <div className="flex justify-center mt-10 mb-2">
+          <div style={{ display:'flex', gap:4, background:'#F1F5F9', borderRadius:99, padding:4 }}>
+            {(['mensal','semestral','anual'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setBillingPeriod(p)}
+                style={{
+                  padding:'10px 24px', borderRadius:99, fontSize:14, fontWeight:700,
+                  border:'none', cursor:'pointer', position:'relative',
+                  background: billingPeriod === p ? '#fff' : 'transparent',
+                  color: billingPeriod === p ? '#1B2A4A' : '#64748B',
+                  boxShadow: billingPeriod === p ? '0 2px 8px rgba(27,42,74,0.12)' : 'none',
+                  transition:'all 0.18s',
+                }}
+              >
+                {p === 'mensal' ? 'Mensal' : p === 'semestral' ? 'Semestral' : 'Anual'}
+                {p === 'semestral' && (
+                  <span style={{
+                    position:'absolute', top:-10, right:-2,
+                    background:'#4CAF50', color:'#fff', fontSize:9,
+                    fontWeight:800, borderRadius:99, padding:'2px 8px', whiteSpace:'nowrap',
+                  }}>Recomendado</span>
+                )}
+                {p === 'anual' && billingPeriod !== 'anual' && (
+                  <span style={{
+                    position:'absolute', top:-10, right:-2,
+                    background:'#1A73E8', color:'#fff', fontSize:9,
+                    fontWeight:800, borderRadius:99, padding:'2px 6px',
+                  }}>−30%</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Banner oferta — só para períodos com desconto */}
+        {billingPeriod !== 'mensal' && (
+          <div className="flex items-center gap-3 rounded-2xl px-5 py-3 mt-6 mb-2"
+            style={{ background:'linear-gradient(135deg,#FF5722,#FF7043)', boxShadow:'0 8px 24px rgba(255,87,34,0.25)' }}>
+            <span style={{ fontSize:20 }}>⏳</span>
+            <div>
+              <p className="text-sm font-extrabold text-white">Oferta de lançamento — vagas limitadas</p>
+              <p className="text-xs mt-0.5" style={{ color:'rgba(255,255,255,0.85)' }}>
+                Preços especiais para os primeiros municípios que assinarem. Garanta agora.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 mt-6">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.key && status === 'active';
+            const pricing = plan.pricing[billingPeriod];
             return (
               <div
                 key={plan.key}
-                className={`relative bg-white rounded-2xl border-2 p-6 flex flex-col ${plan.color} ${plan.highlight ? 'shadow-xl' : 'shadow-sm'}`}
+                className={`relative bg-white rounded-2xl p-6 flex flex-col ${
+                  plan.highlight
+                    ? 'border-2 border-green-600 shadow-xl'
+                    : 'border border-gray-200 shadow-sm'
+                }`}
               >
                 {plan.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-4 py-1 rounded-full">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">
                     Mais popular
                   </div>
                 )}
@@ -231,10 +297,30 @@ export default function Pricing() {
                   <span className="font-bold text-lg">{plan.name}</span>
                 </div>
 
-                <div className="mb-1">
-                  <span className="text-4xl font-extrabold text-gray-900">{plan.priceLabel}</span>
-                  <span className="text-gray-400 text-sm">/mês</span>
+                {/* Discount badge */}
+                {pricing.discount && (
+                  <span className="inline-block text-xs font-extrabold px-2 py-0.5 rounded-full mb-2 w-fit"
+                    style={{ background:'linear-gradient(135deg,#FF5722,#FF7043)', color:'#fff' }}>
+                    🔥 {pricing.discount}
+                  </span>
+                )}
+
+                {/* Old price */}
+                {pricing.old && (
+                  <p className="text-sm line-through text-gray-400 mb-0.5">{pricing.old}</p>
+                )}
+
+                {/* Price */}
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-4xl font-extrabold text-gray-900">{pricing.price}</span>
+                  <span className="text-gray-400 text-sm">{pricing.label}</span>
                 </div>
+
+                {/* Monthly equivalent */}
+                {pricing.equiv && (
+                  <p className="text-xs text-gray-400 mb-2">{pricing.equiv}</p>
+                )}
+
                 <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
 
                 <ul className="space-y-2 mb-8 flex-1">
@@ -263,7 +349,7 @@ export default function Pricing() {
                     ? 'Plano atual'
                     : status === 'trial'
                     ? 'Assinar agora'
-                    : 'Mudar para este plano'}
+                    : 'Começar 1 mês grátis'}
                 </button>
               </div>
             );
@@ -279,7 +365,7 @@ export default function Pricing() {
             <span className="font-medium">Pix</span>,{' '}
             <span className="font-medium">Boleto Bancário</span> e{' '}
             <span className="font-medium">Cartão de Crédito</span>.
-            {' '}Para pagamento via empenho municipal, entre em contato: {' '}
+            {' '}Para pagamento via empenho municipal, entre em contato:{' '}
             <a href="mailto:contato@eduplate.com.br" className="text-green-700 underline">
               contato@eduplate.com.br
             </a>
@@ -333,7 +419,6 @@ export default function Pricing() {
     </div>
 
     {/* ── Email modal ── */}
-
     {emailModal.open && (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"

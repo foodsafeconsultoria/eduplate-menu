@@ -110,12 +110,12 @@ export default function Register() {
   };
 
   const BENEFITS = [
-    '3 meses grátis — sem cobranças agora',
+    '1 mês grátis — sem cobranças agora',
     'Cartão necessário para ativar o trial',
     'Cardápios, fichas técnicas e dietas especiais',
     'Fiscalização de escolas e relatórios SIGPC',
     'Acesso a todos os módulos durante o trial',
-    'Cancele a qualquer momento antes do 3º mês',
+    'Cancele a qualquer momento no período de trial',
   ];
 
   return (
@@ -144,13 +144,13 @@ export default function Register() {
 
           <div className="mt-10 w-full rounded-2xl p-4" style={{ background:'rgba(76,175,80,0.1)', border:'1px solid rgba(76,175,80,0.2)' }}>
             <p className="text-xs text-center" style={{ color:'rgba(255,255,255,0.5)' }}>
-              Após os 3 meses, a partir de
+              Após o 1º mês, a partir de
             </p>
             <p className="text-2xl font-extrabold text-center mt-1" style={{ color:'#4CAF50' }}>
               R$ 49,90<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
             </p>
             <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.35)' }}>
-              Cancele antes do 3º mês e não paga nada
+              Cancele no trial e não paga nada
             </p>
           </div>
         </div>
@@ -166,12 +166,12 @@ export default function Register() {
         <div className="w-full max-w-md">
           <div className="mb-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
             style={{ background:'rgba(76,175,80,0.1)', color:'#2E7D32', border:'1px solid rgba(76,175,80,0.3)' }}>
-            3 meses grátis · Cancele quando quiser
+            1 mês grátis · Cancele quando quiser
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mt-2">Criar conta grátis</h1>
           <p className="text-sm text-gray-500 mt-1">
             Preencha seus dados e você será direcionado para informar seu cartão.<br/>
-            <strong className="text-gray-600">Nenhuma cobrança pelos primeiros 3 meses.</strong>
+            <strong className="text-gray-600">Nenhuma cobrança no primeiro mês.</strong>
           </p>
 
           {/* Card notice */}
