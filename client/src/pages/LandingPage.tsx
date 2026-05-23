@@ -558,16 +558,16 @@ export default function LandingPage() {
                   O EduPlate Menu inclui banco de alimentos baseado na <strong style={{ color: '#81C784' }}>Tabela TACO (UNICAMP)</strong> — o padrão de referência do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
                 </p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flexShrink: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, width: '100%' }}>
                 {[
                   { n: '600+', l: 'alimentos cadastrados' },
                   { n: 'TACO', l: 'Tabela UNICAMP' },
-                  { n: 'PNAE', l: 'nutrientes obrigatórios calculados automaticamente' },
+                  { n: 'PNAE', l: 'nutrientes PNAE calculados' },
                   { n: '1 clique', l: 'para gerar ficha técnica' },
                 ].map(s => (
-                  <div key={s.n} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
+                  <div key={s.n} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 10px', textAlign: 'center', minWidth: 0 }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>{s.n}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600 }}>{s.l}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600, wordBreak: 'break-word' }}>{s.l}</div>
                   </div>
                 ))}
               </div>

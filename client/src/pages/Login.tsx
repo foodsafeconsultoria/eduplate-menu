@@ -95,7 +95,7 @@ export default function Login() {
             style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.35)' }}
           >
             <p style={{ fontSize: 30, fontWeight: 800, color: '#4CAF50', margin: 0, lineHeight: 1.1 }}>
-              3 meses grátis
+              1 mês grátis
             </p>
             <p className="mt-1 text-sm" style={{ color: 'rgba(76,175,80,0.7)', margin: '6px 0 0', fontWeight: 600 }}>
               Acesso completo · Cartão necessário
@@ -131,7 +131,7 @@ export default function Login() {
 
         {/* Mobile logo */}
         <div className="flex lg:hidden mb-8">
-          <EduPlateLogo className="w-52" />
+          <EduPlateLogo className="w-52" variant="light" />
         </div>
 
         <div className="w-full max-w-sm">

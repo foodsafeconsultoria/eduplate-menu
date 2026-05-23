@@ -55,6 +55,7 @@ git add client\src\pages\Pricing.tsx
 git add client\src\pages\Register.tsx
 git add client\src\pages\ForgotPassword.tsx
 git add client\src\pages\Login.tsx
+
 git add client\src\App.tsx
 git add client\src\contexts\AuthContext.tsx
 git add client\public\manifest.json
@@ -83,7 +84,7 @@ git add client\src\components\TopNav.tsx
 git rm --cached client\src\pages\SchoolCertificates.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: planos semestral/anual com desconto, toggle de periodo, trial 1 mes, landing e pricing atualizados"
+git commit -m "fix: logo login mobile invisivel, grid TACO mobile overflow, trial 1 mes no Login"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
