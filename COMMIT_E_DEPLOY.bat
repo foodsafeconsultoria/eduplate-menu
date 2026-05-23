@@ -62,6 +62,7 @@ git add client\public\icon-192.png
 git add client\public\icon-512.png
 git add server\stripe.ts
 git add server\email.ts
+
 git add server\index.ts
 git add client\src\pages\Inspection.tsx
 git add client\src\hooks\useOrgId.ts

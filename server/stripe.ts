@@ -1,13 +1,19 @@
 /**
  * Stripe API routes for the Sistema PNAE billing system.
  *
- * Required env vars (set in .env):
- *   STRIPE_SECRET_KEY         — sk_live_... or sk_test_...
- *   STRIPE_WEBHOOK_SECRET     — whsec_... (from Stripe Dashboard → Webhooks)
- *   STRIPE_PRICE_ESSENCIAL    — price_... (Stripe Price ID for Essencial plan)
- *   STRIPE_PRICE_PRO          — price_... (Stripe Price ID for Pro plan)
- *   STRIPE_PRICE_ENTERPRISE   — price_... (Stripe Price ID for Enterprise plan)
- *   APP_URL                   — https://your-domain.com (for redirect URLs)
+ * Required env vars (set in .env / Railway):
+ *   STRIPE_SECRET_KEY                   — sk_live_... or sk_test_...
+ *   STRIPE_WEBHOOK_SECRET               — whsec_... (from Stripe Dashboard → Webhooks)
+ *   STRIPE_PRICE_ESSENCIAL              — price_... (Básico · mensal)
+ *   STRIPE_PRICE_ESSENCIAL_SEMESTRAL    — price_... (Básico · semestral R$250)
+ *   STRIPE_PRICE_ESSENCIAL_ANUAL        — price_... (Básico · anual R$412)
+ *   STRIPE_PRICE_PRO                    — price_... (Essencial · mensal)
+ *   STRIPE_PRICE_PRO_SEMESTRAL          — price_... (Essencial · semestral R$505)
+ *   STRIPE_PRICE_PRO_ANUAL              — price_... (Essencial · anual R$832)
+ *   STRIPE_PRICE_ENTERPRISE             — price_... (Consórcio · mensal)
+ *   STRIPE_PRICE_ENTERPRISE_SEMESTRAL   — price_... (Consórcio · semestral R$2035)
+ *   STRIPE_PRICE_ENTERPRISE_ANUAL       — price_... (Consórcio · anual R$3352)
+ *   APP_URL                             — https://your-domain.com (for redirect URLs)
  */
 import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
@@ -16,28 +22,44 @@ import { getAdminDb } from './firebase-admin.js';
 
 // ── Plan definitions (must match Stripe Price IDs in env) ────────────────────
 
+export type BillingPeriod = 'mensal' | 'semestral' | 'anual';
+
 export const PLANS = {
   essencial: {
     name: 'Básico',
-    priceId: () => process.env.STRIPE_PRICE_ESSENCIAL || '',
     description: '1 município · até 2 usuários',
-    amount: 4990, // R$ 49,90 in centavos
+    priceIds: {
+      mensal:    () => process.env.STRIPE_PRICE_ESSENCIAL            || '',
+      semestral: () => process.env.STRIPE_PRICE_ESSENCIAL_SEMESTRAL  || '',
+      anual:     () => process.env.STRIPE_PRICE_ESSENCIAL_ANUAL      || '',
+    },
   },
   pro: {
-    name: 'Profissional',
-    priceId: () => process.env.STRIPE_PRICE_PRO || '',
+    name: 'Essencial',
     description: '1 município · usuários ilimitados',
-    amount: 9900, // R$ 99,00 in centavos
+    priceIds: {
+      mensal:    () => process.env.STRIPE_PRICE_PRO            || '',
+      semestral: () => process.env.STRIPE_PRICE_PRO_SEMESTRAL  || '',
+      anual:     () => process.env.STRIPE_PRICE_PRO_ANUAL      || '',
+    },
   },
   enterprise: {
     name: 'Consórcio',
-    priceId: () => process.env.STRIPE_PRICE_ENTERPRISE || '',
     description: 'Municípios ilimitados · onboarding incluso',
-    amount: 39900, // R$ 399,00 in centavos
+    priceIds: {
+      mensal:    () => process.env.STRIPE_PRICE_ENTERPRISE            || '',
+      semestral: () => process.env.STRIPE_PRICE_ENTERPRISE_SEMESTRAL  || '',
+      anual:     () => process.env.STRIPE_PRICE_ENTERPRISE_ANUAL      || '',
+    },
   },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;
+
+/** Returns the correct Stripe Price ID for a plan + billing period. */
+function getPriceId(plan: PlanKey, period: BillingPeriod = 'mensal'): string {
+  return PLANS[plan].priceIds[period]();
+}
 
 // ── Stripe client (lazy-init so missing key doesn't crash on startup) ─────────
 
@@ -53,17 +75,17 @@ const router = express.Router();
 
 // ── POST /api/stripe/checkout-new ────────────────────────────────────────────
 // Creates a Stripe Checkout session for a NEW subscriber (no login required).
-// Body: { email, plan }
+// Body: { email, plan, period? }
 router.post('/checkout-new', async (req: Request, res: Response) => {
   try {
-    const { email, plan } = req.body as { email: string; plan: PlanKey };
+    const { email, plan, period = 'mensal' } = req.body as { email: string; plan: PlanKey; period?: BillingPeriod };
     if (!email || !plan) {
       return res.status(400).json({ error: 'email e plan são obrigatórios.' });
     }
     const planConfig = PLANS[plan];
     if (!planConfig) return res.status(400).json({ error: `Plano inválido: ${plan}` });
-    const priceId = planConfig.priceId();
-    if (!priceId) return res.status(500).json({ error: `STRIPE_PRICE_${plan.toUpperCase()} não configurado.` });
+    const priceId = getPriceId(plan, period);
+    if (!priceId) return res.status(500).json({ error: `Price ID para ${plan}/${period} não configurado.` });
 
     const stripe = getStripe();
     const db = getAdminDb();
@@ -99,10 +121,10 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
-      metadata: { orgId, plan, setupToken },
+      metadata: { orgId, plan, period, setupToken },
       subscription_data: {
-        trial_period_days: 90,       // 3 meses grátis com cartão
-        metadata: { orgId, plan },
+        trial_period_days: 30,       // 1 mês grátis com cartão
+        metadata: { orgId, plan, period },
       },
       locale: 'pt-BR',
       billing_address_collection: 'required',
@@ -204,12 +226,13 @@ router.post('/setup/complete', async (req: Request, res: Response) => {
 
 // ── POST /api/stripe/checkout ─────────────────────────────────────────────────
 // Creates a Stripe Checkout session for an EXISTING org (logged-in user).
-// Body: { orgId, plan, userId, userEmail, orgName }
+// Body: { orgId, plan, period?, userId, userEmail, orgName }
 router.post('/checkout', async (req: Request, res: Response) => {
   try {
-    const { orgId, plan, userId, userEmail, orgName } = req.body as {
+    const { orgId, plan, period = 'mensal', userId, userEmail, orgName } = req.body as {
       orgId: string;
       plan: PlanKey;
+      period?: BillingPeriod;
       userId: string;
       userEmail: string;
       orgName?: string;
@@ -224,10 +247,10 @@ router.post('/checkout', async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Plano inválido: ${plan}` });
     }
 
-    const priceId = planConfig.priceId();
+    const priceId = getPriceId(plan, period);
     if (!priceId) {
       return res.status(500).json({
-        error: `Stripe Price ID para o plano "${plan}" não configurado (STRIPE_PRICE_${plan.toUpperCase()}).`
+        error: `Price ID para ${plan}/${period} não configurado.`
       });
     }
 
@@ -262,10 +285,10 @@ router.post('/checkout', async (req: Request, res: Response) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${appUrl}/planos?canceled=1`,
-      metadata: { orgId, userId, plan },
+      metadata: { orgId, userId, plan, period },
       subscription_data: {
-        trial_period_days: 90,       // 3 meses grátis com cartão
-        metadata: { orgId, userId, plan },
+        trial_period_days: 30,       // 1 mês grátis com cartão
+        metadata: { orgId, userId, plan, period },
       },
       locale: 'pt-BR',
       allow_promotion_codes: true,
