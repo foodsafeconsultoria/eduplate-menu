@@ -8,7 +8,7 @@ import { useLocation } from 'wouter';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
   BookOpen, ClipboardList, GraduationCap, FolderOpen,
-  BarChart2, Users, QrCode, Mail, Menu, X, Play,
+  BarChart2, Users, QrCode, Mail, Menu, X,
   Check, Minus, ChevronDown, ChevronUp, ArrowRight,
   ShieldCheck, Wifi, Clock, Award, Bell, AlertTriangle,
 } from 'lucide-react';
@@ -43,7 +43,7 @@ function MockNav() {
       <div style={{ width:22, height:22, borderRadius:6, background:'#4CAF50', marginRight:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
         <div style={{ width:10, height:10, borderRadius:'50%', background:'rgba(255,255,255,0.9)' }} />
       </div>
-      {['Dashboard','Alimentação','Fiscalização','Documentos','Treinamentos','Certificados'].map((n,i) => (
+      {['Dashboard','Alimentação','Fiscalização','Documentos','Treinamentos'].map((n,i) => (
         <div key={n} style={{ padding:'0 8px', fontSize:10, fontWeight:700, color: i===0 ? '#4CAF50' : 'rgba(255,255,255,0.55)', whiteSpace:'nowrap', position:'relative' }}>
           {n}
           {n==='Fiscalização' && <span style={{ marginLeft:3, background:'#FF9800', color:'#fff', borderRadius:8, padding:'0 4px', fontSize:8, fontWeight:800 }}>36</span>}
@@ -386,7 +386,7 @@ export default function LandingPage() {
                 <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
               </div>
               <div className="lp-hero-meta">
-                <span className="lp-pill">Cartão necessário · Sem cobranças por 3 meses</span>
+                <span className="lp-pill">Sem cobranças por 3 meses</span>
                 <span className="lp-pill">Cancele a qualquer momento</span>
                 <span className="lp-pill">Dados seguros na nuvem</span>
               </div>
@@ -680,7 +680,6 @@ export default function LandingPage() {
                 controls
                 preload="metadata"
                 style={{ width:'100%', display:'block', maxHeight:480, background:'#000' }}
-                poster=""
               >
                 <source src="/demo-cardapio.mp4" type="video/mp4" />
                 Seu navegador não suporta vídeo HTML5.
@@ -822,7 +821,7 @@ export default function LandingPage() {
             </p>
             <div className="lp-steps">
               {[
-                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis sem cartão de crédito.' },
+                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis — nenhuma cobrança nos primeiros 3 meses.' },
                 { n:'02', title:'Configure em minutos', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
                 { n:'03', title:'Use de qualquer lugar', desc:'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.' },
               ].map(s => (
@@ -919,59 +918,6 @@ export default function LandingPage() {
                   </a>
                 </div>
               </article>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Depoimento ──────────────────────────────────────────── */}
-        <section className="lp-section" style={{ background:'#F7FBF7' }}>
-          <div className="lp-container" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-            <span className="lp-eyebrow">O que dizem as nutricionistas</span>
-            <h2 style={{ marginTop:18, textAlign:'center' }}>Gestão do PNAE que funciona na prática</h2>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:22, marginTop:36, width:'100%' }}>
-              {[
-                {
-                  quote: 'Consegui organizar a fiscalização das 18 escolas do município em uma semana. Antes levava um mês para consolidar tudo em planilha. O módulo de treinamentos com QR Code foi um diferencial enorme — acabou com a lista de papel.',
-                  name: 'Nutricionista RT',
-                  role: 'Secretaria Municipal de Educação · Interior de SP',
-                  initial: 'N',
-                  color: '#4CAF50',
-                },
-                {
-                  quote: 'O relatório SIGPC que eu levava horas para montar agora sai em minutos. Os certificados de treinamento com assinatura digital impressionaram os diretores das escolas. Vale cada centavo.',
-                  name: 'Nutricionista Escolar',
-                  role: 'Rede particular · Região Sul',
-                  initial: 'N',
-                  color: '#1A73E8',
-                },
-                {
-                  quote: 'O banco de alimentos com TACO e as fichas técnicas automáticas me poupam horas toda semana. Finalmente tenho um sistema pensado para nutricionistas do PNAE, não um software genérico adaptado.',
-                  name: 'Nutricionista RT',
-                  role: 'Consórcio intermunicipal · SP',
-                  initial: 'N',
-                  color: '#FF9800',
-                },
-              ].map((t, i) => (
-                <div key={i} style={{
-                  background:'#fff', border:'1px solid #E6EBF2', borderRadius:20,
-                  padding:'26px 28px', boxShadow:'0 6px 24px rgba(27,42,74,0.07)',
-                  display:'flex', flexDirection:'column', gap:18,
-                }}>
-                  <div style={{ fontSize:32, color:t.color, lineHeight:1, fontFamily:'Georgia,serif', opacity:0.5 }}>"</div>
-                  <p style={{ fontSize:14, color:'#334155', lineHeight:1.75, margin:0, flex:1 }}>{t.quote}</p>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{
-                      width:40, height:40, borderRadius:'50%', background:t.color,
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      fontSize:16, fontWeight:800, color:'#fff', flexShrink:0,
-                    }}>{t.initial}</div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#1B2A4A' }}>{t.name}</div>
-                      <div style={{ fontSize:12, color:'#94A3B8' }}>{t.role}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </section>

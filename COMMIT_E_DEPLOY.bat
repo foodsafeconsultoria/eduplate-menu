@@ -49,6 +49,7 @@ git add client\src\pages\nutrition\Menus.tsx
 git add client\src\pages\Profile.tsx
 git add client\src\components\OnboardingModal.tsx
 git add client\src\pages\LandingPage.tsx
+git add client\src\pages\LandingPage.css
 git add client\src\pages\Notifications.tsx
 git add client\src\pages\Register.tsx
 git add client\src\pages\ForgotPassword.tsx
@@ -80,7 +81,7 @@ git add client\src\components\TopNav.tsx
 git rm --cached client\src\pages\SchoolCertificates.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: certificado inspeção igual ao modulo certificados, remove modulo Certificados, escolas salvas no Firestore, PDF cardapio com refeicoes corretas, Invalid Date corrigido"
+git commit -m "fix: landing page - remove depoimentos, corrige mensagens trial, mostra mockup no mobile, remove Certificados do MockNav"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

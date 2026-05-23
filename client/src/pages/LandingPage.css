@@ -772,7 +772,7 @@
 @media (max-width: 1024px) {
   .lp-hero-grid,
   .lp-problem-wrap { grid-template-columns: 1fr; }
-  .lp-hero-card { display: none; }
+  .lp-hero-card { max-height: 360px; overflow: hidden; }
   .lp-grid-3 { grid-template-columns: repeat(2, 1fr); }
   .lp-pricing,
   .lp-steps { grid-template-columns: repeat(2, 1fr); }
@@ -790,6 +790,7 @@
 }
 
 @media (max-width: 640px) {
+  .lp-hero-card { max-height: 240px; }
   .lp-hero { padding-top: 28px; padding-bottom: 40px; }
   .lp-section { padding: 52px 0; }
   .lp-section-sm { padding: 36px 0; }
