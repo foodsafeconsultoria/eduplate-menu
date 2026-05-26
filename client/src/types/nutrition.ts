@@ -212,6 +212,11 @@ export interface ProductionLog {
   cleanLeftover: number;
   destination: 'donation' | 'discard' | 'reuse';
   destinationEntity?: string;
+  // RDC ANVISA 216/2004
+  foodType?: 'quente' | 'frio';
+  temperature?: number;        // °C aferida no momento do registro
+  temperatureTime?: string;    // HH:MM
+  observations?: string;
   createdAt: Date;
   updatedAt: Date;
 }

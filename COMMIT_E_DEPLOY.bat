@@ -82,9 +82,12 @@ git add client\src\hooks\useAcceptabilityRecords.ts
 git add client\src\pages\Schools.tsx
 git add client\src\components\TopNav.tsx
 git rm --cached client\src\pages\SchoolCertificates.tsx
+git add client\src\types\nutrition.ts
+git add client\src\pages\nutrition\Production.tsx
+git add client\src\components\TopNav.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: logo login mobile invisivel, grid TACO mobile overflow, trial 1 mes no Login"
+git commit -m "feat: modulo Manejo de Sobras com RDC 216, temperatura e relatorio PDF"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

@@ -212,7 +212,7 @@ export default function TopNav() {
     { label: 'Cardápios',        href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" />, badge: workflowAlertCount },
     { label: 'Fichas Técnicas',  href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
     { label: 'Dietas Especiais', href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
-    { label: 'Produção',         href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
+    { label: 'Manejo de Sobras', href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
     { label: 'SIGPC',            href: '/nutrition/sigpc',         icon: <FileBarChart2 className="h-4 w-4" /> },
   ];
 
