@@ -26,15 +26,41 @@ export default function ProfilePage() {
 
   const { settings: orgSettings, saveSettings, uploadImage: uploadOrgImage } = useOrgSettings();
   const [sigUploading, setSigUploading] = useState(false);
-  const [sigName, setSigName] = useState('');
-  const [sigCrn, setSigCrn] = useState('');
-  const sigInputRef = useRef<HTMLInputElement>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [sigName, setSigName]       = useState('');
+  const [sigCrn, setSigCrn]         = useState('');
+  const [municipio, setMunicipio]   = useState('');
+  const [uf, setUf]                 = useState('');
+  const sigInputRef  = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync sigName/sigCrn from orgSettings
+  // Sync from orgSettings
   useEffect(() => {
     if (orgSettings.nutritionistName !== undefined) setSigName(orgSettings.nutritionistName || '');
     if (orgSettings.nutritionistCrn  !== undefined) setSigCrn (orgSettings.nutritionistCrn  || '');
-  }, [orgSettings.nutritionistName, orgSettings.nutritionistCrn]);
+    if (orgSettings.municipio        !== undefined) setMunicipio(orgSettings.municipio || '');
+    if (orgSettings.uf               !== undefined) setUf(orgSettings.uf || '');
+  }, [orgSettings.nutritionistName, orgSettings.nutritionistCrn, orgSettings.municipio, orgSettings.uf]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Imagem deve ter no máximo 5 MB'); return; }
+    setLogoUploading(true);
+    try {
+      const url = await uploadOrgImage(file, 'logo');
+      await saveSettings({ logoUrl: url });
+      toast.success('Logo/brasão salvo! Será usado em todos os relatórios PDF.');
+    } catch { toast.error('Erro ao salvar logo.'); }
+    finally { setLogoUploading(false); if (logoInputRef.current) logoInputRef.current.value = ''; }
+  };
+
+  const handleSaveMunicipio = async () => {
+    try {
+      await saveSettings({ municipio: municipio.trim(), uf: uf.trim().toUpperCase() });
+      toast.success('Município e UF salvos!');
+    } catch { toast.error('Erro ao salvar.'); }
+  };
 
   const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -381,6 +407,83 @@ export default function ProfilePage() {
                     </Button>
                   </>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* ── Identidade Visual (Logo + Município) ────────────────────── */}
+            <Card className="border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Upload className="w-4 h-4 text-blue-700" />
+                  Logo / Brasão da Prefeitura
+                </CardTitle>
+                <CardDescription>
+                  Aparece no cabeçalho de <strong>todos os relatórios PDF</strong> — manejo de sobras, certificados, treinamentos e qualquer imprimível do sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Preview */}
+                {orgSettings.logoDataUrl || orgSettings.logoUrl ? (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/30 p-4 flex items-center justify-center" style={{ minHeight: 80 }}>
+                    <img
+                      src={orgSettings.logoDataUrl || orgSettings.logoUrl}
+                      alt="Logo atual"
+                      className="max-h-20 max-w-xs object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-400">
+                    Nenhuma logo cadastrada — os PDFs sairão sem brasão
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-3">PNG ou JPG com fundo branco ou transparente. Recomendado: 200 × 200 px.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+                    disabled={logoUploading}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    {logoUploading ? 'Salvando…' : orgSettings.logoUrl ? 'Trocar logo' : 'Enviar logo'}
+                  </Button>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                </div>
+
+                {/* Município + UF */}
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium mb-1">Município e UF</p>
+                  <p className="text-xs text-muted-foreground mb-3">Aparecem no cabeçalho dos PDFs ao lado do nome do nutricionista.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Município</label>
+                      <input
+                        type="text"
+                        value={municipio}
+                        onChange={e => setMunicipio(e.target.value)}
+                        placeholder="Ex.: Itaí"
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">UF</label>
+                      <input
+                        type="text"
+                        value={uf}
+                        onChange={e => setUf(e.target.value.toUpperCase())}
+                        placeholder="SP"
+                        maxLength={2}
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <Button size="sm" className="mt-3 gap-2 bg-blue-700 hover:bg-blue-800 text-white" onClick={handleSaveMunicipio}>
+                    <Save className="w-4 h-4" />
+                    Salvar município e UF
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

@@ -85,9 +85,10 @@ git rm --cached client\src\pages\SchoolCertificates.tsx
 git add client\src\types\nutrition.ts
 git add client\src\pages\nutrition\Production.tsx
 git add client\src\components\TopNav.tsx
+git add client\src\pages\Profile.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: modulo Manejo de Sobras com RDC 216, temperatura e relatorio PDF"
+git commit -m "feat: Manejo de Sobras RDC216, upload logo por org, correcao PDF"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

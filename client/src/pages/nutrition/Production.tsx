@@ -83,34 +83,35 @@ async function generateReport(
   const orgLogo = await toDataUrl(orgSettings.logoDataUrl || orgSettings.logoUrl);
 
   // ── cabeçalho ──────────────────────────────────────────────────────────────
+  const barH = 34;
   doc.setFillColor(27, 42, 74); // #1B2A4A
-  doc.rect(0, 0, pw, 28, 'F');
+  doc.rect(0, 0, pw, barH, 'F');
 
-  if (orgLogo) addImg(orgLogo, 8, 4, 20, 20);
+  // Logo — posicionado na faixa azul, sem sobrepor texto
+  if (orgLogo) addImg(orgLogo, 8, 7, 20, 20);
 
+  // Título centralizado
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(255, 255, 255);
-  doc.text('RELATÓRIO DE MANEJO DE SOBRAS', pw / 2, 12, { align: 'center' });
+  doc.text('RELATORIO DE MANEJO DE SOBRAS', pw / 2, 14, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(180, 210, 255);
-  doc.text('Conforme RDC ANVISA nº 216/2004 — Boas Práticas para Serviços de Alimentação', pw / 2, 19, { align: 'center' });
+  doc.text('Conforme RDC ANVISA n. 216/2004 - Boas Praticas para Servicos de Alimentacao', pw / 2, 21, { align: 'center' });
 
-  // nome + CRN
-  doc.setFontSize(8);
-  doc.setTextColor(200, 220, 255);
-  const headerRight = [];
-  if (orgSettings.nutritionistName) headerRight.push(`Nutricionista RT: ${orgSettings.nutritionistName}`);
-  if (orgSettings.nutritionistCrn)  headerRight.push(`CRN: ${orgSettings.nutritionistCrn}`);
-  if (orgSettings.municipio)        headerRight.push(`${orgSettings.municipio}${orgSettings.uf ? '/' + orgSettings.uf : ''}`);
-  if (headerRight.length) doc.text(headerRight.join('  |  '), pw - 8, 24, { align: 'right' });
+  // Org info — direita
+  const infoLines: string[] = [];
+  if (orgSettings.nutritionistName) infoLines.push(`Nutr. RT: ${orgSettings.nutritionistName}`);
+  if (orgSettings.nutritionistCrn)  infoLines.push(`CRN: ${orgSettings.nutritionistCrn}`);
+  if (orgSettings.municipio)        infoLines.push(`${orgSettings.municipio}${orgSettings.uf ? '/' + orgSettings.uf : ''}`);
+  doc.setFontSize(7.5); doc.setTextColor(200, 220, 255);
+  infoLines.forEach((line, i) => doc.text(line, pw - 8, 11 + i * 5.5, { align: 'right' }));
 
-  // data de geração
-  doc.setFontSize(8);
-  doc.setTextColor(180, 210, 255);
-  doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 8, 24);
+  // Data de geração — dentro da faixa, canto inferior esquerdo
+  doc.setFontSize(7); doc.setTextColor(150, 190, 240);
+  doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}`, 32, 30);
 
   // ── totais resumo ─────────────────────────────────────────────────────────
   const totalProd  = logs.reduce((s, l) => s + l.producedQuantity, 0);
@@ -120,15 +121,15 @@ async function generateReport(
   const conformes  = logs.filter(l => rdc216Status(l) === 'conforme').length;
   const naoConf    = logs.filter(l => rdc216Status(l) === 'nao_conforme').length;
 
-  const boxY = 32; const boxH = 14;
+  const boxY = 37; const boxH = 14;
   const boxes = [
     { label: 'Registros', value: String(logs.length) },
     { label: 'Total produzido', value: `${totalProd.toFixed(3)} kg` },
     { label: 'Total de sobras', value: `${totalSobra.toFixed(3)} kg` },
     { label: 'Total servido', value: `${totalServ.toFixed(3)} kg` },
     { label: '% Aproveitamento', value: `${pctAprov}%` },
-    { label: 'Conformes RDC 216', value: `${conformes} ✔` },
-    { label: 'Não conformes', value: naoConf > 0 ? `${naoConf} ✗` : '0' },
+    { label: 'Conformes RDC 216', value: conformes > 0 ? `${conformes} OK` : '0' },
+    { label: 'Nao conformes',    value: naoConf > 0 ? `${naoConf} (!)`  : '0' },
   ];
   const bw = (pw - 16) / boxes.length;
   boxes.forEach((b, i) => {
@@ -142,9 +143,9 @@ async function generateReport(
   });
 
   // ── tabela ─────────────────────────────────────────────────────────────────
-  const headers = ['Data', 'Preparação', 'Produzido\n(kg)', 'Sobra\n(kg)', 'Servido\n(kg)', '%', 'Tipo', 'Temp\n(°C)', 'Conformidade', 'Destino'];
-  const colW    = [18, 60, 20, 18, 20, 10, 16, 16, 36, 24];
-  let ty = 50;
+  const headers = ['Data', 'Preparacao', 'Produzido\n(kg)', 'Sobra\n(kg)', 'Servido\n(kg)', '%', 'Tipo', 'Temp\n(C)', 'Conformidade', 'Destino / Local'];
+  const colW    = [18, 52, 20, 18, 20, 10, 16, 15, 34, 36];
+  let ty = 55;
   const rowH = 7; const hdrH = 9;
 
   // header da tabela
@@ -172,18 +173,21 @@ async function generateReport(
     const served = log.producedQuantity - log.cleanLeftover;
     const pct    = log.producedQuantity > 0 ? ((served / log.producedQuantity) * 100).toFixed(0) : '0';
     const status = rdc216Status(log);
-    const statusTxt = status === 'conforme' ? 'Conforme' : status === 'nao_conforme' ? 'Não conforme' : '—';
+    const statusTxt = status === 'conforme' ? 'Conforme' : status === 'nao_conforme' ? 'Nao conforme' : '-';
+    const destTxt = log.destination === 'donation' && log.destinationEntity
+      ? 'Doado > ' + log.destinationEntity.slice(0, 20)
+      : destinationLabel[log.destination];
     const cells = [
       format(safeDate(log.date), 'dd/MM/yy', { locale: ptBR }),
-      log.dishName.length > 30 ? log.dishName.slice(0, 30) + '…' : log.dishName,
+      log.dishName.length > 28 ? log.dishName.slice(0, 28) + '...' : log.dishName,
       log.producedQuantity.toFixed(3),
       log.cleanLeftover.toFixed(3),
       served > 0 ? served.toFixed(3) : '0.000',
       `${pct}%`,
-      log.foodType === 'quente' ? 'Quente' : log.foodType === 'frio' ? 'Frio' : '—',
-      log.temperature != null ? `${log.temperature}°C` : '—',
+      log.foodType === 'quente' ? 'Quente' : log.foodType === 'frio' ? 'Frio' : '-',
+      log.temperature != null ? `${log.temperature}C` : '-',
       statusTxt,
-      destinationLabel[log.destination],
+      destTxt,
     ];
     cx = 8;
     cells.forEach((cell, i) => {
@@ -210,7 +214,7 @@ async function generateReport(
   const noteY = Math.min(ty + 6, ph - 22);
   doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(100, 100, 120);
   doc.text(
-    'RDC 216/2004: Alimentos quentes devem ser mantidos ≥ 60 °C (máx. 6 h). Alimentos frios devem ser mantidos ≤ 10 °C. Fora das faixas: descartar.',
+    'RDC 216/2004: Alimentos quentes: manter >= 60 C (max. 6 h). Alimentos frios: manter <= 10 C. Fora da faixa: descartar.',
     pw / 2, noteY, { align: 'center' },
   );
 
@@ -351,7 +355,7 @@ export default function Production() {
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 flex gap-2 items-start">
           <Thermometer className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
           <span>
-            <strong>RDC 216/2004:</strong> Alimentos quentes ≥ 60 °C (máx. 6 h) · Alimentos frios ≤ 10 °C.
+            <strong>RDC 216/2004:</strong> Alimentos quentes >= 60 °C (max. 6 h) · Alimentos frios <= 10 °C.
             Registre a temperatura no momento da aferição para rastrear conformidade.
           </span>
         </div>
