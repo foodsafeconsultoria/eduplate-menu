@@ -16,14 +16,14 @@ const moduleCards = [
     href: '/nutrition/recipes',
   },
   {
-    title: 'Cardapios',
+    title: 'Cardápios',
     description: 'Planejamento alimentar por categoria, periodo, escola e conformidade PNAE.',
     icon: BookOpen,
     href: '/nutrition/menus',
   },
   {
-    title: 'Publicacoes',
-    description: 'Consulta rapida dos cardapios publicados por escola, periodo e categoria.',
+    title: 'Publicações',
+    description: 'Consulta rápida dos cardápios publicados por escola, período e categoria.',
     icon: BookOpen,
     href: '/nutrition/publications',
   },
@@ -34,7 +34,7 @@ const moduleCards = [
     href: '/nutrition/special-diets',
   },
   {
-    title: 'Producao',
+    title: 'Produção',
     description: 'Acompanhamento da execucao diaria, sobras e indicadores operacionais.',
     icon: Factory,
     href: '/nutrition/production',
@@ -48,7 +48,7 @@ export default function NutritionHub() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Alimentacao Escolar</h1>
           <p className="text-gray-600 mt-2">
-            Novo modulo estruturado para centralizar cardapios, fichas, dietas, producao e conformidade PNAE.
+            Novo módulo estruturado para centralizar cardápios, fichas, dietas, produção e conformidade PNAE.
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export default function NutritionHub() {
           <CardHeader>
             <CardTitle>Fase atual da fusao</CardTitle>
             <CardDescription>
-              Estrutura inicial criada no sistema base. O proximo passo sera migrar a logica real do app de cardapios para estas areas.
+              Estrutura inicial criada no sistema base. O próximo passo será migrar a lógica real do app de cardápios para estas áreas.
             </CardDescription>
           </CardHeader>
         </Card>

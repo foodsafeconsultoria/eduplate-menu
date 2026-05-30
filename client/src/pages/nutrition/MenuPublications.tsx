@@ -45,9 +45,9 @@ export default function MenuPublications() {
     <div className="min-h-screen flex-1 bg-gray-50 p-4 md:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Publicacoes de Cardapio</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Publicações de Cardápio</h1>
           <p className="mt-2 text-gray-600">
-            Consulta operacional dos cardapios publicados por periodo, categoria e unidade.
+            Consulta operacional dos cardápios publicados por período, categoria e unidade.
           </p>
         </div>
 

@@ -610,7 +610,7 @@ export default function Recipes() {
 
   const handleSave = () => {
     if (!name.trim()) {
-      toast.error('Informe o nome da preparacao.');
+      toast.error('Informe o nome da preparação.');
       return;
     }
 
@@ -739,7 +739,7 @@ export default function Recipes() {
 
               <div className="space-y-6">
                 <div>
-                  <Label>Nome da preparacao</Label>
+                  <Label>Nome da preparação</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-2 max-w-xl" />
                 </div>
 
@@ -1123,7 +1123,7 @@ export default function Recipes() {
             <CardContent className="py-16 text-center">
               <FileText className="mx-auto mb-4 h-12 w-12 text-gray-300" />
               <p className="font-medium text-gray-600">Nenhuma ficha tecnica cadastrada.</p>
-              <p className="mt-2 text-sm text-gray-500">Crie a primeira ficha para alimentar o planejamento de cardapios.</p>
+              <p className="mt-2 text-sm text-gray-500">Crie a primeira ficha para alimentar o planejamento de cardápios.</p>
             </CardContent>
           </Card>
         ) : filteredRecipes.length === 0 ? (

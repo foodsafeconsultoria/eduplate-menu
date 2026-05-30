@@ -45,7 +45,8 @@ const NutritionHub = lazy(() => import('@/pages/nutrition/NutritionHub'));
 const Production   = lazy(() => import('@/pages/nutrition/Production'));
 const Recipes      = lazy(() => import('@/pages/nutrition/Recipes'));
 const SigpcReport  = lazy(() => import('@/pages/nutrition/SigpcReport'));
-const SpecialDiets = lazy(() => import('@/pages/nutrition/SpecialDiets'));
+const SpecialDiets       = lazy(() => import('@/pages/nutrition/SpecialDiets'));
+const MenuPublications   = lazy(() => import('@/pages/nutrition/MenuPublications'));
 
 // ── Spinner de transição entre módulos ────────────────────────────────────────
 function PageLoader() {
@@ -121,6 +122,7 @@ function Router() {
                   <Route path="/nutrition/special-diets" component={SpecialDiets} />
                   <Route path="/nutrition/production" component={Production} />
                   <Route path="/nutrition/sigpc" component={SigpcReport} />
+                  <Route path="/nutrition/publications" component={MenuPublications} />
                   <Route path="/inspection" component={Inspection} />
                   <Route path="/ppes" component={PPEs} />
                   <Route path="/schedule" component={Schedule} />

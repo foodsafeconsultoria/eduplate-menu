@@ -113,7 +113,7 @@ export default function Foods() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Alimentos</h1>
             <p className="text-gray-600 mt-2">
-              Base nutricional e economica para fichas tecnicas, cardapios e calculos de custo.
+              Base nutricional e econômica para fichas técnicas, cardápios e cálculos de custo.
             </p>
           </div>
 

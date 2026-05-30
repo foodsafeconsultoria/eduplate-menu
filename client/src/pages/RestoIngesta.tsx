@@ -217,7 +217,7 @@ export default function RestoIngestaPage() {
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle>Registros</CardTitle>
-                <CardDescription>Registre e acompanhe os percentuais de desperdicio por escola e preparacao.</CardDescription>
+                <CardDescription>Registre e acompanhe os percentuais de desperdício por escola e preparação.</CardDescription>
               </div>
               <div className="flex flex-col gap-2 md:flex-row">
                 <Button onClick={generatePDF} variant="outline">
@@ -235,7 +235,7 @@ export default function RestoIngestaPage() {
                     <DialogHeader>
                       <DialogTitle>Novo Registro Resto/Ingesta</DialogTitle>
                       <DialogDescription>
-                        Registre a preparacao avaliada, quantidades e percentual de desperdicio.
+                        Registre a preparação avaliada, quantidades e percentual de desperdício.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -352,7 +352,7 @@ export default function RestoIngestaPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por escola ou preparacao..."
+                placeholder="Buscar por escola ou preparação..."
                 className="pl-9"
               />
             </div>

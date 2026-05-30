@@ -295,7 +295,7 @@ export default function AcceptabilityPage() {
                     <DialogHeader>
                       <DialogTitle>Novo Teste de Aceitabilidade</DialogTitle>
                       <DialogDescription>
-                        Registre um novo teste usando a escola e a preparacao observada no atendimento.
+                        Registre um novo teste usando a escola e a preparação observada no atendimento.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -327,10 +327,10 @@ export default function AcceptabilityPage() {
                           />
                         </div>
                         <div>
-                          <Label>Tipo de refeicao</Label>
+                          <Label>Tipo de refeição</Label>
                           <Select value={form.mealType} onValueChange={(value) => setForm({ ...form, mealType: value })}>
                             <SelectTrigger className="mt-2 w-full">
-                              <SelectValue placeholder="Selecione a refeicao" />
+                              <SelectValue placeholder="Selecione a refeição" />
                             </SelectTrigger>
                             <SelectContent>
                               {MEAL_TYPES.map((meal) => (
@@ -344,7 +344,7 @@ export default function AcceptabilityPage() {
                       </div>
 
                       <div>
-                        <Label>Nome da preparacao</Label>
+                        <Label>Nome da preparação</Label>
                         <div className="relative mt-2">
                           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <Input
@@ -417,7 +417,7 @@ export default function AcceptabilityPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por escola, refeicao ou preparacao..."
+                placeholder="Buscar por escola, refeição ou preparação..."
                 className="pl-9"
               />
             </div>
@@ -431,7 +431,7 @@ export default function AcceptabilityPage() {
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900">{record.schoolName}</h4>
                       <p className="text-sm text-gray-600">
-                        {format(record.testDate, 'dd/MM/yyyy', { locale: ptBR })} · {record.mealType} · {record.dishName || 'Sem preparacao'}
+                        {format(record.testDate, 'dd/MM/yyyy', { locale: ptBR })} · {record.mealType} · {record.dishName || 'Sem preparação'}
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2 text-sm">
                         <div>
