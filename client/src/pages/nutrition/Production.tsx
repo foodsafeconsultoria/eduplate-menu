@@ -355,7 +355,7 @@ export default function Production() {
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 flex gap-2 items-start">
           <Thermometer className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
           <span>
-            <strong>RDC 216/2004:</strong> Alimentos quentes >= 60 °C (max. 6 h) · Alimentos frios <= 10 °C.
+            <strong>RDC 216/2004:</strong> Alimentos quentes ≥ 60 °C (max. 6 h) · Alimentos frios ≤ 10 °C.
             Registre a temperatura no momento da aferição para rastrear conformidade.
           </span>
         </div>
