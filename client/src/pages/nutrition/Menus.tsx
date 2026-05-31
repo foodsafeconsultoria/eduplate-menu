@@ -157,6 +157,45 @@ function migrateItemsToSlots(items: Menu['items']): MenuSlot[] {
   return Array.from(slotMap.values());
 }
 
+// ── PDF helpers ────────────────────────────────────────────────────────────────
+
+const PT_MONTHS_MAP: Record<string, number> = {
+  janeiro: 0, jan: 0, fevereiro: 1, fev: 1, marco: 2, março: 2, mar: 2,
+  abril: 3, abr: 3, maio: 4, mai: 4, junho: 5, jun: 5,
+  julho: 6, jul: 6, agosto: 7, ago: 7, setembro: 8, set: 8,
+  outubro: 9, out: 9, novembro: 10, nov: 10, dezembro: 11, dez: 11,
+};
+
+/**
+ * Tenta derivar a data de início da semana (segunda-feira) a partir do
+ * campo referenceMonth, por ex.: "Semana 1 Junho 2026" → "2026-06-01".
+ * Retorna null se não conseguir.
+ */
+function deriveWeekStart(referenceMonth: string): string | null {
+  if (!referenceMonth) return null;
+  const lower = referenceMonth.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  let month = -1;
+  for (const [name, num] of Object.entries(PT_MONTHS_MAP)) {
+    if (lower.includes(name)) { month = num; break; }
+  }
+  if (month < 0) return null;
+  const yearMatch = lower.match(/\b(20\d{2})\b/);
+  const year = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+  const weekMatch = lower.match(/semana\s*(\d)/i);
+  const weekNum = weekMatch ? Math.max(1, Number(weekMatch[1])) : 1;
+  // Encontra a primeira segunda-feira do mês
+  const firstDay = new Date(year, month, 1);
+  const dow = firstDay.getDay(); // 0=Dom, 1=Seg...
+  const toMonday = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+  const firstMonday = new Date(year, month, 1 + toMonday);
+  // Avança (weekNum - 1) semanas
+  firstMonday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+  const y = firstMonday.getFullYear();
+  const m = String(firstMonday.getMonth() + 1).padStart(2, '0');
+  const d = String(firstMonday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // ── PDF Generator ──────────────────────────────────────────────────────────────
 
 /**
@@ -200,7 +239,7 @@ async function generateMenuPDF(
 
   // ── Meal grid — only nomeFantasia ────────────────────────────────────────
   const startY = 40;
-  const weekStart = (menu as any).weekStartDate;
+  const weekStart = (menu as any).weekStartDate || deriveWeekStart(menu.referenceMonth || '');
   const head = [[
     'REFEIÇÃO',
     ...weekdays.map((d, i) => {
@@ -962,31 +1001,62 @@ export default function Menus() {
     setOpen(false);
   };
 
-  // ── Diet alerts (active special diets in the targeted schools + categories) ──
+  // ── Diet alerts — por dia do almoço ─────────────────────────────────────────
+  // Identifica quais mealLabels são o almoço/jantar principal
+  const LUNCH_KEYWORDS = ['almoço', 'jantar', 'refeição', 'almoco'];
 
-  // Meals for which diet alerts are relevant (lunch/dinner only — breakfast goes separately)
-  const LUNCH_DINNER_MEALS = ['almoço', 'jantar', 'refeição'];
-
-  const dietAlerts = useMemo(() => {
-    // Only show alerts when the menu has content
+  /**
+   * Para cada dia da semana que tem slot de almoço preenchido,
+   * retorna: { day, dishName, alerts: { labelKey, labelText, count }[] }
+   */
+  const dietDayAlerts = useMemo(() => {
     if (!slots.some((s) => s.composicao.length > 0)) return [];
 
-    // Only show for lunch/dinner — not for Desjejum, Café da Manhã, Lanche, etc.
-    const mealLower = targetMeal.toLowerCase();
-    const isLunchOrDinner = LUNCH_DINNER_MEALS.some((m) => mealLower.includes(m));
-    if (!isLunchOrDinner) return [];
-
-    return specialDiets.filter((diet) => {
+    // Filtra alunos ativos das escolas/categorias selecionadas
+    const relevantDiets = specialDiets.filter((diet) => {
       if (diet.status !== 'active') return false;
-      // School filter: if specific schools selected, student must belong to one
-      const schoolMatch =
-        targetSchoolIds.length === 0 || targetSchoolIds.includes(diet.schoolId);
-      // Category filter: if student has a category assigned, it must be in targetCategories
-      const categoryMatch =
-        !diet.category || targetCategories.length === 0 || targetCategories.includes(diet.category);
+      const schoolMatch = targetSchoolIds.length === 0 || targetSchoolIds.includes(diet.schoolId);
+      const categoryMatch = !diet.category || targetCategories.length === 0 || targetCategories.includes(diet.category);
       return schoolMatch && categoryMatch;
     });
-  }, [specialDiets, targetSchoolIds, targetCategories, slots, targetMeal]);
+
+    if (relevantDiets.length === 0) return [];
+
+    // Total de alunos com cada restrição
+    const totalPerLabel = new Map<string, number>();
+    relevantDiets.forEach((diet) => {
+      (diet.labels ?? []).forEach((lbl) => {
+        totalPerLabel.set(lbl, (totalPerLabel.get(lbl) ?? 0) + 1);
+      });
+    });
+    const totalWithAnyRestriction = relevantDiets.length;
+
+    // Para cada dia, pega o slot do almoço
+    return weekdays.map((day) => {
+      const lunchSlot = slots.find((s) =>
+        s.dayLabel === day &&
+        LUNCH_KEYWORDS.some((kw) => s.mealLabel.toLowerCase().includes(kw)) &&
+        s.composicao.length > 0,
+      );
+      if (!lunchSlot) return null;
+
+      const dishName = lunchSlot.nomeFantasia.trim()
+        || lunchSlot.composicao.map((ins) => ins.nome).join(', ')
+        || '—';
+
+      // Monta alertas por label
+      const alerts = Array.from(totalPerLabel.entries())
+        .map(([key, count]) => ({
+          labelKey: key,
+          labelText: DIET_LABEL_MAP.get(key)?.text ?? key,
+          labelColor: DIET_LABEL_MAP.get(key)?.color ?? '',
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return { day, dishName, alerts, totalStudents: totalWithAnyRestriction };
+    }).filter(Boolean) as { day: string; dishName: string; alerts: { labelKey: string; labelText: string; labelColor: string; count: number }[]; totalStudents: number }[];
+  }, [specialDiets, targetSchoolIds, targetCategories, slots]);
 
   // ── Gallery filters ───────────────────────────────────────────────────────────
 
@@ -1589,48 +1659,40 @@ export default function Menus() {
                   </Card>
                 )}
 
-                {/* ── Diet alerts panel ─────────────────────────────────────── */}
-                {dietAlerts.length > 0 && (
-                  <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                    <div className="mb-2 flex items-center gap-2 text-orange-800">
+                {/* ── Diet alerts — por dia do almoço ─────────────────────────── */}
+                {dietDayAlerts.length > 0 && (
+                  <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-orange-800">
                       <ShieldAlert className="h-4 w-4 shrink-0" />
                       <span className="text-sm font-semibold">
-                        {dietAlerts.length} aluno{dietAlerts.length > 1 ? 's' : ''} com dieta especial
-                        {targetSchoolIds.length > 0 ? ' nas escolas selecionadas' : ' na rede'}
+                        Atenção — alunos com restrição alimentar no almoço
+                        {targetSchoolIds.length > 0 ? ' (escolas selecionadas)' : ' (toda a rede)'}
                       </span>
                     </div>
-                    <div className="space-y-2">
-                      {dietAlerts.map((diet) => (
-                        <div
-                          key={diet.id}
-                          className="flex flex-wrap items-start gap-x-2 gap-y-1 rounded-lg border border-orange-100 bg-white px-3 py-2 text-xs"
-                        >
-                          <span className="font-semibold text-orange-900">{diet.studentName}</span>
-                          <span className="text-orange-600">— {diet.schoolName}</span>
-                          {diet.category && (
-                            <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
-                              {diet.category}
-                            </span>
-                          )}
-                          <div className="flex flex-wrap gap-1">
-                            {(diet.labels ?? []).map((key) => {
-                              const info = DIET_LABEL_MAP.get(key);
-                              return info ? (
-                                <span
-                                  key={key}
-                                  className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${info.color}`}
-                                >
-                                  {info.text}
-                                </span>
-                              ) : null;
-                            })}
-                          </div>
+                    {dietDayAlerts.map((entry) => (
+                      <div key={entry.day} className="rounded-lg border border-orange-100 bg-white px-4 py-3 space-y-2">
+                        {/* Dia + prato */}
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-orange-900">{entry.day}-feira</span>
+                          <span className="text-sm text-gray-500">—</span>
+                          <span className="text-sm font-medium text-gray-800 italic">{entry.dishName}</span>
                         </div>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs text-orange-700">
-                      ⚠️ Verifique os ingredientes e prepare marmitas individuais conforme as prescrições.
-                    </p>
+                        {/* Restrições */}
+                        <div className="flex flex-wrap gap-2">
+                          {entry.alerts.map((alert) => (
+                            <span
+                              key={alert.labelKey}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${alert.labelColor}`}
+                            >
+                              {alert.count} aluno{alert.count > 1 ? 's' : ''}: {alert.labelText}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-orange-600">
+                          Prepare {entry.totalStudents} marmita{entry.totalStudents > 1 ? 's' : ''} especial{entry.totalStudents > 1 ? 'is' : ''} conforme as prescrições cadastradas.
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
 

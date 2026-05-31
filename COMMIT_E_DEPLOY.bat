@@ -93,9 +93,12 @@ git add client\src\pages\nutrition\Recipes.tsx
 git add client\src\pages\nutrition\NutritionHub.tsx
 git add client\src\pages\nutrition\MenuPublications.tsx
 git add client\src\pages\nutrition\Foods.tsx
+git add client\src\pages\nutrition\ShoppingList.tsx
+git add client\src\pages\Inspection.tsx
+git add client\src\pages\nutrition\Menus.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: Manejo de Sobras RDC216, upload logo por org, fix rota publications, acentos"
+git commit -m "feat: Lista de Compras, fiscalizacao completa, datas PDF cardapio, alertas dieta por dia"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

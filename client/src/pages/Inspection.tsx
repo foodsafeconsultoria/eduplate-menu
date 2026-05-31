@@ -179,67 +179,103 @@ async function pdfAddGreenHeader(
   return 38;
 }
 
-async function generateInspectionPDF(inspection: Inspection, orgLogoDataUrl?: string) {
+async function generateInspectionPDF(
+  inspection: Inspection,
+  orgLogoDataUrl?: string,
+  orgMeta?: { nutritionistName?: string; nutritionistCrn?: string; municipio?: string; uf?: string },
+) {
   const doc = new jsPDF();
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
+  const green: [number,number,number] = [22, 101, 52];
+  const red:   [number,number,number] = [185, 28, 28];
 
   // Watermark sutil PNAE
   const wmUrl = buildWatermarkDataUrl(pw, ph);
   doc.addImage(wmUrl, 'PNG', 0, 0, pw, ph);
 
-  let y = await pdfAddGreenHeader(doc, 'RELATÓRIO DE FISCALIZAÇÃO', 'PNAE — Gestão de Nutrição Escolar', orgLogoDataUrl);
+  // Metadata
+  const nutriName = orgMeta?.nutritionistName || inspection.nutritionist || 'Nutricionista Responsavel';
+  const nutriCrn  = orgMeta?.nutritionistCrn  || '';
+  const muni      = orgMeta?.municipio ? `${orgMeta.municipio}/${orgMeta.uf || 'SP'}` : '';
+  const dateStr   = new Date(inspection.inspectionDate).toLocaleDateString('pt-BR');
+  const todayStr  = new Date().toLocaleDateString('pt-BR');
+  const subtitle  = muni ? `${muni} — PNAE` : 'PNAE — Gestao de Nutricao Escolar';
 
-  // Info table
+  let y = await pdfAddGreenHeader(doc, 'RELATORIO DE FISCALIZACAO', subtitle, orgLogoDataUrl);
+
+  // ── Bloco de identificacao ────────────────────────────────────────────────
+  // Score badge lateral
+  const scoreColor: [number,number,number] = inspection.overallScore >= 80 ? [22,101,52] : inspection.overallScore >= 60 ? [180,120,0] : [185,28,28];
+  doc.setFillColor(...scoreColor);
+  doc.roundedRect(pw - 40, y - 2, 30, 18, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(255,255,255);
+  doc.text(`${inspection.overallScore}%`, pw - 25, y + 7, { align: 'center' });
+  doc.setFontSize(7);
+  doc.text('Conformidade', pw - 25, y + 13, { align: 'center' });
+
   const infoData = [
-    ['Escola', inspection.schoolName],
-    ['Diretor(a)', inspection.director],
-    ['Nutricionista', inspection.nutritionist],
-    ['Data', new Date(inspection.inspectionDate).toLocaleDateString('pt-BR')],
-    ['Horário', inspection.inspectionTime || '—'],
-    ['Alunos Regulares', String(inspection.regularStudents)],
-    ['Alunos Integrais', String(inspection.integralStudents)],
-    ['Conformidade Geral', `${inspection.overallScore}%`],
+    ['Escola',            inspection.schoolName],
+    ['Diretor(a)',        inspection.director || '—'],
+    ['Nutricionista',     nutriName + (nutriCrn ? `  |  CRN: ${nutriCrn}` : '')],
+    ['Data da visita',    dateStr + (inspection.inspectionTime ? `  |${inspection.inspectionTime}` : '')],
+    ['Alunos regulares',  String(inspection.regularStudents)],
+    ['Alunos integrais',  String(inspection.integralStudents)],
+    ['Municipio/UF',      muni || '—'],
+    ['Emissao',           todayStr],
   ];
 
   autoTable(doc, {
     startY: y,
-    head: [['Campo', 'Informação']],
+    head: [['Campo', 'Informacao']],
     body: infoData,
     theme: 'grid',
-    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-    bodyStyles: { fontSize: 9 },
+    tableWidth: pw - 55,
+    headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 8 },
     alternateRowStyles: { fillColor: [240, 253, 244] },
+    columnStyles: { 0: { cellWidth: 42, fontStyle: 'bold', fillColor: [248,252,249] }, 1: { cellWidth: 'auto' } },
   });
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
+  // ── Objetivo da visita ────────────────────────────────────────────────────
   if (inspection.visitObjective) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(22, 101, 52);
-    doc.text('Objetivo da Visita:', 15, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 50);
-    y += 5;
-    const objLines = doc.splitTextToSize(inspection.visitObjective, pw - 30);
-    doc.text(objLines, 15, y);
-    y += objLines.length * 5 + 6;
+    if (y > ph - 50) { doc.addPage(); y = 15; }
+    doc.setFillColor(240,253,244); doc.setDrawColor(...green); doc.setLineWidth(0.3);
+    const objLines = doc.splitTextToSize(inspection.visitObjective, pw - 36);
+    const boxH = objLines.length * 4.5 + 10;
+    doc.roundedRect(12, y, pw - 24, boxH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...green);
+    doc.text('Objetivo da Visita:', 17, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(40,40,40);
+    doc.text(objLines, 17, y + 11);
+    y += boxH + 8;
   }
 
-  if (inspection.guidelines) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(22, 101, 52);
-    doc.text('Orientações / Providências:', 15, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 50);
-    y += 5;
-    const guidLines = doc.splitTextToSize(inspection.guidelines, pw - 30);
-    doc.text(guidLines, 15, y);
-    y += guidLines.length * 5 + 8;
+  // ── Refeicoes do dia ──────────────────────────────────────────────────────
+  if (inspection.meals && inspection.meals.length > 0) {
+    if (y > ph - 40) { doc.addPage(); y = 15; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...green);
+    doc.text('Refeicoes do Dia:', 14, y); y += 4;
+    autoTable(doc, {
+      startY: y,
+      head: [['Tipo de Refeicao', 'Horario', 'Cardapio']],
+      body: inspection.meals.map(m => [m.type, m.time || '—', m.menu || '—']),
+      theme: 'striped',
+      headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 25, halign: 'center' }, 2: { cellWidth: 'auto' } },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // Checklist summary
+  // ── Checklist por secao ───────────────────────────────────────────────────
+  if (y > ph - 50) { doc.addPage(); y = 15; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...green);
+  doc.text('Conformidade por Secao:', 14, y); y += 4;
+
   const sectionKeys: SectionKey[] = ['manipulationProcedures', 'uniformization', 'stockManagement', 'refrigerator', 'kitchen', 'distribution', 'pestControl', 'waterPotability', 'physicalStructure'];
   const checklistData = sectionKeys.map((k) => {
     const items = (inspection as any)[k] as ChecklistItemData[];
@@ -247,76 +283,134 @@ async function generateInspectionPDF(inspection: Inspection, orgLogoDataUrl?: st
     const yes = items.filter(i => i.answer === 'yes').length;
     const total = items.length;
     const pct = total > 0 ? Math.round((yes / total) * 100) : 0;
-    return [(sectionLabels as any)[k] || k, `${yes}/${total}`, `${pct}%`];
+    const status = pct >= 80 ? 'Conforme' : pct >= 60 ? 'Atencao' : 'Nao conforme';
+    return [(sectionLabels as any)[k] || k, `${yes}/${total}`, `${pct}%`, status];
   }).filter(Boolean) as string[][];
 
   if (checklistData.length > 0) {
     autoTable(doc, {
       startY: y,
-      head: [['Seção', 'Respostas SIM', '% Conformidade']],
+      head: [['Secao', 'SIM/Total', '%', 'Status']],
       body: checklistData,
       theme: 'striped',
-      headStyles: { fillColor: [22, 101, 52], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold', fontSize: 8 },
       bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 22, halign: 'center' },
+        2: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+        3: { cellWidth: 30, halign: 'center', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 2) {
+          const pct = parseInt(data.cell.raw as string);
+          data.cell.styles.textColor = pct >= 80 ? [22,101,52] : pct >= 60 ? [180,120,0] : [185,28,28];
+        }
+        if (data.section === 'body' && data.column.index === 3) {
+          const s = data.cell.raw as string;
+          data.cell.styles.textColor = s === 'Conforme' ? [22,101,52] : s === 'Atencao' ? [180,120,0] : [185,28,28];
+        }
+      },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // Non-conformities
+  // ── Nao conformidades com prazo ───────────────────────────────────────────
   const nonConf: string[][] = [];
   sectionKeys.forEach(k => {
     const items = (inspection as any)[k] as ChecklistItemData[];
     if (!items) return;
     items.forEach(item => {
-      if (item.answer === 'no' && item.observation) {
-        nonConf.push([(sectionLabels as any)[k], item.question, item.observation]);
+      if (item.answer === 'no') {
+        nonConf.push([(sectionLabels as any)[k], item.question, item.observation || '—', '___/___/______']);
       }
     });
   });
   if (nonConf.length > 0) {
-    if (y > ph - 40) { doc.addPage(); y = 15; }
+    if (y > ph - 50) { doc.addPage(); y = 15; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...red);
+    doc.text(`Nao Conformidades (${nonConf.length}):`, 14, y); y += 4;
     autoTable(doc, {
       startY: y,
-      head: [['Seção', 'Pergunta', 'Não Conformidade']],
+      head: [['Secao', 'Item', 'Observacao / Corretiva', 'Prazo']],
       body: nonConf,
       theme: 'grid',
-      headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      headStyles: { fillColor: red, textColor: 255, fontStyle: 'bold', fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 28, halign: 'center', textColor: [100,100,100] },
+      },
     });
+    y = (doc as any).lastAutoTable.finalY + 8;
   }
 
-  // Photos
+  // ── Encaminhamentos / Orientacoes ─────────────────────────────────────────
+  if (inspection.guidelines) {
+    if (y > ph - 50) { doc.addPage(); y = 15; }
+    const guidLines = doc.splitTextToSize(inspection.guidelines, pw - 36);
+    const boxH = guidLines.length * 4.5 + 10;
+    doc.setFillColor(255,250,240); doc.setDrawColor(180,120,0); doc.setLineWidth(0.4);
+    doc.roundedRect(12, y, pw - 24, boxH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(140,90,0);
+    doc.text('Encaminhamentos e Orientacoes:', 17, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(60,40,0);
+    doc.text(guidLines, 17, y + 11);
+    y += boxH + 8;
+  }
+
+  // ── Assinatura ────────────────────────────────────────────────────────────
+  if (y > ph - 45) { doc.addPage(); y = 15; }
+  y = ph - 38;
+  const localDate = muni ? `${muni}, ${todayStr}` : todayStr;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(80,80,80);
+  doc.text(localDate, 14, y);
+  y += 8;
+  doc.setDrawColor(...green); doc.setLineWidth(0.4);
+  doc.line(14, y, 100, y);
+  y += 4;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+  doc.text(nutriName, 14, y);
+  y += 4;
+  if (nutriCrn) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(80,80,80); doc.text(`CRN: ${nutriCrn}`, 14, y); }
+
+  // ── Fotos ─────────────────────────────────────────────────────────────────
   if (inspection.photos && inspection.photos.length > 0) {
     doc.addPage();
-    await pdfAddGreenHeader(doc, 'FOTOS DA INSPEÇÃO', inspection.schoolName, orgLogoDataUrl);
-    let px = 10, py = 38;
-    const imgW = (pw - 20) / 2, imgH = 58;
+    await pdfAddGreenHeader(doc, 'REGISTRO FOTOGRAFICO', `${inspection.schoolName} — ${dateStr}`, orgLogoDataUrl);
+    let px = 10, py = 40;
+    const imgW = (pw - 30) / 2, imgH = 62;
     inspection.photos.forEach((photo, idx) => {
-      if (py + imgH + 15 > ph - 10) { doc.addPage(); py = 15; px = 10; }
+      if (py + imgH + 18 > ph - 15) { doc.addPage(); py = 15; px = 10; }
       try {
-        doc.addImage(photo, 'JPEG', px, py, imgW, imgH);
-        doc.setFontSize(7);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`Foto ${idx + 1}`, px + 2, py + imgH + 3);
-      } catch {}
-      if ((idx + 1) % 2 === 0) { py += imgH + 15; px = 10; } else { px += imgW + 10; }
+        doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+        doc.rect(px - 1, py - 1, imgW + 2, imgH + 2);
+        const fmt = photo.startsWith('data:image/jpeg') || photo.startsWith('data:image/jpg') ? 'JPEG' : 'PNG';
+        doc.addImage(photo, fmt, px, py, imgW, imgH);
+        doc.setFontSize(7); doc.setTextColor(80,80,80); doc.setFont('helvetica', 'bold');
+        doc.text(`Foto ${idx + 1}`, px + 2, py + imgH + 5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(120,120,120);
+        doc.text(`Fiscalizacao: ${inspection.schoolName}`, px + 2, py + imgH + 9);
+      } catch { /* skip */ }
+      if ((idx + 1) % 2 === 0) { py += imgH + 18; px = 10; } else { px += imgW + 10; }
     });
   }
 
-  // Footer on all pages
+  // ── Rodape em todas as paginas ────────────────────────────────────────────
   const totalPages = (doc as any).getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    doc.setDrawColor(22, 101, 52);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(...green); doc.setLineWidth(0.3);
     doc.line(10, ph - 12, pw - 10, ph - 12);
-    doc.setFontSize(7);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`PNAE — Sistema de Gestão de Nutrição Escolar`, 15, ph - 7);
-    doc.text(`Página ${p}/${totalPages}`, pw - 15, ph - 7, { align: 'right' });
+    doc.setFontSize(7); doc.setTextColor(120,120,120);
+    const footLeft = muni ? `EduPlate PNAE — ${muni}` : 'EduPlate — Sistema de Gestao PNAE';
+    doc.text(footLeft, 14, ph - 7);
+    doc.text(`Pagina ${p}/${totalPages}`, pw - 14, ph - 7, { align: 'right' });
   }
 
-  doc.save(`Fiscalizacao_${inspection.schoolName}_${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`Fiscalizacao_${inspection.schoolName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // ── Painel Geral PDF ─────────────────────────────────────────────────────────
@@ -861,7 +955,7 @@ export default function InspectionPage() {
       setInspectionTime(''); setVisitObjective(''); setGuidelines(''); setPhotos([]);
 
       const action = editingInspectionId ? 'atualizada' : 'salva';
-      generateInspectionPDF(savedInspection, orgSettings?.logoDataUrl).catch((err) => {
+      generateInspectionPDF(savedInspection, orgSettings?.logoDataUrl, { nutritionistName: orgSettings?.nutritionistName, nutritionistCrn: orgSettings?.nutritionistCrn, municipio: orgSettings?.municipio, uf: orgSettings?.uf }).catch((err) => {
         console.error('Erro ao gerar PDF:', err);
         toast.error('Fiscalização salva, mas houve erro ao gerar o PDF.');
       });
@@ -1276,7 +1370,7 @@ export default function InspectionPage() {
                     )}
 
                     <div className="flex gap-2 flex-wrap pt-1">
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { generateInspectionPDF(inspection, orgSettings?.logoDataUrl).catch(() => {}); }}>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { generateInspectionPDF(inspection, orgSettings?.logoDataUrl, { nutritionistName: orgSettings?.nutritionistName, nutritionistCrn: orgSettings?.nutritionistCrn, municipio: orgSettings?.municipio, uf: orgSettings?.uf }).catch(() => {}); }}>
                         <Download className="h-3.5 w-3.5" /> Baixar PDF
                       </Button>
 

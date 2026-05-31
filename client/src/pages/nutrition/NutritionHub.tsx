@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'wouter';
-import { Apple, BookOpen, ClipboardMinus, Factory, ShieldAlert } from 'lucide-react';
+import { Apple, BookOpen, ClipboardMinus, Factory, ShieldAlert, ShoppingCart } from 'lucide-react';
 
 const moduleCards = [
   {
@@ -38,6 +38,12 @@ const moduleCards = [
     description: 'Acompanhamento da execucao diaria, sobras e indicadores operacionais.',
     icon: Factory,
     href: '/nutrition/production',
+  },
+  {
+    title: 'Lista de Compras',
+    description: 'Consolidação automática dos insumos por cardápio, com quantidades por número de alunos e PDF imprimível.',
+    icon: ShoppingCart,
+    href: '/nutrition/shopping-list',
   },
 ];
 
