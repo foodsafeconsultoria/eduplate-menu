@@ -55,6 +55,9 @@ git add client\src\pages\Pricing.tsx
 git add client\src\pages\Register.tsx
 git add client\src\pages\ForgotPassword.tsx
 git add client\src\pages\Login.tsx
+git add client\src\pages\Pricing.tsx
+git add client\src\pages\LandingPage.tsx
+git add client\src\pages\Register.tsx
 
 git add client\src\App.tsx
 git add client\src\contexts\AuthContext.tsx
@@ -105,7 +108,7 @@ git add server\stripe.ts
 git add client\src\App.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: trial sem cartao, checkout-subscribe, banner urgencia 7 dias, fix trial copy"
+git commit -m "feat: trial sem cartao, checkout-subscribe, banner urgencia 7 dias, fix trial copy em Login/Pricing/LandingPage/Register"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

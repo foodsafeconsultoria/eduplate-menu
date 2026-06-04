@@ -96,7 +96,7 @@ const PLANS: Plan[] = [
 const FAQS = [
   {
     q: 'Preciso de cartão de crédito para o 1 mês grátis?',
-    a: 'Sim. Solicitamos o cartão para garantir a continuidade automática após o trial — mas você não paga nada no primeiro mês. Cancele antes do fim do trial e nenhum valor será cobrado.',
+    a: 'Não. O cadastro é totalmente gratuito e sem cartão. Você só precisa informar uma forma de pagamento quando o trial de 30 dias estiver prestes a terminar — e apenas se quiser continuar.',
   },
   {
     q: 'Qual a diferença entre o plano semestral e anual?',
@@ -200,7 +200,7 @@ export default function Pricing() {
       <div style={{ background: '#1B2A4A' }} className="py-16 px-4 text-center">
         <span className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
           style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50', border: '1px solid rgba(76,175,80,0.3)' }}>
-          1 mês grátis · Cartão necessário
+          30 dias grátis · Sem cartão
         </span>
         <h1 className="text-4xl font-extrabold text-white mt-2">Planos para cada etapa</h1>
         <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>

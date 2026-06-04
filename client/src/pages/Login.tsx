@@ -98,7 +98,7 @@ export default function Login() {
               1 mês grátis
             </p>
             <p className="mt-1 text-sm" style={{ color: 'rgba(76,175,80,0.7)', margin: '6px 0 0', fontWeight: 600 }}>
-              Acesso completo · Cartão necessário
+              Acesso completo · Sem cartão
             </p>
           </div>
 

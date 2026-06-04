@@ -133,7 +133,7 @@ export default function Register() {
         <div className="w-full max-w-md">
           <div className="mb-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
             style={{ background:'rgba(76,175,80,0.1)', color:'#2E7D32', border:'1px solid rgba(76,175,80,0.3)' }}>
-            1 mês grátis · Cancele quando quiser
+            30 dias grátis · Sem cartão
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 mt-2">Criar conta grátis</h1>
           <p className="text-sm text-gray-500 mt-1">
