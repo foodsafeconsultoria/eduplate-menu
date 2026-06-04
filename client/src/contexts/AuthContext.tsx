@@ -97,6 +97,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await createUserWithEmailAndPassword(auth, email, password);
       firebaseUser = res.user;
 
+      // ── Step 1b: Phone uniqueness check (must run after auth) ────────────
+      // Firestore rules require isSignedIn(), so this must come after Step 1.
+      if (phone) {
+        const usersRef = collection(db, 'users');
+        const phoneSnap = await getDocs(query(usersRef, where('phone', '==', phone)));
+        if (!phoneSnap.empty) {
+          await res.user.delete();
+          firebaseUser = null;
+          setError('Este número de celular já está cadastrado. Faça login ou use outro número.');
+          throw new Error('phone-already-in-use');
+        }
+      }
+
       // ── Step 2: Resolve orgId ─────────────────────────────────────────────
       let orgId: string;
 

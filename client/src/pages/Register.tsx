@@ -10,8 +10,6 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import { apiUrl } from '@/lib/apiUrl';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 // Format phone as (XX) XXXXX-XXXX
 function formatPhone(value: string): string {
@@ -46,17 +44,10 @@ export default function Register() {
     setErrorMsg('');
     setLoading(true);
     try {
-      // Check for duplicate phone in Firestore
       const phoneDigits = phone.replace(/\D/g, '');
-      const usersRef = collection(db, 'users');
-      const snap = await getDocs(query(usersRef, where('phone', '==', phoneDigits)));
-      if (!snap.empty) {
-        setErrorMsg('Este número de celular já está cadastrado. Faça login ou use outro número.');
-        setLoading(false);
-        return;
-      }
 
       // Create Firebase account + org (trial status set in Firestore)
+      // Phone uniqueness check runs inside register() after auth is established
       await register(email.trim(), password, name.trim(), 'admin', undefined, phoneDigits);
 
       // Send welcome email (fire-and-forget)
@@ -70,6 +61,7 @@ export default function Register() {
       navigate('/');
 
     } catch (err: any) {
+      // authError is already set by AuthContext for phone-already-in-use and other known errors
       setErrorMsg(authError || err.message || 'Erro ao criar conta. Tente novamente.');
       setLoading(false);
     }

@@ -108,7 +108,7 @@ git add server\stripe.ts
 git add client\src\App.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: trial sem cartao, checkout-subscribe, banner urgencia 7 dias, fix trial copy em Login/Pricing/LandingPage/Register"
+git commit -m "fix: mover verificacao de telefone para depois do auth (corrige Missing permissions no cadastro)"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
