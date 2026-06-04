@@ -96,9 +96,12 @@ git add client\src\pages\nutrition\Foods.tsx
 git add client\src\pages\nutrition\ShoppingList.tsx
 git add client\src\pages\Inspection.tsx
 git add client\src\pages\nutrition\Menus.tsx
+git add client\src\contexts\AuthContext.tsx
+git add client\src\pages\LandingPage.tsx
+git add server\email.ts
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: Lista de Compras, fiscalizacao completa, datas PDF cardapio, alertas dieta por dia"
+git commit -m "feat: Lista de Compras, fiscalizacao completa, datas PDF cardapio, alertas dieta, fix trial 1 mes"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...

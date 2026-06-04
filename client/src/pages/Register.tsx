@@ -1,7 +1,7 @@
 /**
  * /registro — Trial registration page
  * Flow: collect name/email/phone/password → create Firebase account + org
- *       → redirect to Stripe checkout (card required, 3-month trial, no charge now)
+ *       → redirect to Stripe checkout (card required, 1-month trial, no charge now)
  */
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
@@ -66,7 +66,7 @@ export default function Register() {
         body: JSON.stringify({ name: name.trim(), email: email.trim() }),
       }).catch(() => {});
 
-      // Redirect to Stripe checkout to collect card (3-month trial, no charge now)
+      // Redirect to Stripe checkout to collect card (1-month trial, no charge now)
       // We need the orgId — it's set in the user context after register()
       // Give auth state a moment to propagate, then call checkout
       await redirectToStripe(email.trim());
@@ -256,7 +256,7 @@ export default function Register() {
               style={{ background: '#4CAF50' }}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? 'Criando conta…' : 'Criar conta e ativar 3 meses grátis →'}
+              {loading ? 'Criando conta…' : 'Criar conta e ativar 1 mês grátis →'}
             </button>
 
             <p className="text-xs text-center text-gray-400 mt-2">
