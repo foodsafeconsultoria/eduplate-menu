@@ -136,6 +136,7 @@ function Router() {
                   <Route path="/notifications" component={Notifications} />
                   <Route path="/profile" component={Profile} />
                   <Route path="/billing" component={Billing} />
+                  <Route path="/assinatura" component={Billing} />
                   <Route path="/documents" component={Documents} />
                   <Route path="/team" component={Team} />
                   <Route component={NotFound} />

@@ -177,6 +177,61 @@ router.get('/verify-session', async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/stripe/checkout-subscribe ──────────────────────────────────────
+// Cria checkout para usuário JÁ CADASTRADO que quer assinar (sem trial).
+// Chamado pelo TrialBanner quando o trial está próximo ou expirado.
+// Body: { orgId, plan?, period? }
+router.post('/checkout-subscribe', async (req: Request, res: Response) => {
+  try {
+    const { orgId, plan = 'essencial', period = 'mensal' } = req.body as { orgId: string; plan?: PlanKey; period?: BillingPeriod };
+    if (!orgId) return res.status(400).json({ error: 'orgId é obrigatório.' });
+
+    const planConfig = PLANS[plan as PlanKey];
+    if (!planConfig) return res.status(400).json({ error: `Plano inválido: ${plan}` });
+    const priceId = getPriceId(plan as PlanKey, period);
+    if (!priceId) return res.status(500).json({ error: `Price ID para ${plan}/${period} não configurado.` });
+
+    const stripe = getStripe();
+    const db = getAdminDb();
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+
+    // Busca ou cria Stripe customer para essa org
+    const orgDoc = await db.collection('organizations').doc(orgId).get();
+    if (!orgDoc.exists) return res.status(404).json({ error: 'Organização não encontrada.' });
+    const orgData = orgDoc.data()!;
+
+    let customerId: string = orgData.stripeCustomerId || '';
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: orgData.ownerEmail || '',
+        metadata: { orgId, firebaseProjectId: 'gestaoescola-e5f3d' },
+      });
+      customerId = customer.id;
+      await db.collection('organizations').doc(orgId).set({ stripeCustomerId: customerId }, { merge: true });
+    }
+
+    // Checkout SEM trial — cobrança imediata na aprovação do cartão
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/assinatura?status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/planos?canceled=1`,
+      metadata: { orgId, plan, period },
+      subscription_data: { metadata: { orgId, plan, period } },
+      locale: 'pt-BR',
+      billing_address_collection: 'auto',
+      allow_promotion_codes: true,
+    });
+
+    res.json({ url: session.url });
+  } catch (err: any) {
+    console.error('[Stripe /checkout-subscribe error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/stripe/setup?token=XXX&orgId=YYY ────────────────────────────────
 // Verifies a post-payment setup token and returns org info.
 router.get('/setup', async (req: Request, res: Response) => {

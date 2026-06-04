@@ -99,9 +99,13 @@ git add client\src\pages\nutrition\Menus.tsx
 git add client\src\contexts\AuthContext.tsx
 git add client\src\pages\LandingPage.tsx
 git add server\email.ts
+git add client\src\pages\Register.tsx
+git add client\src\components\TrialBanner.tsx
+git add server\stripe.ts
+git add client\src\App.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "feat: Lista de Compras, fiscalizacao completa, datas PDF cardapio, alertas dieta, fix trial 1 mes"
+git commit -m "feat: trial sem cartao, checkout-subscribe, banner urgencia 7 dias, fix trial copy"
 echo.
 
 echo [2/2] Enviando para Railway (redeploy automatico)...
