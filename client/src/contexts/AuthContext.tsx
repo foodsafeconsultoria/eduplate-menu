@@ -159,10 +159,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // overriding any fallback state set by the onAuthStateChanged handler.
       setUser(userData as User);
     } catch (err: any) {
+      // phone-already-in-use: error message was already set above, don't overwrite
+      if (err.message === 'phone-already-in-use') {
+        throw err;
+      }
       if (err.code === 'auth/email-already-in-use') {
         setError('Este e-mail já está em uso.');
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve ter pelo menos 6 caracteres.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.');
       } else if (!err.message?.includes('inválido')) {
         setError('Erro ao criar conta. Tente novamente.');
       }

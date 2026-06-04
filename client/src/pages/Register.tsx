@@ -61,8 +61,12 @@ export default function Register() {
       navigate('/');
 
     } catch (err: any) {
-      // authError is already set by AuthContext for phone-already-in-use and other known errors
-      setErrorMsg(authError || err.message || 'Erro ao criar conta. Tente novamente.');
+      // AuthContext.setError() handles known Firebase/auth errors (email in use, phone duplicate, etc).
+      // They'll appear via `authError` after React re-renders.
+      // Only set local errorMsg for unexpected non-auth errors.
+      if (!err.code?.startsWith('auth/') && err.message !== 'phone-already-in-use') {
+        setErrorMsg(err.message || 'Erro ao criar conta. Tente novamente.');
+      }
       setLoading(false);
     }
   };
