@@ -97,16 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await createUserWithEmailAndPassword(auth, email, password);
       firebaseUser = res.user;
 
-      // ── Step 1b: Phone uniqueness check (must run after auth) ────────────
-      // Firestore rules require isSignedIn(), so this must come after Step 1.
+      // ── Step 1b: Phone uniqueness check (best-effort — skip if Firestore rules deny) ──
+      // NOTE: Firestore collection-level queries require list permission in rules.
+      // If the query fails, we continue registration without blocking the user.
       if (phone) {
-        const usersRef = collection(db, 'users');
-        const phoneSnap = await getDocs(query(usersRef, where('phone', '==', phone)));
-        if (!phoneSnap.empty) {
-          await res.user.delete();
-          firebaseUser = null;
-          setError('Este número de celular já está cadastrado. Faça login ou use outro número.');
-          throw new Error('phone-already-in-use');
+        try {
+          const usersRef = collection(db, 'users');
+          const phoneSnap = await getDocs(query(usersRef, where('phone', '==', phone)));
+          if (!phoneSnap.empty) {
+            await res.user.delete();
+            firebaseUser = null;
+            setError('Este número de celular já está cadastrado. Faça login ou use outro número.');
+            throw new Error('phone-already-in-use');
+          }
+        } catch (phoneErr: any) {
+          // If the error is our own phone-duplicate signal, re-throw it
+          if (phoneErr.message === 'phone-already-in-use') throw phoneErr;
+          // Otherwise (Firestore permissions, network, etc.) — log and continue
+          console.warn('Phone uniqueness check skipped:', phoneErr?.message);
         }
       }
 
