@@ -111,7 +111,11 @@ git status
 git commit -m "fix: mover verificacao de telefone para depois do auth (corrige Missing permissions no cadastro)"
 echo.
 
-echo [2/2] Enviando para Railway (redeploy automatico)...
+echo [2/3] Publicando regras do Firestore...
+firebase deploy --only firestore:rules
+echo.
+
+echo [3/3] Enviando para Railway (redeploy automatico)...
 git push
 if %ERRORLEVEL% NEQ 0 (
   echo ERRO no git push. Verifique sua conexao ou autenticacao.
