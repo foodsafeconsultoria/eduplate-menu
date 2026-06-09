@@ -229,6 +229,8 @@ export function useMenus() {
           ...(input.category           !== undefined && { category:           input.category }),
           ...(input.targetCategories   !== undefined && { targetCategories:   input.targetCategories }),
           ...(input.referenceMonth     !== undefined && { referenceMonth:     input.referenceMonth }),
+          ...(input.weekStartDate      !== undefined && { weekStartDate:      input.weekStartDate }),
+          ...(input.studentCount       !== undefined && { studentCount:       input.studentCount }),
           ...(input.schoolIds          !== undefined && { schoolIds:          input.schoolIds }),
           ...(input.slots              !== undefined && { slots:              input.slots }),
           ...(input.items              !== undefined && { items:              input.items }),

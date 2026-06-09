@@ -74,6 +74,7 @@ git add client\src\hooks\useDocuments.ts
 git add client\src\hooks\useFirestore.ts
 git add client\src\hooks\useSpecialDiets.ts
 git add client\src\hooks\useMenus.ts
+git add firestore.rules
 git add client\src\hooks\useRestoIngestaRecords.ts
 git add client\src\hooks\useMarmitaRuns.ts
 git add client\src\hooks\useRecipes.ts
@@ -108,7 +109,7 @@ git add server\stripe.ts
 git add client\src\App.tsx
 git add COMMIT_E_DEPLOY.bat
 git status
-git commit -m "fix: mover verificacao de telefone para depois do auth (corrige Missing permissions no cadastro)"
+git commit -m "fix: salvar weekStartDate e studentCount no cardapio, regras Firestore notificationSettings, erros de auth"
 echo.
 
 echo [2/3] Publicando regras do Firestore...

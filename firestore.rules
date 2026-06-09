@@ -87,6 +87,12 @@ service cloud.firestore {
       }
     }
 
+    // ── notificationSettings (per-user notification preferences) ─────────────
+    // Each user can only read and write their own notification settings.
+    match /notificationSettings/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // ── training_tokens (global — powers the public QR-scan attendance page) ──
     // TrainingAttend is a public unauthenticated page, so read must be open.
     // Writes are restricted to authenticated users from the token's owner org.
