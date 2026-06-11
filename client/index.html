@@ -6,7 +6,7 @@
 
     <!-- ── Primary SEO ──────────────────────────────────────── -->
     <title>EduPlate Menu — Gestão do PNAE em uma plataforma só</title>
-    <meta name="description" content="Plataforma especialista em PNAE para nutricionistas e secretarias de educação. Cardápios, fiscalização, treinamentos, certificados, dietas especiais e documentos — 100% online. Teste grátis por 14 dias." />
+    <meta name="description" content="Plataforma especialista em PNAE para nutricionistas e secretarias de educação. Cardápios, fiscalização, treinamentos, certificados, dietas especiais e documentos — 100% online. Teste grátis por 1 mês." />
     <meta name="keywords" content="PNAE, alimentação escolar, gestão cardápio escolar, fiscalização escolas, nutricionista PNAE, FNDE, SIGPC, certificado manipulador, dieta especial escolar" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://www.eduplate.com.br/" />
@@ -16,7 +16,7 @@
     <meta property="og:url"         content="https://www.eduplate.com.br/" />
     <meta property="og:site_name"   content="EduPlate Menu" />
     <meta property="og:title"       content="EduPlate Menu — Gestão do PNAE em uma plataforma só" />
-    <meta property="og:description" content="Cardápios, fiscalização, treinamentos, certificados, dietas especiais e documentos da alimentação escolar do município — com mais controle e menos retrabalho. Teste grátis 14 dias." />
+    <meta property="og:description" content="Cardápios, fiscalização, treinamentos, certificados, dietas especiais e documentos da alimentação escolar do município — com mais controle e menos retrabalho. Teste grátis por 1 mês." />
     <meta property="og:image"       content="https://www.eduplate.com.br/og-image.png" />
     <meta property="og:image:width"  content="1200" />
     <meta property="og:image:height" content="630" />
@@ -25,7 +25,7 @@
     <!-- ── Twitter / X Card ─────────────────────────────────── -->
     <meta name="twitter:card"        content="summary_large_image" />
     <meta name="twitter:title"       content="EduPlate Menu — Gestão do PNAE em uma plataforma só" />
-    <meta name="twitter:description" content="Plataforma especialista em PNAE para nutricionistas e secretarias de educação. 100% online, 14 dias grátis." />
+    <meta name="twitter:description" content="Plataforma especialista em PNAE para nutricionistas e secretarias de educação. 100% online, 1 mês grátis." />
     <meta name="twitter:image"       content="https://www.eduplate.com.br/og-image.png" />
 
     <!-- ── Favicon ──────────────────────────────────────────── -->
@@ -66,9 +66,12 @@
       "operatingSystem": "Web",
       "description": "Plataforma especialista em PNAE para gestão da alimentação escolar municipal.",
       "offers": [
-        { "@type": "Offer", "name": "Básico",    "price": "49", "priceCurrency": "BRL" },
-        { "@type": "Offer", "name": "Essencial", "price": "99", "priceCurrency": "BRL" },
-        { "@type": "Offer", "name": "Consórcio", "price": "399",   "priceCurrency": "BRL" }
+        { "@type": "Offer", "name": "Básico", "priceCurrency": "BRL",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49", "priceCurrency": "BRL", "unitText": "mês", "billingDuration": 1 } },
+        { "@type": "Offer", "name": "Essencial", "priceCurrency": "BRL",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "BRL", "unitText": "mês", "billingDuration": 1 } },
+        { "@type": "Offer", "name": "Consórcio", "priceCurrency": "BRL",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "399", "priceCurrency": "BRL", "unitText": "mês", "billingDuration": 1 } }
       ],
       "author": {
         "@type": "Organization",

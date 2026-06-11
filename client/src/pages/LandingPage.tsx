@@ -553,7 +553,7 @@ export default function LandingPage() {
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Diferencial exclusivo</span>
                 </div>
-                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 200+ alimentos com cálculo nutricional automático</h3>
+                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 600+ alimentos com cálculo nutricional automático</h3>
                 <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 10, lineHeight: 1.65 }}>
                   O EduPlate Menu inclui banco de alimentos baseado na <strong style={{ color: '#81C784' }}>Tabela TACO (UNICAMP)</strong> — o padrão de referência do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
                 </p>
@@ -679,7 +679,8 @@ export default function LandingPage() {
               </div>
               <video
                 controls
-                preload="metadata"
+                preload="none"
+                poster="/og-image.png"
                 style={{ width:'100%', display:'block', maxHeight:480, background:'#000' }}
               >
                 <source src="/demo-cardapio.mp4" type="video/mp4" />

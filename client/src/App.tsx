@@ -49,6 +49,51 @@ const SpecialDiets       = lazy(() => import('@/pages/nutrition/SpecialDiets'));
 const MenuPublications   = lazy(() => import('@/pages/nutrition/MenuPublications'));
 const ShoppingList       = lazy(() => import('@/pages/nutrition/ShoppingList'));
 
+// ── Título da aba por rota (SEO + UX) ─────────────────────────────────────────
+const DEFAULT_TITLE = 'EduPlate Menu — Gestão do PNAE em uma plataforma só';
+const PAGE_TITLES: Record<string, string> = {
+  '/landing': DEFAULT_TITLE,
+  '/planos': 'Planos e preços | EduPlate Menu',
+  '/login': 'Entrar | EduPlate Menu',
+  '/registro': 'Criar conta grátis | EduPlate Menu',
+  '/cadastro': 'Finalizar cadastro | EduPlate Menu',
+  '/esqueci-senha': 'Recuperar senha | EduPlate Menu',
+  '/privacidade': 'Política de Privacidade | EduPlate Menu',
+  '/termos': 'Termos de Uso | EduPlate Menu',
+  '/': 'Dashboard | EduPlate Menu',
+  '/nutrition': 'Alimentação | EduPlate Menu',
+  '/nutrition/foods': 'Alimentos | EduPlate Menu',
+  '/nutrition/recipes': 'Fichas técnicas | EduPlate Menu',
+  '/nutrition/menus': 'Cardápios | EduPlate Menu',
+  '/nutrition/special-diets': 'Dietas especiais | EduPlate Menu',
+  '/nutrition/production': 'Produção | EduPlate Menu',
+  '/nutrition/sigpc': 'Relatório SIGPC | EduPlate Menu',
+  '/nutrition/publications': 'Publicações de cardápio | EduPlate Menu',
+  '/nutrition/shopping-list': 'Lista de compras | EduPlate Menu',
+  '/inspection': 'Fiscalização | EduPlate Menu',
+  '/ppes': 'Controle de EPIs | EduPlate Menu',
+  '/schedule': 'Agenda | EduPlate Menu',
+  '/schools': 'Escolas | EduPlate Menu',
+  '/resto-ingesta': 'Resto-ingestão | EduPlate Menu',
+  '/acceptability': 'Testes de aceitabilidade | EduPlate Menu',
+  '/maintenance': 'Manutenção | EduPlate Menu',
+  '/training': 'Treinamentos | EduPlate Menu',
+  '/notifications': 'Notificações | EduPlate Menu',
+  '/profile': 'Perfil | EduPlate Menu',
+  '/billing': 'Assinatura | EduPlate Menu',
+  '/assinatura': 'Assinatura | EduPlate Menu',
+  '/documents': 'Documentos | EduPlate Menu',
+  '/team': 'Equipe | EduPlate Menu',
+};
+
+function PageTitle() {
+  const [location] = useLocation();
+  useEffect(() => {
+    document.title = PAGE_TITLES[location] || DEFAULT_TITLE;
+  }, [location]);
+  return null;
+}
+
 // ── Spinner de transição entre módulos ────────────────────────────────────────
 function PageLoader() {
   return (
@@ -94,6 +139,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
+    <>
+    <PageTitle />
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/login" component={Login} />
@@ -149,6 +196,7 @@ function Router() {
         </Route>
       </Switch>
     </Suspense>
+    </>
   );
 }
 

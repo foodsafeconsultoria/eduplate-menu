@@ -6,6 +6,7 @@ import stripeRouter from "./stripe.js";
 import emailRouter from "./email.js";
 import aiRouter from "./ai.js";
 import { requireAuth } from "./auth-middleware.js";
+import { rateLimit } from "./rate-limit.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,9 @@ async function startServer() {
     if (req.path === '/api/stripe/webhook') return next();
     express.json({ limit: '10mb' })(req, res, next);
   });
+
+  // ── Rate limiting em todas as rotas de API (webhook do Stripe é isento) ──
+  app.use('/api', rateLimit);
 
   // ── Stripe routes ─────────────────────────────────────────────────────────
   app.use('/api/stripe', stripeRouter);

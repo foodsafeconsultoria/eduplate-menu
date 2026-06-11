@@ -115,10 +115,11 @@ router.post('/checkout-new', async (req: Request, res: Response) => {
     });
     await db.collection('organizations').doc(orgId).set({ stripeCustomerId: customer.id }, { merge: true });
 
+    // payment_method_types omitido — o Stripe usa os métodos ativados no
+    // Dashboard (Settings → Payment methods): cartão, e boleto/pix quando habilitados.
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode: 'subscription',
-      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/cadastro?token=${setupToken}&orgId=${orgId}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
@@ -211,11 +212,11 @@ router.post('/checkout-subscribe', requireAuth, requireOrgMember, async (req: Re
       await db.collection('organizations').doc(orgId).set({ stripeCustomerId: customerId }, { merge: true });
     }
 
-    // Checkout SEM trial — cobrança imediata na aprovação do cartão
+    // Checkout SEM trial — cobrança imediata na aprovação do pagamento.
+    // payment_method_types omitido — métodos controlados pelo Stripe Dashboard.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/assinatura?status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/planos?canceled=1`,
@@ -334,10 +335,10 @@ router.post('/checkout', requireAuth, requireOrgMember, async (req: Request, res
       );
     }
 
+    // payment_method_types omitido — métodos controlados pelo Stripe Dashboard.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/billing?session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${appUrl}/planos?canceled=1`,
