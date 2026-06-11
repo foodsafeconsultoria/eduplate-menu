@@ -18,8 +18,9 @@ import { DIET_LABEL_MAP } from '@/data/dietLabels';
 import type { Food, Menu, MenuInsumo, MenuSlot, NutritionNutrientSet, Recipe } from '@/types/nutrition';
 import {
   AlertTriangle, BookOpen, ChevronDown, ClipboardList, ClipboardPaste, Copy,
-  LayoutGrid, LayoutList, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
+  Layers, LayoutGrid, LayoutList, Mail, Pencil, Printer, School, Search, ShieldAlert, SlidersHorizontal, Trash2, X,
 } from 'lucide-react';
+import { replicateMenuForCategory, suggestedFactor, type EtapaCategory } from '@/lib/replicateMenu';
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -518,6 +519,28 @@ export default function Menus() {
 
   // Which card has the meal-picker popover open
   const [copyPickerMenuId, setCopyPickerMenuId] = useState<string | null>(null);
+
+  // ── Replicação por etapa de ensino ───────────────────────────────────────────
+  const [replicatePickerMenuId, setReplicatePickerMenuId] = useState<string | null>(null);
+  const [replicateTarget, setReplicateTarget] = useState<EtapaCategory | null>(null);
+  const [replicateFactor, setReplicateFactor] = useState<string>('1');
+
+  const handleReplicate = (menu: Menu) => {
+    if (!replicateTarget) { toast.error('Escolha a etapa de destino.'); return; }
+    const factor = parseFloat(replicateFactor.replace(',', '.'));
+    if (!factor || factor <= 0 || factor > 5) {
+      toast.error('Fator inválido. Use um número entre 0,1 e 5 (ex.: 0,75).');
+      return;
+    }
+    const { payload, skippedMeals } = replicateMenuForCategory(menu, replicateTarget, factor, currentUserName);
+    addMenu(payload);
+    setReplicatePickerMenuId(null);
+    setReplicateTarget(null);
+    toast.success(`Cardápio replicado para ${replicateTarget} (porções × ${factor}).`);
+    if (skippedMeals.length > 0) {
+      toast.info(`Refeições sem equivalente em ${replicateTarget} foram omitidas: ${skippedMeals.join(', ')}.`);
+    }
+  };
 
   // ── Email sending state ───────────────────────────────────────────────────────
   const [emailModal, setEmailModal] = useState<{ open: boolean; menu: Menu | null }>({ open: false, menu: null });
@@ -2023,6 +2046,22 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
+                        className={`border-purple-200 text-purple-600 hover:bg-purple-50 ${replicatePickerMenuId === menu.id ? 'bg-purple-50' : ''}`}
+                        title="Replicar para outra etapa de ensino (porções ajustadas)"
+                        onClick={() => {
+                          if (replicatePickerMenuId === menu.id) {
+                            setReplicatePickerMenuId(null);
+                          } else {
+                            setReplicatePickerMenuId(menu.id);
+                            setReplicateTarget(null);
+                            setReplicateFactor('1');
+                          }
+                        }}
+                      >
+                        <Layers className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
                         className="border-blue-200 text-blue-600 hover:bg-blue-50"
                         onClick={() => openEditMenu(menu)}
                         title="Editar cardápio"
@@ -2085,6 +2124,68 @@ export default function Menus() {
                         </div>
                       );
                     })()}
+
+                    {/* Replicate-by-etapa picker — shows when replicate button is clicked */}
+                    {replicatePickerMenuId === menu.id && (
+                      <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                        <p className="mb-2 text-xs font-semibold text-purple-800">
+                          Replicar "{menu.title}" para qual etapa?
+                        </p>
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {categories.filter((c) => c !== menu.category).map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setReplicateTarget(cat as EtapaCategory);
+                                setReplicateFactor(String(suggestedFactor(menu.category, cat as EtapaCategory)).replace('.', ','));
+                              }}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                                replicateTarget === cat
+                                  ? 'border-purple-500 bg-purple-600 text-white'
+                                  : 'border-purple-300 bg-white text-purple-700 hover:bg-purple-100'
+                              }`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                        {replicateTarget && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-xs text-purple-800">
+                              Fator das porções:
+                            </label>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={replicateFactor}
+                              onChange={(e) => setReplicateFactor(e.target.value)}
+                              className="w-20 rounded border border-purple-300 px-2 py-1 text-xs"
+                              title="Multiplicador aplicado a todas as porções (ex.: 0,75 = 75% do peso atual)"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleReplicate(menu)}
+                              className="rounded-full border border-green-300 bg-white px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100"
+                            >
+                              Criar cópia para {replicateTarget}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setReplicatePickerMenuId(null); setReplicateTarget(null); }}
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-400 hover:bg-gray-50"
+                            >
+                              Cancelar
+                            </button>
+                            <p className="w-full text-[11px] leading-snug text-purple-700/80">
+                              Fator sugerido com base na proporção das necessidades energéticas entre as faixas
+                              etárias (referências do PNAE). Ajuste conforme sua avaliação técnica — as porções
+                              podem ser refinadas individualmente depois, no editor.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

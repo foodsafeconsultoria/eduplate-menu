@@ -1,4 +1,5 @@
 import type { Food } from '@/types/nutrition';
+import { tbcaFoods } from './tbcaFoods';
 
 const now = new Date();
 
@@ -804,3 +805,11 @@ export const initialFoods: Food[] = [
   { id: 'food-777', name: 'Mostarda crua',                  unit: 'kg',  price: 5.5,  source: 'taco', nutrients: { kcal:  27, protein: 2.7, lipids: 0.4,  carbohydrates:  4.7, fiber: 3.3, calcium: 103, iron: 1.6, zinc: 0.4, vitaminA: 297, vitaminC: 70.0 }, createdAt: now, updatedAt: now },
   { id: 'food-778', name: 'Mostarda refogada',              unit: 'kg',  price: 5.5,  source: 'taco', nutrients: { kcal:  23, protein: 2.3, lipids: 0.9,  carbohydrates:  3.8, fiber: 2.8, calcium:  97, iron: 1.3, zinc: 0.3, vitaminA: 265, vitaminC: 48.0 }, createdAt: now, updatedAt: now },
 ];
+
+// ── TBCA (USP/FoRC) — alimentos importados, mesclados sem duplicar nomes ──────
+const existingNames = new Set(initialFoods.map((f) => f.name.toLowerCase().trim()));
+for (const food of tbcaFoods) {
+  if (!existingNames.has(food.name.toLowerCase().trim())) {
+    initialFoods.push(food);
+  }
+}
