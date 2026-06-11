@@ -196,7 +196,7 @@ async function generateShoppingPDF(
 export default function ShoppingList() {
   const { menus, loading } = useMenus();
   const { schools } = useSchools();
-  const { orgSettings } = useOrgSettings();
+  const { settings: orgSettings } = useOrgSettings();
 
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
   const [filterMonth, setFilterMonth] = useState<string>('all');

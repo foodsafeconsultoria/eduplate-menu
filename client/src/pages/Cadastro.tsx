@@ -13,7 +13,7 @@ import { auth, db } from '@/lib/firebase';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2, Loader2, Lock, User } from 'lucide-react';
 import EduPlateLogo from '@/components/EduPlateLogo';
-import { apiUrl } from '@/lib/apiUrl';
+import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 type Status = 'loading' | 'ready' | 'creating' | 'done' | 'error';
 
@@ -82,7 +82,7 @@ export default function Cadastro() {
       // 4. Send welcome email (fire-and-forget — não bloqueia o fluxo)
       fetch(apiUrl('/api/email/welcome'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ name: name.trim(), email, plan }),
       }).catch(() => {}); // falha silenciosa
 

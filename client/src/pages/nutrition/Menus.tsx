@@ -25,7 +25,7 @@ import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
-import { apiUrl } from '@/lib/apiUrl';
+import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -564,7 +564,7 @@ export default function Menus() {
 
       const res = await fetch(apiUrl('/api/email/send-menu'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           schools: selectedSchoolObjects.map(s => ({ name: s.name, email: s.email })),
           menuTitle: menu.title,
@@ -589,10 +589,10 @@ export default function Menus() {
   const buildMenuEmailHtml = (menu: Menu): string => {
     const slots = menu.slots?.length ? menu.slots : migrateItemsToSlots(menu.items);
     const rows = weekdays.map(day => {
-      const daySlots = slots.filter(s => s.day === day && s.composicao.length > 0);
+      const daySlots = slots.filter(s => s.dayLabel === day && s.composicao.length > 0);
       if (daySlots.length === 0) return '';
       const meals = daySlots.map(s =>
-        `<tr><td style="padding:4px 8px;color:#6b7280;font-size:13px;">${s.mealLabel}</td><td style="padding:4px 8px;font-size:13px;">${s.composicao.map(c => c.label).join(', ')}</td></tr>`
+        `<tr><td style="padding:4px 8px;color:#6b7280;font-size:13px;">${s.mealLabel}</td><td style="padding:4px 8px;font-size:13px;">${s.composicao.map(c => c.nome).join(', ')}</td></tr>`
       ).join('');
       return `<tr><td colspan="2" style="padding:8px 8px 2px;font-weight:700;font-size:13px;color:#1B2A4A;border-top:1px solid #e5e7eb;">${day}</td></tr>${meals}`;
     }).filter(Boolean).join('');

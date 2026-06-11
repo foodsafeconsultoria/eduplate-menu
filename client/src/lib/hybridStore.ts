@@ -185,10 +185,14 @@ export function persistHybridSnapshot<T>(storageKey: string, items: T[]) {
 }
 
 export async function syncHybridDocument<T extends { id: string }>(
-  orgId: string,
+  orgId: string | null,
   collectionName: string,
   item: T
 ): Promise<boolean> {
+  if (!orgId) {
+    console.warn(`[hybridStore] syncHybridDocument chamado sem orgId (${collectionName}/${item.id}) — ignorado.`);
+    return false;
+  }
   try {
     await setDoc(
       doc(db, 'organizations', orgId, collectionName, item.id),
@@ -201,7 +205,11 @@ export async function syncHybridDocument<T extends { id: string }>(
   }
 }
 
-export async function removeHybridDocument(orgId: string, collectionName: string, id: string) {
+export async function removeHybridDocument(orgId: string | null, collectionName: string, id: string) {
+  if (!orgId) {
+    console.warn(`[hybridStore] removeHybridDocument chamado sem orgId (${collectionName}/${id}) — ignorado.`);
+    return;
+  }
   try {
     await deleteDoc(doc(db, 'organizations', orgId, collectionName, id));
   } catch (error) {
@@ -210,10 +218,14 @@ export async function removeHybridDocument(orgId: string, collectionName: string
 }
 
 export async function syncHybridCollectionSnapshot<T extends { id: string }>(
-  orgId: string,
+  orgId: string | null,
   collectionName: string,
   items: T[]
 ) {
+  if (!orgId) {
+    console.warn(`[hybridStore] syncHybridCollectionSnapshot chamado sem orgId (${collectionName}) — ignorado.`);
+    return;
+  }
   try {
     const orgPath = collection(db, 'organizations', orgId, collectionName);
     const snapshot = await getDocs(orgPath);

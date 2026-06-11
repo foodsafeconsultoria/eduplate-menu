@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import stripeRouter from "./stripe.js";
 import emailRouter from "./email.js";
 import aiRouter from "./ai.js";
+import { requireAuth } from "./auth-middleware.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,11 +51,11 @@ async function startServer() {
   // ── Stripe routes ─────────────────────────────────────────────────────────
   app.use('/api/stripe', stripeRouter);
 
-  // ── Email routes ──────────────────────────────────────────────────────────
-  app.use('/api/email', emailRouter);
+  // ── Email routes (require login — prevents open-relay abuse) ─────────────
+  app.use('/api/email', requireAuth, emailRouter);
 
-  // ── AI routes ─────────────────────────────────────────────────────────────
-  app.use('/api/ai', aiRouter);
+  // ── AI routes (require login — prevents anonymous credit burn) ───────────
+  app.use('/api/ai', requireAuth, aiRouter);
 
   // ── Static files (production build) ──────────────────────────────────────
   const staticPath =

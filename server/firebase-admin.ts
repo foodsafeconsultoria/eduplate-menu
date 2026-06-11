@@ -9,6 +9,7 @@
  */
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 let adminDb: ReturnType<typeof getFirestore> | null = null;
 
@@ -36,4 +37,11 @@ export function getAdminDb(): ReturnType<typeof getFirestore> {
 
   adminDb = getFirestore();
   return adminDb;
+}
+
+/** Firebase Admin Auth — used to verify ID tokens sent by the client. */
+export function getAdminAuth(): ReturnType<typeof getAuth> {
+  // Ensure the app is initialized (getAdminDb handles init + env validation)
+  getAdminDb();
+  return getAuth();
 }

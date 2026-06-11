@@ -3,7 +3,7 @@ import { AlertTriangle, Rocket, CreditCard, X } from 'lucide-react';
 import { useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiUrl } from '@/lib/apiUrl';
+import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 /**
  * Shows a persistent banner when the org is on trial or has payment issues.
@@ -25,7 +25,7 @@ export default function TrialBanner() {
     try {
       const res = await fetch(apiUrl('/api/stripe/checkout-subscribe'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ orgId: user.organizationId, plan: 'essencial' }),
       });
       const data = await res.json();

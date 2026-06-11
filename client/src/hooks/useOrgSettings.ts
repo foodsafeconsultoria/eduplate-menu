@@ -33,7 +33,7 @@ export interface OrgSettings {
 
 const LEGACY_ORG_ID = 'pnae-default-org';
 
-function storageKey(orgId: string) {
+function storageKey(orgId: string | null) {
   return `pnae_org_settings_${orgId}`;
 }
 
@@ -103,6 +103,7 @@ export function useOrgSettings() {
 
   // ── Save to Firestore ──────────────────────────────────────────────────────
   const saveSettings = useCallback(async (updates: Partial<OrgSettings>) => {
+    if (!orgId) return; // auth ainda carregando — nada a salvar
     const next = { ...settings, ...updates };
     setSettings(next);
     localStorage.setItem(storageKey(orgId), JSON.stringify(next));
@@ -126,6 +127,7 @@ export function useOrgSettings() {
     file: File,
     field: 'logo' | 'signature',
   ): Promise<string> => {
+    if (!orgId) throw new Error('Organização ainda não carregada. Tente novamente.');
     // 1. Upload para Firebase Storage
     const path = `orgs/${orgId}/branding/${field}_${Date.now()}.png`;
     const fRef = storageRef(storage, path);

@@ -9,7 +9,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import EduPlateLogo from '@/components/EduPlateLogo';
-import { apiUrl } from '@/lib/apiUrl';
+import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 // Format phone as (XX) XXXXX-XXXX
 function formatPhone(value: string): string {
@@ -53,7 +53,7 @@ export default function Register() {
       // Send welcome email (fire-and-forget)
       fetch(apiUrl('/api/email/welcome'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ name: name.trim(), email: email.trim() }),
       }).catch(() => {});
 

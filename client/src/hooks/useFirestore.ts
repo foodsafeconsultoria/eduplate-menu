@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { EPI, Inspection, Schedule, School } from '@/types';
-import { loadHybridCollection, persistHybridSnapshot, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
+import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgId } from '@/hooks/useOrgId';
 

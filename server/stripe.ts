@@ -19,6 +19,7 @@ import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { randomBytes, randomUUID } from 'crypto';
 import { getAdminDb } from './firebase-admin.js';
+import { requireAuth, requireOrgMember } from './auth-middleware.js';
 
 // ── Plan definitions (must match Stripe Price IDs in env) ────────────────────
 
@@ -66,7 +67,7 @@ function getPriceId(plan: PlanKey, period: BillingPeriod = 'mensal'): string {
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('STRIPE_SECRET_KEY env var is missing.');
-  return new Stripe(key, { apiVersion: '2025-04-30.basil' });
+  return new Stripe(key, { apiVersion: '2025-02-24.acacia' });
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -181,7 +182,7 @@ router.get('/verify-session', async (req: Request, res: Response) => {
 // Cria checkout para usuário JÁ CADASTRADO que quer assinar (sem trial).
 // Chamado pelo TrialBanner quando o trial está próximo ou expirado.
 // Body: { orgId, plan?, period? }
-router.post('/checkout-subscribe', async (req: Request, res: Response) => {
+router.post('/checkout-subscribe', requireAuth, requireOrgMember, async (req: Request, res: Response) => {
   try {
     const { orgId, plan = 'essencial', period = 'mensal' } = req.body as { orgId: string; plan?: PlanKey; period?: BillingPeriod };
     if (!orgId) return res.status(400).json({ error: 'orgId é obrigatório.' });
@@ -282,7 +283,7 @@ router.post('/setup/complete', async (req: Request, res: Response) => {
 // ── POST /api/stripe/checkout ─────────────────────────────────────────────────
 // Creates a Stripe Checkout session for an EXISTING org (logged-in user).
 // Body: { orgId, plan, period?, userId, userEmail, orgName }
-router.post('/checkout', async (req: Request, res: Response) => {
+router.post('/checkout', requireAuth, requireOrgMember, async (req: Request, res: Response) => {
   try {
     const { orgId, plan, period = 'mensal', userId, userEmail, orgName } = req.body as {
       orgId: string;
@@ -364,7 +365,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
 // ── POST /api/stripe/portal ───────────────────────────────────────────────────
 // Creates a Stripe Customer Portal session for subscription management.
 // Body: { orgId }
-router.post('/portal', async (req: Request, res: Response) => {
+router.post('/portal', requireAuth, requireOrgMember, async (req: Request, res: Response) => {
   try {
     const { orgId } = req.body as { orgId: string };
     if (!orgId) return res.status(400).json({ error: 'orgId é obrigatório.' });
