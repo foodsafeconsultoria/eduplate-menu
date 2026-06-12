@@ -145,7 +145,7 @@ router.post('/welcome', async (req: Request, res: Response) => {
     const resend = getResend();
     const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
     const planLabel: Record<string, string> = {
-      essencial: 'Básico', pro: 'Profissional', enterprise: 'Consórcio',
+      essencial: 'EduPlate Menu', pro: 'EduPlate Menu', enterprise: 'EduPlate Menu',
     };
 
     await resend.emails.send({

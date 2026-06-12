@@ -28,7 +28,7 @@ const FEATURES = [
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 const FAQS = [
   { q: 'O EduPlate Menu funciona para escolas particulares também?', a: 'Sim. O sistema atende tanto redes públicas (PNAE) quanto escolas particulares. Nutricionistas de colégios privados usam para organizar cardápios, dietas especiais de alunos, documentação e treinamentos da equipe de cozinha — sem precisar da parte de SIGPC/FNDE.' },
-  { q: 'O EduPlate Menu funciona para qualquer município?', a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes, com planos adequados para redes menores, maiores e operações em consórcio.' },
+  { q: 'O EduPlate Menu funciona para qualquer município?', a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes — e o plano é único, com todos os módulos e usuários ilimitados, do município pequeno ao consórcio.' },
   { q: 'Preciso instalar algum software?', a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.' },
   { q: 'Como funciona o 1 mês grátis?', a: 'Você acessa todas as funcionalidades do plano escolhido por 30 dias sem custo e sem cartão. Ao final do trial, você escolhe se quer continuar — só então solicitamos uma forma de pagamento.' },
   { q: 'Quem pode usar o sistema além da nutricionista RT?', a: 'Cada organização conta com perfis de nutricionista RT e agente escolar. Os dados são isolados por organização, com segurança LGPD.' },
@@ -309,7 +309,6 @@ export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [billingPeriod, setBillingPeriod] = useState<'mensal' | 'semestral' | 'anual'>('semestral');
 
   const goToPlans = () => navigate('/planos');
   const goToRegister = () => navigate('/registro');
@@ -823,7 +822,7 @@ export default function LandingPage() {
             </p>
             <div className="lp-steps">
               {[
-                { n:'01', title:'Assine o plano', desc:'Escolha o plano ideal para o porte do município e ative o período de teste grátis — nenhuma cobrança no primeiro mês.' },
+                { n:'01', title:'Crie sua conta', desc:'Ative o teste grátis de 30 dias — sem cartão e sem cobrança no primeiro mês. Acesso completo desde o primeiro minuto.' },
                 { n:'02', title:'Configure em minutos', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
                 { n:'03', title:'Use de qualquer lugar', desc:'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.' },
               ].map(s => (
@@ -841,123 +840,27 @@ export default function LandingPage() {
         <section className="lp-section" id="planos">
           <div className="lp-container">
             <span className="lp-eyebrow">Planos e preços</span>
-            <h2 style={{ marginTop:18 }}>Planos pensados para o porte da sua rede</h2>
+            <h2 style={{ marginTop:18 }}>Um plano. Tudo incluso.</h2>
             <p className="lp-lead" style={{ marginTop:18 }}>
-              1 mês grátis em qualquer plano. Sem taxa de setup.
+              Todos os módulos, usuários ilimitados. 1 mês grátis, sem cartão e sem taxa de setup.
             </p>
 
-            {/* ── Toggle de período ─────────────────────────────────── */}
-            <div style={{ display:'flex', justifyContent:'center', marginTop:28 }}>
-              <div style={{ display:'flex', gap:4, background:'#F1F5F9', borderRadius:99, padding:4 }}>
-                {(['mensal','semestral','anual'] as const).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setBillingPeriod(p)}
-                    style={{
-                      padding:'9px 22px', borderRadius:99, fontSize:13, fontWeight:700,
-                      border:'none', cursor:'pointer', position:'relative',
-                      background: billingPeriod === p ? '#fff' : 'transparent',
-                      color: billingPeriod === p ? '#1B2A4A' : '#64748B',
-                      boxShadow: billingPeriod === p ? '0 2px 8px rgba(27,42,74,0.12)' : 'none',
-                      transition:'all 0.18s',
-                    }}
-                  >
-                    {p === 'mensal' ? 'Mensal' : p === 'semestral' ? 'Semestral' : 'Anual'}
-                    {p === 'semestral' && (
-                      <span style={{
-                        position:'absolute', top:-9, right:-2,
-                        background: billingPeriod === 'semestral' ? '#4CAF50' : '#4CAF50',
-                        color:'#fff', fontSize:9, fontWeight:800,
-                        borderRadius:99, padding:'2px 6px', whiteSpace:'nowrap',
-                      }}>Recomendado</span>
-                    )}
-                    {p === 'anual' && billingPeriod !== 'anual' && (
-                      <span style={{
-                        position:'absolute', top:-9, right:-2,
-                        background:'#1A73E8', color:'#fff', fontSize:9,
-                        fontWeight:800, borderRadius:99, padding:'2px 6px',
-                      }}>−30%</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="lp-pricing" style={{ marginTop:28, justifyContent:'center', display:'flex' }}>
 
-            {/* ── Banner oferta — só para períodos com desconto ─────── */}
-            {billingPeriod !== 'mensal' && (
-              <div style={{
-                background:'linear-gradient(135deg,#FF5722,#FF7043)',
-                borderRadius:16, padding:'14px 22px',
-                display:'flex', alignItems:'center', gap:12,
-                marginTop:20, marginBottom:4,
-                boxShadow:'0 8px 24px rgba(255,87,34,0.25)',
-              }}>
-                <span style={{ fontSize:22 }}>⏳</span>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>Oferta de lançamento — vagas limitadas</div>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)', marginTop:2 }}>
-                    Preços especiais para os primeiros municípios que assinarem. Garanta agora.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="lp-pricing" style={{ marginTop: billingPeriod !== 'mensal' ? 16 : 28 }}>
-
-              {/* Básico */}
-              <article className="lp-price-card">
-                <h3>Básico</h3>
-                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Ideal para municípios com até 10 escolas.</p>
-                {billingPeriod !== 'mensal' && (
-                  <>
-                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
-                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 294' : 'De R$ 588'}</span>
-                  </>
-                )}
+              <article className="lp-price-card popular" style={{ maxWidth:440, width:'100%' }}>
+                <span className="lp-popular-badge">Tudo incluso</span>
+                <h3>EduPlate Menu</h3>
+                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>
+                  Para municípios, consórcios e escolas particulares — acesso completo, sem níveis de plano.
+                </p>
                 <div className="lp-price">
-                  {billingPeriod === 'mensal' && <>R$ 49 <small>/mês</small></>}
-                  {billingPeriod === 'semestral' && <>R$ 250 <small>/semestre</small></>}
-                  {billingPeriod === 'anual' && <>R$ 412 <small>/ano</small></>}
+                  R$ 99 <small>/mês</small>
                 </div>
-                {billingPeriod !== 'mensal' && (
-                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
-                    {billingPeriod === 'semestral' ? '≈ R$ 41,67/mês' : '≈ R$ 34,33/mês'}
-                  </p>
-                )}
+                <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
+                  30 dias grátis para testar · cancele quando quiser
+                </p>
                 <ul className="lp-price-list">
-                  {['Cardápios e fichas técnicas','Fiscalização de escolas','Treinamentos + QR Code','Certificados em PDF','Documentos com validade','Relatório SIGPC/FNDE','Suporte por e-mail'].map(i => (
-                    <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
-                  ))}
-                </ul>
-                <div className="lp-spacer" />
-                <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <button className="lp-btn lp-btn-secondary" style={{ width:'100%' }} onClick={goToRegister}>Começar 1 mês grátis</button>
-                </div>
-              </article>
-
-              {/* Essencial */}
-              <article className="lp-price-card popular">
-                <span className="lp-popular-badge">Mais popular</span>
-                <h3>Essencial</h3>
-                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para municípios com até 30 escolas.</p>
-                {billingPeriod !== 'mensal' && (
-                  <>
-                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
-                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 594' : 'De R$ 1.188'}</span>
-                  </>
-                )}
-                <div className="lp-price">
-                  {billingPeriod === 'mensal' && <>R$ 99 <small>/mês</small></>}
-                  {billingPeriod === 'semestral' && <>R$ 505 <small>/semestre</small></>}
-                  {billingPeriod === 'anual' && <>R$ 832 <small>/ano</small></>}
-                </div>
-                {billingPeriod !== 'mensal' && (
-                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
-                    {billingPeriod === 'semestral' ? '≈ R$ 84,17/mês' : '≈ R$ 69,33/mês'}
-                  </p>
-                )}
-                <ul className="lp-price-list">
-                  {['Tudo do plano Básico','Usuários ilimitados','Dietas especiais de alunos','Envio de cardápio por e-mail','Controle de EPIs','Suporte prioritário'].map(i => (
+                  {['Usuários ilimitados','Cardápios e fichas técnicas — 5.000+ alimentos (TACO + TBCA)','Replicação de cardápio por etapa de ensino','Fiscalização de escolas com score e relatório','Treinamentos com certificado por QR Code','Dietas especiais de alunos com etiquetas','Documentos com alerta de vencimento','Relatório SIGPC/FNDE com um clique','Envio de cardápio por e-mail às escolas','Suporte prioritário'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
@@ -965,39 +868,10 @@ export default function LandingPage() {
                 <div className="lp-btn-row" style={{ marginTop:22 }}>
                   <button className="lp-btn lp-btn-primary" style={{ width:'100%' }} onClick={goToRegister}>Começar 1 mês grátis</button>
                 </div>
-              </article>
-
-              {/* Consórcio */}
-              <article className="lp-price-card">
-                <h3>Consórcio</h3>
-                <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>Para redes regionais com múltiplos municípios.</p>
-                {billingPeriod !== 'mensal' && (
-                  <>
-                    <span className="lp-price-badge">🔥 {billingPeriod === 'semestral' ? '15% OFF' : '30% OFF'}</span>
-                    <span className="lp-price-original">{billingPeriod === 'semestral' ? 'De R$ 2.394' : 'De R$ 4.788'}</span>
-                  </>
-                )}
-                <div className="lp-price" style={{ fontSize:'1.5rem' }}>
-                  {billingPeriod === 'mensal' && <>a partir de <strong>R$ 399</strong><small>/mês</small></>}
-                  {billingPeriod === 'semestral' && <>R$ 2.035 <small>/semestre</small></>}
-                  {billingPeriod === 'anual' && <>R$ 3.352 <small>/ano</small></>}
-                </div>
-                {billingPeriod !== 'mensal' && (
-                  <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
-                    {billingPeriod === 'semestral' ? '≈ R$ 339,17/mês' : '≈ R$ 279,33/mês'}
-                  </p>
-                )}
-                <ul className="lp-price-list">
-                  {['Tudo do plano Essencial','Múltiplos municípios','Logo personalizada','Treinamento presencial','SLA garantido','Suporte dedicado'].map(i => (
-                    <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
-                  ))}
-                </ul>
-                <div className="lp-spacer" />
-                <div className="lp-btn-row" style={{ marginTop:22 }}>
-                  <a className="lp-btn lp-btn-outline" style={{ width:'100%', justifyContent:'center' }} href="mailto:contato@eduplate.com.br">
-                    Falar com especialista
-                  </a>
-                </div>
+                <p style={{ fontSize:12, color:'var(--lp-muted)', textAlign:'center', marginTop:12 }}>
+                  Prefeituras: aceitamos pagamento via empenho municipal —{' '}
+                  <a href="mailto:contato@eduplate.com.br" style={{ color:'#4CAF50' }}>fale conosco</a>.
+                </p>
               </article>
 
             </div>

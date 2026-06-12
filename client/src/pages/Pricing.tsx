@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Zap, Building2, Network, X, Mail, Loader2 } from 'lucide-react';
+import { Check, Building2, X, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -7,15 +7,6 @@ import { Input } from '@/components/ui/input';
 import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 type PlanKey = 'essencial' | 'pro' | 'enterprise';
-type BillingPeriod = 'mensal' | 'semestral' | 'anual';
-
-interface PlanPricing {
-  price: string;
-  label: string;
-  old: string | null;
-  equiv: string | null;
-  discount: string | null;
-}
 
 interface Plan {
   key: PlanKey;
@@ -24,72 +15,32 @@ interface Plan {
   icon: React.ReactNode;
   highlight: boolean;
   features: string[];
-  pricing: Record<BillingPeriod, PlanPricing>;
+  price: string;
+  label: string;
 }
 
+// Plano único — acesso completo a todos os módulos.
 const PLANS: Plan[] = [
   {
-    key: 'essencial',
-    name: 'Básico',
-    description: 'Para municípios em início de implantação',
-    icon: <Zap className="w-5 h-5" />,
-    highlight: false,
-    features: [
-      '1 município / organização',
-      'Até 2 usuários',
-      'Cardápios e fichas técnicas',
-      'Controle de dietas especiais',
-      'Registro de produção e sobras',
-      'Testes de aceitabilidade',
-      'Suporte por e-mail (72h)',
-    ],
-    pricing: {
-      mensal:    { price: 'R$ 49',    label: '/mês',      old: null,         equiv: null,              discount: null },
-      semestral: { price: 'R$ 250',   label: '/semestre', old: 'De R$ 294',  equiv: '≈ R$ 41,67/mês',  discount: '15% OFF' },
-      anual:     { price: 'R$ 412',   label: '/ano',      old: 'De R$ 588',  equiv: '≈ R$ 34,33/mês',  discount: '30% OFF' },
-    },
-  },
-  {
     key: 'pro',
-    name: 'Essencial',
-    description: 'Para secretarias com operação ativa',
+    name: 'EduPlate Menu',
+    description: 'Acesso completo a todos os módulos. Um preço único, sem surpresa.',
     icon: <Building2 className="w-5 h-5" />,
     highlight: true,
     features: [
-      '1 município / organização',
       'Usuários ilimitados',
-      'Tudo do plano Básico',
-      'Fiscalização de escolas',
-      'Treinamentos com certificado (QR)',
-      'Relatórios e exportação SIGPC',
-      'Suporte prioritário (48h)',
+      'Cardápios e fichas técnicas — banco com 5.000+ alimentos (TACO + TBCA)',
+      'Replicação de cardápio por etapa de ensino',
+      'Fiscalização de escolas com score e relatório',
+      'Treinamentos com certificado por QR Code',
+      'Dietas especiais por aluno, com etiquetas',
+      'Documentos com alerta de vencimento',
+      'Relatório SIGPC/FNDE com um clique',
+      'Produção, sobras e testes de aceitabilidade',
+      'Suporte prioritário',
     ],
-    pricing: {
-      mensal:    { price: 'R$ 99',    label: '/mês',      old: null,          equiv: null,              discount: null },
-      semestral: { price: 'R$ 505',   label: '/semestre', old: 'De R$ 594',   equiv: '≈ R$ 84,17/mês',  discount: '15% OFF' },
-      anual:     { price: 'R$ 832',   label: '/ano',      old: 'De R$ 1.188', equiv: '≈ R$ 69,33/mês',  discount: '30% OFF' },
-    },
-  },
-  {
-    key: 'enterprise',
-    name: 'Consórcio',
-    description: 'Para consórcios intermunicipais',
-    icon: <Network className="w-5 h-5" />,
-    highlight: false,
-    features: [
-      'Municípios ilimitados',
-      'Usuários ilimitados',
-      'Tudo do plano Essencial',
-      'Painel multi-município consolidado',
-      'SLA 99,9% garantido',
-      'Suporte dedicado (WhatsApp)',
-      'Onboarding e treinamento incluso',
-    ],
-    pricing: {
-      mensal:    { price: 'R$ 399',   label: '/mês',      old: null,           equiv: null,               discount: null },
-      semestral: { price: 'R$ 2.035', label: '/semestre', old: 'De R$ 2.394',  equiv: '≈ R$ 339,17/mês',  discount: '15% OFF' },
-      anual:     { price: 'R$ 3.352', label: '/ano',      old: 'De R$ 4.788',  equiv: '≈ R$ 279,33/mês',  discount: '30% OFF' },
-    },
+    price: 'R$ 99',
+    label: '/mês',
   },
 ];
 
@@ -97,10 +48,6 @@ const FAQS = [
   {
     q: 'Preciso de cartão de crédito para o 1 mês grátis?',
     a: 'Não. O cadastro é totalmente gratuito e sem cartão. Você só precisa informar uma forma de pagamento quando o trial de 30 dias estiver prestes a terminar — e apenas se quiser continuar.',
-  },
-  {
-    q: 'Qual a diferença entre o plano semestral e anual?',
-    a: 'No semestral você paga a cada 6 meses com 15% de desconto em relação ao mensal. No anual, paga uma vez por ano com 30% de desconto — a opção mais econômica. Ambos incluem o mês de trial gratuito.',
   },
   {
     q: 'A prefeitura pode pagar com empenho ou nota de empenho?',
@@ -112,7 +59,7 @@ const FAQS = [
   },
   {
     q: 'Quantos usuários posso cadastrar?',
-    a: 'No plano Básico, até 2 usuários (ideal para nutricionistas RT e um agente). No plano Essencial e Consórcio, usuários ilimitados — toda a equipe da secretaria pode ter acesso com perfis e permissões diferentes.',
+    a: 'Usuários ilimitados — toda a equipe da secretaria pode ter acesso, com perfis e permissões diferentes (nutricionista, agente escolar, visualização).',
   },
   {
     q: 'Os dados de cada município ficam separados e seguros?',
@@ -129,7 +76,6 @@ export default function Pricing() {
   const { status, plan: currentPlan } = useSubscription();
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('semestral');
 
   // Email modal for non-logged-in visitors
   const [emailModal, setEmailModal] = useState<{ open: boolean; planKey: PlanKey | null }>({ open: false, planKey: null });
@@ -151,7 +97,6 @@ export default function Pricing() {
           body: JSON.stringify({
             orgId: user.organizationId,
             plan: planKey,
-            period: billingPeriod,
             userId: user.uid,
             userEmail: user.email,
             orgName: user.organizationId,
@@ -181,7 +126,7 @@ export default function Pricing() {
       const res = await fetch(apiUrl('/api/stripe/checkout-new'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput.trim(), plan: planKey, period: billingPeriod }),
+        body: JSON.stringify({ email: emailInput.trim(), plan: planKey }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
@@ -202,9 +147,9 @@ export default function Pricing() {
           style={{ background: 'rgba(76,175,80,0.15)', color: '#4CAF50', border: '1px solid rgba(76,175,80,0.3)' }}>
           30 dias grátis · Sem cartão
         </span>
-        <h1 className="text-4xl font-extrabold text-white mt-2">Planos para cada etapa</h1>
+        <h1 className="text-4xl font-extrabold text-white mt-2">Um plano. Tudo incluso.</h1>
         <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          Do primeiro cardápio ao consórcio intermunicipal — sem complicação.
+          Todos os módulos, usuários ilimitados, R$ 99 por mês. Simples assim.
         </p>
         <div className="flex items-center justify-center gap-5 mt-6 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
           {['Pix', 'Boleto', 'Cartão de crédito', 'Empenho municipal'].map(m => (
@@ -222,65 +167,14 @@ export default function Pricing() {
 
       <div className="max-w-5xl mx-auto px-4 -mt-6 pb-20">
 
-        {/* ── Toggle de período ─────────────────────────────────────── */}
-        <div className="flex justify-center mt-10 mb-2">
-          <div style={{ display:'flex', gap:4, background:'#F1F5F9', borderRadius:99, padding:4 }}>
-            {(['mensal','semestral','anual'] as const).map(p => (
-              <button
-                key={p}
-                onClick={() => setBillingPeriod(p)}
-                style={{
-                  padding:'10px 24px', borderRadius:99, fontSize:14, fontWeight:700,
-                  border:'none', cursor:'pointer', position:'relative',
-                  background: billingPeriod === p ? '#fff' : 'transparent',
-                  color: billingPeriod === p ? '#1B2A4A' : '#64748B',
-                  boxShadow: billingPeriod === p ? '0 2px 8px rgba(27,42,74,0.12)' : 'none',
-                  transition:'all 0.18s',
-                }}
-              >
-                {p === 'mensal' ? 'Mensal' : p === 'semestral' ? 'Semestral' : 'Anual'}
-                {p === 'semestral' && (
-                  <span style={{
-                    position:'absolute', top:-10, right:-2,
-                    background:'#4CAF50', color:'#fff', fontSize:9,
-                    fontWeight:800, borderRadius:99, padding:'2px 8px', whiteSpace:'nowrap',
-                  }}>Recomendado</span>
-                )}
-                {p === 'anual' && billingPeriod !== 'anual' && (
-                  <span style={{
-                    position:'absolute', top:-10, right:-2,
-                    background:'#1A73E8', color:'#fff', fontSize:9,
-                    fontWeight:800, borderRadius:99, padding:'2px 6px',
-                  }}>−30%</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Banner oferta — só para períodos com desconto */}
-        {billingPeriod !== 'mensal' && (
-          <div className="flex items-center gap-3 rounded-2xl px-5 py-3 mt-6 mb-2"
-            style={{ background:'linear-gradient(135deg,#FF5722,#FF7043)', boxShadow:'0 8px 24px rgba(255,87,34,0.25)' }}>
-            <span style={{ fontSize:20 }}>⏳</span>
-            <div>
-              <p className="text-sm font-extrabold text-white">Oferta de lançamento — vagas limitadas</p>
-              <p className="text-xs mt-0.5" style={{ color:'rgba(255,255,255,0.85)' }}>
-                Preços especiais para os primeiros municípios que assinarem. Garanta agora.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 mt-6">
+        <div className="flex justify-center mb-12 mt-12">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.key && status === 'active';
-            const pricing = plan.pricing[billingPeriod];
             return (
               <div
                 key={plan.key}
-                className={`relative bg-white rounded-2xl p-6 flex flex-col ${
+                className={`relative bg-white rounded-2xl p-8 flex flex-col w-full max-w-md ${
                   plan.highlight
                     ? 'border-2 border-green-600 shadow-xl'
                     : 'border border-gray-200 shadow-sm'
@@ -297,29 +191,12 @@ export default function Pricing() {
                   <span className="font-bold text-lg">{plan.name}</span>
                 </div>
 
-                {/* Discount badge */}
-                {pricing.discount && (
-                  <span className="inline-block text-xs font-extrabold px-2 py-0.5 rounded-full mb-2 w-fit"
-                    style={{ background:'linear-gradient(135deg,#FF5722,#FF7043)', color:'#fff' }}>
-                    🔥 {pricing.discount}
-                  </span>
-                )}
-
-                {/* Old price */}
-                {pricing.old && (
-                  <p className="text-sm line-through text-gray-400 mb-0.5">{pricing.old}</p>
-                )}
-
                 {/* Price */}
                 <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-4xl font-extrabold text-gray-900">{pricing.price}</span>
-                  <span className="text-gray-400 text-sm">{pricing.label}</span>
+                  <span className="text-5xl font-extrabold text-gray-900">{plan.price}</span>
+                  <span className="text-gray-400 text-sm">{plan.label}</span>
                 </div>
-
-                {/* Monthly equivalent */}
-                {pricing.equiv && (
-                  <p className="text-xs text-gray-400 mb-2">{pricing.equiv}</p>
-                )}
+                <p className="text-xs text-gray-400 mb-2">30 dias grátis para testar · cancele quando quiser</p>
 
                 <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
 

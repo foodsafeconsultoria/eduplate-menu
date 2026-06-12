@@ -26,40 +26,21 @@ import { requireAuth, requireOrgMember } from './auth-middleware.js';
 export type BillingPeriod = 'mensal' | 'semestral' | 'anual';
 
 export const PLANS = {
-  essencial: {
-    name: 'Básico',
-    description: '1 município · até 2 usuários',
-    priceIds: {
-      mensal:    () => process.env.STRIPE_PRICE_ESSENCIAL            || '',
-      semestral: () => process.env.STRIPE_PRICE_ESSENCIAL_SEMESTRAL  || '',
-      anual:     () => process.env.STRIPE_PRICE_ESSENCIAL_ANUAL      || '',
-    },
-  },
-  pro: {
-    name: 'Essencial',
-    description: '1 município · usuários ilimitados',
-    priceIds: {
-      mensal:    () => process.env.STRIPE_PRICE_PRO            || '',
-      semestral: () => process.env.STRIPE_PRICE_PRO_SEMESTRAL  || '',
-      anual:     () => process.env.STRIPE_PRICE_PRO_ANUAL      || '',
-    },
-  },
-  enterprise: {
-    name: 'Consórcio',
-    description: 'Municípios ilimitados · onboarding incluso',
-    priceIds: {
-      mensal:    () => process.env.STRIPE_PRICE_ENTERPRISE            || '',
-      semestral: () => process.env.STRIPE_PRICE_ENTERPRISE_SEMESTRAL  || '',
-      anual:     () => process.env.STRIPE_PRICE_ENTERPRISE_ANUAL      || '',
-    },
-  },
+  // ── PLANO ÚNICO ──────────────────────────────────────────────────────────
+  // O EduPlate passou a ter um único plano (R$99/mês, tudo incluso).
+  // As três chaves são mantidas por compatibilidade com clients antigos —
+  // todas apontam para o MESMO price do Stripe.
+  // Env: STRIPE_PRICE_UNICO (preferida) ou STRIPE_PRICE_PRO (legado, R$99/mês).
+  essencial:  { name: 'EduPlate Menu', description: 'Acesso completo · usuários ilimitados' },
+  pro:        { name: 'EduPlate Menu', description: 'Acesso completo · usuários ilimitados' },
+  enterprise: { name: 'EduPlate Menu', description: 'Acesso completo · usuários ilimitados' },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;
 
-/** Returns the correct Stripe Price ID for a plan + billing period. */
-function getPriceId(plan: PlanKey, period: BillingPeriod = 'mensal'): string {
-  return PLANS[plan].priceIds[period]();
+/** Plano único: retorna sempre o mesmo Price ID, independente de plano/período. */
+function getPriceId(_plan: PlanKey, _period: BillingPeriod = 'mensal'): string {
+  return process.env.STRIPE_PRICE_UNICO || process.env.STRIPE_PRICE_PRO || '';
 }
 
 // ── Stripe client (lazy-init so missing key doesn't crash on startup) ─────────
