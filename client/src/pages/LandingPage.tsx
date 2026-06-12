@@ -305,6 +305,7 @@ function MockDocumentos() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const [billingPeriod, setBillingPeriod] = useState<'mensal' | 'semestral' | 'anual'>('mensal');
   const [, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -853,14 +854,55 @@ export default function LandingPage() {
                 <p style={{ color:'var(--lp-muted)', fontSize:14, marginTop:8 }}>
                   Para municípios, consórcios e escolas particulares — acesso completo, sem níveis de plano.
                 </p>
-                <div className="lp-price">
-                  R$ 99 <small>/mês</small>
+                {/* Seletor de período */}
+                <div style={{ display:'flex', gap:6, margin:'14px 0 12px' }}>
+                  {([
+                    { k:'mensal',    label:'Mensal',    badge:null },
+                    { k:'semestral', label:'Semestral', badge:'−15%' },
+                    { k:'anual',     label:'Anual',     badge:'−30%' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.k}
+                      type="button"
+                      onClick={() => setBillingPeriod(opt.k)}
+                      style={{
+                        flex:1, padding:'9px 4px', borderRadius:12, cursor:'pointer',
+                        border: billingPeriod === opt.k ? '2px solid #4CAF50' : '2px solid #E6EBF2',
+                        background: billingPeriod === opt.k ? 'rgba(76,175,80,0.06)' : '#fff',
+                        fontSize:13, fontWeight:700,
+                        color: billingPeriod === opt.k ? '#1B2A4A' : '#64748B',
+                        position:'relative', transition:'all 0.15s',
+                      }}
+                    >
+                      {opt.label}
+                      {opt.badge && (
+                        <span style={{
+                          position:'absolute', top:-9, right:6,
+                          background: opt.k === 'semestral' ? '#4CAF50' : '#1A73E8',
+                          color:'#fff', fontSize:9, fontWeight:800,
+                          borderRadius:99, padding:'1px 6px',
+                        }}>{opt.badge}</span>
+                      )}
+                    </button>
+                  ))}
                 </div>
-                <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:4 }}>
+                {billingPeriod !== 'mensal' && (
+                  <p style={{ fontSize:13, color:'#94A3B8', textDecoration:'line-through', marginBottom:0 }}>
+                    {billingPeriod === 'semestral' ? 'De R$ 594' : 'De R$ 1.188'}
+                  </p>
+                )}
+                <div className="lp-price">
+                  {billingPeriod === 'mensal'    && <>R$ 99 <small>/mês</small></>}
+                  {billingPeriod === 'semestral' && <>R$ 505 <small>/semestre</small></>}
+                  {billingPeriod === 'anual'     && <>R$ 832 <small>/ano</small></>}
+                </div>
+                {billingPeriod !== 'mensal' && (
+                  <p style={{ fontSize:13, fontWeight:700, color:'#4CAF50', marginTop:-4, marginBottom:2 }}>
+                    {billingPeriod === 'semestral' ? '≈ R$ 84,17/mês · economia de 15%' : '≈ R$ 69,33/mês · economia de 30%'}
+                  </p>
+                )}
+                <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop: billingPeriod === 'mensal' ? -4 : 2, marginBottom:8 }}>
                   30 dias grátis para testar · cancele quando quiser
-                </p>
-                <p style={{ fontSize:12, color:'var(--lp-muted)', marginBottom:8 }}>
-                  Ou economize: <strong>semestral R$ 505</strong> (≈ R$ 84/mês · −15%) · <strong>anual R$ 832</strong> (≈ R$ 69/mês · −30%)
                 </p>
                 <ul className="lp-price-list">
                   {['Usuários ilimitados','Cardápios e fichas técnicas — 5.000+ alimentos (TACO + TBCA)','Replicação de cardápio por etapa de ensino','Fiscalização de escolas com score e relatório','Treinamentos com certificado por QR Code','Dietas especiais de alunos com etiquetas','Documentos com alerta de vencimento','Relatório SIGPC/FNDE com um clique','Envio de cardápio por e-mail às escolas','Suporte prioritário'].map(i => (
