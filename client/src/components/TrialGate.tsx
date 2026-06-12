@@ -117,15 +117,16 @@ export default function TrialGate({ children }: Props) {
             </div>
           </div>
 
-          {/* Planos resumo */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+          {/* Plano único — 3 períodos */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
             {[
-              { name: 'Básico', price: 'R$ 49', sub: 'até 10 escolas', color: '#1A73E8' },
-              { name: 'Essencial', price: 'R$ 99', sub: 'até 30 escolas', color: '#4CAF50', popular: true },
+              { name: 'Mensal', price: 'R$ 99', sub: '/mês', color: '#1B2A4A' },
+              { name: 'Semestral', price: 'R$ 505', sub: '≈ R$ 84/mês', color: '#4CAF50', popular: true },
+              { name: 'Anual', price: 'R$ 832', sub: '≈ R$ 69/mês', color: '#1A73E8' },
             ].map(p => (
               <div key={p.name} style={{
                 border: `2px solid ${p.popular ? 'rgba(76,175,80,0.35)' : '#E6EBF2'}`,
-                borderRadius: 16, padding: '14px 16px',
+                borderRadius: 16, padding: '14px 12px',
                 background: p.popular ? 'rgba(76,175,80,0.04)' : '#fff',
                 position: 'relative',
               }}>
@@ -135,12 +136,12 @@ export default function TrialGate({ children }: Props) {
                     background: '#4CAF50', color: '#fff', fontSize: 10, fontWeight: 800,
                     borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap',
                   }}>
-                    Mais popular
+                    −15%
                   </div>
                 )}
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1B2A4A', marginBottom: 4 }}>{p.name}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: p.color, fontFamily: "'Poppins', sans-serif", lineHeight: 1 }}>{p.price}</div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>/mês · {p.sub}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#1B2A4A', marginBottom: 4 }}>{p.name}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: p.color, fontFamily: "'Poppins', sans-serif", lineHeight: 1 }}>{p.price}</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>{p.sub}</div>
               </div>
             ))}
           </div>

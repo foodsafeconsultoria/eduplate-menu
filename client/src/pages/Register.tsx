@@ -107,10 +107,13 @@ export default function Register() {
 
           <div className="mt-10 w-full rounded-2xl p-4" style={{ background:'rgba(76,175,80,0.1)', border:'1px solid rgba(76,175,80,0.2)' }}>
             <p className="text-xs text-center" style={{ color:'rgba(255,255,255,0.5)' }}>
-              Após o 1º mês, a partir de
+              Após o 1º mês — tudo incluso
             </p>
             <p className="text-2xl font-extrabold text-center mt-1" style={{ color:'#4CAF50' }}>
-              R$ 49,90<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
+              R$ 99<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
+            </p>
+            <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.55)' }}>
+              ou R$ 505/semestre (≈ R$ 84/mês) · R$ 832/ano (≈ R$ 69/mês)
             </p>
             <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.35)' }}>
               Cancele no trial e não paga nada

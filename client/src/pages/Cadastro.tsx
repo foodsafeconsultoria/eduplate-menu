@@ -101,9 +101,9 @@ export default function Cadastro() {
   };
 
   const planLabel: Record<string, string> = {
-    essencial: 'Básico',
-    pro: 'Profissional',
-    enterprise: 'Consórcio',
+    essencial: 'EduPlate Menu',
+    pro: 'EduPlate Menu',
+    enterprise: 'EduPlate Menu',
   };
 
   return (

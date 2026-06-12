@@ -7,15 +7,15 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 const PLAN_LABELS: Record<string, string> = {
-  essencial: 'Básico',
-  pro: 'Profissional',
-  enterprise: 'Consórcio',
+  essencial: 'EduPlate Menu',
+  pro: 'EduPlate Menu',
+  enterprise: 'EduPlate Menu',
 };
 
 const PLAN_PRICES: Record<string, string> = {
-  essencial: 'R$ 49,90/mês',
-  pro: 'R$ 99/mês',
-  enterprise: 'R$ 399/mês',
+  essencial: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
+  pro: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
+  enterprise: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
 };
 
 function StatusBadge({ status }: { status: string }) {
