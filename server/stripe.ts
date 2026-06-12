@@ -38,9 +38,22 @@ export const PLANS = {
 
 export type PlanKey = keyof typeof PLANS;
 
-/** Plano único: retorna sempre o mesmo Price ID, independente de plano/período. */
-function getPriceId(_plan: PlanKey, _period: BillingPeriod = 'mensal'): string {
-  return process.env.STRIPE_PRICE_UNICO || process.env.STRIPE_PRICE_PRO || '';
+/**
+ * Plano único com 3 períodos de cobrança. Independente da chave de plano
+ * enviada pelo client, o preço vem só do PERÍODO:
+ *   mensal    → STRIPE_PRICE_UNICO            (ou STRIPE_PRICE_PRO, R$99/mês)
+ *   semestral → STRIPE_PRICE_UNICO_SEMESTRAL  (ou STRIPE_PRICE_PRO_SEMESTRAL, R$505)
+ *   anual     → STRIPE_PRICE_UNICO_ANUAL      (ou STRIPE_PRICE_PRO_ANUAL, R$832)
+ */
+function getPriceId(_plan: PlanKey, period: BillingPeriod = 'mensal'): string {
+  switch (period) {
+    case 'semestral':
+      return process.env.STRIPE_PRICE_UNICO_SEMESTRAL || process.env.STRIPE_PRICE_PRO_SEMESTRAL || '';
+    case 'anual':
+      return process.env.STRIPE_PRICE_UNICO_ANUAL || process.env.STRIPE_PRICE_PRO_ANUAL || '';
+    default:
+      return process.env.STRIPE_PRICE_UNICO || process.env.STRIPE_PRICE_PRO || '';
+  }
 }
 
 // ── Stripe client (lazy-init so missing key doesn't crash on startup) ─────────

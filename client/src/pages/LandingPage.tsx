@@ -22,7 +22,7 @@ const FEATURES = [
   { icon: <FolderOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#9C27B0,#BA68C8)', title: 'Documentos com validade', desc: 'Controle alvarás, RDC 216, PNAE e outros — alertas automáticos antes do vencimento.' },
   { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#E91E63,#F06292)', title: 'Relatório SIGPC/FNDE', desc: 'Dados preenchidos automaticamente do sistema. Gere o PDF do SIGPC com um clique, por quadrimestre.' },
   { icon: <Users size={22} color="#fff" />, bg: 'linear-gradient(135deg,#00BCD4,#4DD0E1)', title: 'Dietas especiais', desc: 'Centralize restrições alimentares de alunos com etiquetas, prescrições e acompanhamento por escola.' },
-  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#43A047,#1B5E20)', title: 'Banco de 600+ alimentos (TACO/UNICAMP)', desc: 'Banco de alimentos baseado na Tabela TACO/UNICAMP com cálculo automático dos nutrientes obrigatórios pelo PNAE — kcal, proteínas, ferro, zinco, vitaminas A e C e mais.' },
+  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#43A047,#1B5E20)', title: 'Banco de 5.000+ alimentos (TACO + TBCA)', desc: 'Banco de alimentos baseado nas tabelas TACO/UNICAMP e TBCA/USP com cálculo automático dos nutrientes obrigatórios pelo PNAE — kcal, proteínas, ferro, zinco, vitaminas A e C e mais.' },
 ];
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
@@ -412,7 +412,7 @@ export default function LandingPage() {
             {[
               { icon: <Clock size={20} color="#4CAF50" />, big:'1 mês', label:'de acesso grátis para testar' },
               { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
-              { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'600+', label:'alimentos TACO com nutrientes calculados automaticamente' },
+              { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'5.000+', label:'alimentos (TACO + TBCA) com nutrientes calculados automaticamente' },
               { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
             ].map(s => (
               <div key={s.big} className="lp-stat">
@@ -552,15 +552,15 @@ export default function LandingPage() {
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Diferencial exclusivo</span>
                 </div>
-                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 600+ alimentos com cálculo nutricional automático</h3>
+                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 5.000+ alimentos com cálculo nutricional automático</h3>
                 <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 10, lineHeight: 1.65 }}>
-                  O EduPlate Menu inclui banco de alimentos baseado na <strong style={{ color: '#81C784' }}>Tabela TACO (UNICAMP)</strong> — o padrão de referência do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
+                  O EduPlate Menu inclui banco de alimentos baseado nas tabelas <strong style={{ color: '#81C784' }}>TACO (UNICAMP) e TBCA (USP)</strong> — as referências oficiais do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
                 </p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, width: '100%' }}>
                 {[
-                  { n: '600+', l: 'alimentos cadastrados' },
-                  { n: 'TACO', l: 'Tabela UNICAMP' },
+                  { n: '5.000+', l: 'alimentos cadastrados' },
+                  { n: 'TACO+TBCA', l: 'tabelas oficiais' },
                   { n: 'PNAE', l: 'nutrientes PNAE calculados' },
                   { n: '1 clique', l: 'para gerar ficha técnica' },
                 ].map(s => (
@@ -679,7 +679,7 @@ export default function LandingPage() {
               <video
                 controls
                 preload="none"
-                poster="/og-image.png"
+                poster="/video-poster.png"
                 style={{ width:'100%', display:'block', maxHeight:480, background:'#000' }}
               >
                 <source src="/demo-cardapio.mp4" type="video/mp4" />
@@ -740,7 +740,7 @@ export default function LandingPage() {
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:12, justifyContent:'center', marginTop:8 }}>
               {[
-                'Banco TACO/UNICAMP integrado',
+                'Banco TACO + TBCA integrado',
                 'Relatório SIGPC com 1 clique',
                 'Certificados com assinatura digital',
                 'Checklist de fiscalização completo',
@@ -856,8 +856,11 @@ export default function LandingPage() {
                 <div className="lp-price">
                   R$ 99 <small>/mês</small>
                 </div>
-                <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:8 }}>
+                <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop:-4, marginBottom:4 }}>
                   30 dias grátis para testar · cancele quando quiser
+                </p>
+                <p style={{ fontSize:12, color:'var(--lp-muted)', marginBottom:8 }}>
+                  Ou economize: <strong>semestral R$ 505</strong> (≈ R$ 84/mês · −15%) · <strong>anual R$ 832</strong> (≈ R$ 69/mês · −30%)
                 </p>
                 <ul className="lp-price-list">
                   {['Usuários ilimitados','Cardápios e fichas técnicas — 5.000+ alimentos (TACO + TBCA)','Replicação de cardápio por etapa de ensino','Fiscalização de escolas com score e relatório','Treinamentos com certificado por QR Code','Dietas especiais de alunos com etiquetas','Documentos com alerta de vencimento','Relatório SIGPC/FNDE com um clique','Envio de cardápio por e-mail às escolas','Suporte prioritário'].map(i => (

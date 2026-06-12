@@ -7,6 +7,15 @@ import { Input } from '@/components/ui/input';
 import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 type PlanKey = 'essencial' | 'pro' | 'enterprise';
+type BillingPeriod = 'mensal' | 'semestral' | 'anual';
+
+interface PlanPricing {
+  price: string;
+  label: string;
+  old: string | null;
+  equiv: string | null;
+  discount: string | null;
+}
 
 interface Plan {
   key: PlanKey;
@@ -15,8 +24,7 @@ interface Plan {
   icon: React.ReactNode;
   highlight: boolean;
   features: string[];
-  price: string;
-  label: string;
+  pricing: Record<BillingPeriod, PlanPricing>;
 }
 
 // Plano único — acesso completo a todos os módulos.
@@ -39,8 +47,11 @@ const PLANS: Plan[] = [
       'Produção, sobras e testes de aceitabilidade',
       'Suporte prioritário',
     ],
-    price: 'R$ 99',
-    label: '/mês',
+    pricing: {
+      mensal:    { price: 'R$ 99',  label: '/mês',      old: null,          equiv: null,             discount: null },
+      semestral: { price: 'R$ 505', label: '/semestre', old: 'De R$ 594',   equiv: '≈ R$ 84,17/mês', discount: '15% OFF' },
+      anual:     { price: 'R$ 832', label: '/ano',      old: 'De R$ 1.188', equiv: '≈ R$ 69,33/mês', discount: '30% OFF' },
+    },
   },
 ];
 
@@ -48,6 +59,10 @@ const FAQS = [
   {
     q: 'Preciso de cartão de crédito para o 1 mês grátis?',
     a: 'Não. O cadastro é totalmente gratuito e sem cartão. Você só precisa informar uma forma de pagamento quando o trial de 30 dias estiver prestes a terminar — e apenas se quiser continuar.',
+  },
+  {
+    q: 'Qual a diferença entre mensal, semestral e anual?',
+    a: 'O plano é o mesmo — acesso completo a tudo. Muda só a forma de pagar: no semestral você economiza 15% (R$505 a cada 6 meses, ≈R$84/mês) e no anual, 30% (R$832/ano, ≈R$69/mês). Todos incluem os 30 dias de teste grátis.',
   },
   {
     q: 'A prefeitura pode pagar com empenho ou nota de empenho?',
@@ -75,6 +90,7 @@ export default function Pricing() {
   const { user, loading: authLoading } = useAuth();
   const { status, plan: currentPlan } = useSubscription();
   const [loading, setLoading] = useState<PlanKey | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('mensal');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Email modal for non-logged-in visitors
@@ -97,6 +113,7 @@ export default function Pricing() {
           body: JSON.stringify({
             orgId: user.organizationId,
             plan: planKey,
+            period: billingPeriod,
             userId: user.uid,
             userEmail: user.email,
             orgName: user.organizationId,
@@ -126,7 +143,7 @@ export default function Pricing() {
       const res = await fetch(apiUrl('/api/stripe/checkout-new'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput.trim(), plan: planKey }),
+        body: JSON.stringify({ email: emailInput.trim(), plan: planKey, period: billingPeriod }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
@@ -167,8 +184,44 @@ export default function Pricing() {
 
       <div className="max-w-5xl mx-auto px-4 -mt-6 pb-20">
 
+        {/* ── Toggle de período ─────────────────────────────────────── */}
+        <div className="flex justify-center mt-10 mb-2">
+          <div style={{ display:'flex', gap:4, background:'#F1F5F9', borderRadius:99, padding:4 }}>
+            {(['mensal','semestral','anual'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setBillingPeriod(p)}
+                style={{
+                  padding:'10px 24px', borderRadius:99, fontSize:14, fontWeight:700,
+                  border:'none', cursor:'pointer', position:'relative',
+                  background: billingPeriod === p ? '#fff' : 'transparent',
+                  color: billingPeriod === p ? '#1B2A4A' : '#64748B',
+                  boxShadow: billingPeriod === p ? '0 2px 8px rgba(27,42,74,0.12)' : 'none',
+                  transition:'all 0.18s',
+                }}
+              >
+                {p === 'mensal' ? 'Mensal' : p === 'semestral' ? 'Semestral' : 'Anual'}
+                {p === 'semestral' && billingPeriod !== 'semestral' && (
+                  <span style={{
+                    position:'absolute', top:-10, right:-2,
+                    background:'#4CAF50', color:'#fff', fontSize:9,
+                    fontWeight:800, borderRadius:99, padding:'2px 6px',
+                  }}>−15%</span>
+                )}
+                {p === 'anual' && billingPeriod !== 'anual' && (
+                  <span style={{
+                    position:'absolute', top:-10, right:-2,
+                    background:'#1A73E8', color:'#fff', fontSize:9,
+                    fontWeight:800, borderRadius:99, padding:'2px 6px',
+                  }}>−30%</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Plan cards */}
-        <div className="flex justify-center mb-12 mt-12">
+        <div className="flex justify-center mb-12 mt-6">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.key && status === 'active';
             return (
@@ -192,10 +245,24 @@ export default function Pricing() {
                 </div>
 
                 {/* Price */}
+                {(() => { const pricing = plan.pricing[billingPeriod]; return (<>
+                {pricing.discount && (
+                  <span className="inline-block text-xs font-extrabold px-2 py-0.5 rounded-full mb-2 w-fit"
+                    style={{ background:'linear-gradient(135deg,#FF5722,#FF7043)', color:'#fff' }}>
+                    🔥 {pricing.discount}
+                  </span>
+                )}
+                {pricing.old && (
+                  <p className="text-sm line-through text-gray-400 mb-0.5">{pricing.old}</p>
+                )}
                 <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-5xl font-extrabold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-400 text-sm">{plan.label}</span>
+                  <span className="text-5xl font-extrabold text-gray-900">{pricing.price}</span>
+                  <span className="text-gray-400 text-sm">{pricing.label}</span>
                 </div>
+                {pricing.equiv && (
+                  <p className="text-xs text-gray-400 mb-1">{pricing.equiv}</p>
+                )}
+                </>); })()}
                 <p className="text-xs text-gray-400 mb-2">30 dias grátis para testar · cancele quando quiser</p>
 
                 <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
