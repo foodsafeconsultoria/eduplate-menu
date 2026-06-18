@@ -53,6 +53,8 @@ export interface Recipe {
   prepTime?: string;
   preparationMethod?: string;
   operationalNotes?: string;
+  /** Medida caseira da porção (ex.: "1 concha média", "2 colheres de servir") */
+  medidaCaseira?: string;
   costTotal: number;
   costPerServing: number;
   nutrientsPerServing: NutritionNutrientSet;

@@ -16,7 +16,7 @@ import { DIET_LABELS, DIET_LABEL_MAP } from '@/data/dietLabels';
 
 const labelMap = DIET_LABEL_MAP;
 
-const SCHOOL_STAGES = ['Creche', 'Ensino Infantil', 'Fundamental 1', 'Fundamental 2', 'Médio'] as const;
+const SCHOOL_STAGES = ['Creche', 'Ensino Infantil', 'Fundamental 1', 'Fundamental 2', 'Médio', 'EJA'] as const;
 
 // ── Printable sticker label (single student) ──────────────────────────────────
 

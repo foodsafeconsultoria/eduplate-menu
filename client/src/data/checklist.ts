@@ -17,7 +17,7 @@ export const checklistSections = {
     "Utilizam sistema PVPS?",
     "Há etiquetas com data de validade?",
     "Produtos de limpeza estão separados?",
-    "Há produtos vencidos?"
+    "Os produtos estão dentro do prazo de validade?"
   ],
   
   refrigerator: [
@@ -33,7 +33,7 @@ export const checklistSections = {
   ],
   
   pestControl: [
-    "Há evidência de pragas?",
+    "O ambiente está livre de pragas?",
     "Há sistema de controle de pragas?"
   ],
   

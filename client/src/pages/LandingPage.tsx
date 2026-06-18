@@ -858,8 +858,8 @@ export default function LandingPage() {
                 <div style={{ display:'flex', gap:6, margin:'14px 0 12px' }}>
                   {([
                     { k:'mensal',    label:'Mensal',    badge:null },
-                    { k:'semestral', label:'Semestral', badge:'−15%' },
-                    { k:'anual',     label:'Anual',     badge:'−30%' },
+                    { k:'semestral', label:'Semestral', badge:'−10%' },
+                    { k:'anual',     label:'Anual',     badge:'−20%' },
                   ] as const).map(opt => (
                     <button
                       key={opt.k}
@@ -888,17 +888,17 @@ export default function LandingPage() {
                 </div>
                 {billingPeriod !== 'mensal' && (
                   <p style={{ fontSize:13, color:'#94A3B8', textDecoration:'line-through', marginBottom:0 }}>
-                    {billingPeriod === 'semestral' ? 'De R$ 594' : 'De R$ 1.188'}
+                    {billingPeriod === 'semestral' ? 'De R$ 299' : 'De R$ 599'}
                   </p>
                 )}
                 <div className="lp-price">
-                  {billingPeriod === 'mensal'    && <>R$ 99 <small>/mês</small></>}
-                  {billingPeriod === 'semestral' && <>R$ 505 <small>/semestre</small></>}
-                  {billingPeriod === 'anual'     && <>R$ 832 <small>/ano</small></>}
+                  {billingPeriod === 'mensal'    && <>R$ 49,90 <small>/mês</small></>}
+                  {billingPeriod === 'semestral' && <>R$ 269,46 <small>/semestre</small></>}
+                  {billingPeriod === 'anual'     && <>R$ 479,04 <small>/ano</small></>}
                 </div>
                 {billingPeriod !== 'mensal' && (
                   <p style={{ fontSize:13, fontWeight:700, color:'#4CAF50', marginTop:-4, marginBottom:2 }}>
-                    {billingPeriod === 'semestral' ? '≈ R$ 84,17/mês · economia de 15%' : '≈ R$ 69,33/mês · economia de 30%'}
+                    {billingPeriod === 'semestral' ? '≈ R$ 44,91/mês · economia de 10%' : '≈ R$ 39,92/mês · economia de 20%'}
                   </p>
                 )}
                 <p style={{ fontSize:12, color:'var(--lp-muted)', marginTop: billingPeriod === 'mensal' ? -4 : 2, marginBottom:8 }}>

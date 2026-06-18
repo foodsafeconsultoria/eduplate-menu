@@ -11,7 +11,7 @@ import { useFoods } from '@/hooks/useFoods';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Food, RecipeClassification, RecipeIngredient } from '@/types/nutrition';
-import { FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { Copy, FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -20,6 +20,8 @@ import { addPdfHeader } from '@/lib/pdfBranding';
 import { getDefaultCorrectionFactor } from '@/data/correctionFactors';
 import { detectAllergens } from '@/data/allergenMapping';
 import { DEFAULT_RECIPES } from '@/data/defaultRecipes';
+import { SUGGESTED_FACTORS } from '@/lib/replicateMenu';
+import { FNDE_MEAL_REFERENCE, FNDE_REFERENCE_NOTE, adequacyPercent } from '@/data/fndeReference';
 
 const emptyNutrients = {
   kcal: 0,
@@ -43,6 +45,24 @@ const recipeClassifications: { value: RecipeClassification; label: string }[] = 
 ];
 
 const suggestedMeals = ['Cafe da manha', 'Almoco', 'Lanche', 'Jantar', 'Ceia'];
+
+// Ícone visual por alérgeno (correspondência por palavra-chave; fallback ⚠️)
+function allergenIcon(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes('glúten') || n.includes('gluten') || n.includes('trigo') || n.includes('centeio') || n.includes('cevada')) return '🌾';
+  if (n.includes('leite') || n.includes('lácteo') || n.includes('lacteo')) return '🥛';
+  if (n.includes('ovo')) return '🥚';
+  if (n.includes('soja')) return '🫘';
+  if (n.includes('peixe') || n.includes('pescado')) return '🐟';
+  if (n.includes('crustáceo') || n.includes('crustaceo') || n.includes('camarão')) return '🦐';
+  if (n.includes('amendoim')) return '🥜';
+  if (n.includes('castanha') || n.includes('noz') || n.includes('amêndoa') || n.includes('amendoa')) return '🌰';
+  if (n.includes('gergelim')) return '◦';
+  return '⚠️';
+}
+
+// Etapas de ensino para porção de referência (mesmos fatores da replicação de cardápio)
+const ETAPA_ORDER: (keyof typeof SUGGESTED_FACTORS)[] = ['Creche', 'Ensino Infantil', 'Fundamental 1', 'Fundamental 2', 'Médio', 'EJA'];
 
 // ── helper: footer em todas as páginas do doc ────────────────────────────────
 function addFooterAllPages(doc: jsPDF, signerLabel = 'Nutricionista RT — PNAE'): void {
@@ -92,7 +112,8 @@ async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> {
     ['Rendimento Total', `${recipe.yieldTotal?.toFixed(3) || '—'} kg`, 'Rendimento Líquido', `${recipe.yieldPercentage.toFixed(1)}%`],
     ['Peso Bruto Total', `${recipe.totalGrossWeight.toFixed(3)} kg`, 'Peso Líquido Total', `${recipe.totalNetWeight.toFixed(3)} kg`],
     ['Per Capita', `${recipe.perCapita.toFixed(3)} kg`, 'Custo por Porção', `R$ ${recipe.costPerServing.toFixed(2)}`],
-    ['Agricultura Familiar', recipe.usesFamilyFarm ? 'Sim' : 'Não', 'Alérgenos', recipe.allergens.length > 0 ? recipe.allergens.join(', ') : 'Nenhum'],
+    ['Medida Caseira', recipe.medidaCaseira || '—', 'Agricultura Familiar', recipe.usesFamilyFarm ? 'Sim' : 'Não'],
+    ['Alérgenos', recipe.allergens.length > 0 ? recipe.allergens.join(', ') : 'Nenhum', '', ''],
   ];
 
   autoTable(doc, {
@@ -166,6 +187,40 @@ async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> {
     },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
+
+  // Adequação à referência PNAE (por porção)
+  if (y > ph - 50) { doc.addPage(); y = 15; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(22, 101, 52);
+  doc.text('ADEQUAÇÃO NUTRICIONAL (% da referência por refeição)', 15, y);
+  y += 3;
+  const adqRows = FNDE_MEAL_REFERENCE.map((it) => {
+    const perServ = (n as any)[it.key] as number;
+    const pct = adequacyPercent(perServ ?? 0, it.ref);
+    return [
+      it.label,
+      `${(perServ ?? 0).toFixed(it.dec)} ${it.unit}`,
+      `${it.ref} ${it.unit}`,
+      `${pct}%`,
+    ];
+  });
+  autoTable(doc, {
+    startY: y,
+    head: [['Nutriente', 'Por porção', 'Referência', 'Adequação']],
+    body: adqRows,
+    theme: 'striped',
+    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8 },
+    columnStyles: { 3: { fontStyle: 'bold', halign: 'right' } },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(6.5);
+  doc.setTextColor(120, 120, 120);
+  const refNote = doc.splitTextToSize(FNDE_REFERENCE_NOTE, pw - 30);
+  doc.text(refNote, 15, y);
+  y += refNote.length * 3 + 5;
 
   // Helper: renders wrapped text line-by-line, adding new pages as needed.
   // Returns the final Y after the last line.
@@ -383,6 +438,7 @@ export default function Recipes() {
   const [prepTime, setPrepTime] = useState('');
   const [operationalNotes, setOperationalNotes] = useState('');
   const [preparationMethod, setPreparationMethod] = useState('');
+  const [medidaCaseira, setMedidaCaseira] = useState('');
   const [ingredientSearch, setIngredientSearch] = useState('');
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [perCapitaTarget, setPerCapitaTarget] = useState('');
@@ -559,6 +615,7 @@ export default function Recipes() {
     setPrepTime('');
     setOperationalNotes('');
     setPreparationMethod('');
+    setMedidaCaseira('');
     setIngredientSearch('');
     setIngredients([]);
     setEditingRecipeId(null);
@@ -573,6 +630,7 @@ export default function Recipes() {
     setPrepTime(recipe.prepTime || '');
     setOperationalNotes(recipe.operationalNotes || '');
     setPreparationMethod(recipe.preparationMethod || '');
+    setMedidaCaseira(recipe.medidaCaseira || '');
     setIngredientSearch('');
 
     // Migrate ingredients that may have been saved with gram-scale values
@@ -650,6 +708,7 @@ export default function Recipes() {
       prepTime,
       preparationMethod,
       operationalNotes,
+      medidaCaseira,
       costTotal: totals.costTotal,
       costPerServing: totals.costTotal / servingsCount,
       nutrientsPerServing: {
@@ -677,6 +736,17 @@ export default function Recipes() {
 
     resetForm();
     setOpen(false);
+  };
+
+  const handleDuplicate = (recipe: Recipe) => {
+    const { id, createdAt, updatedAt, ...rest } = recipe;
+    void id; void createdAt; void updatedAt;
+    addRecipe({
+      ...rest,
+      name: `${recipe.name} (cópia)`,
+      displayName: recipe.displayName ? `${recipe.displayName} (cópia)` : '',
+    });
+    toast.success('Ficha duplicada — edite a cópia conforme necessário.');
   };
 
   return (
@@ -814,6 +884,18 @@ export default function Recipes() {
                       onChange={(e) => setOperationalNotes(e.target.value)}
                       className="mt-2"
                       placeholder="Ex.: servir quente, usar cuba GN, bater no liquidificador..."
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Medida caseira da porção</Label>
+                    <Input
+                      value={medidaCaseira}
+                      onChange={(e) => setMedidaCaseira(e.target.value)}
+                      className="mt-2"
+                      placeholder="Ex.: 1 concha média, 2 colheres de servir"
                     />
                   </div>
                 </div>
@@ -1019,6 +1101,61 @@ export default function Recipes() {
                   </div>
                 ) : null}
 
+                {ingredients.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* Adequação à referência PNAE */}
+                    <Card className="border-green-200">
+                      <CardHeader>
+                        <CardTitle>Adequação nutricional (por porção)</CardTitle>
+                        <CardDescription>{FNDE_REFERENCE_NOTE}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-1.5">
+                          {FNDE_MEAL_REFERENCE.map(({ key, label, unit, ref, dec }) => {
+                            const perServ = servingsCount > 0 ? totals.nutrients[key as keyof typeof totals.nutrients] / servingsCount : 0;
+                            const pct = adequacyPercent(perServ, ref);
+                            const color = pct >= 100 ? 'text-green-700' : pct >= 70 ? 'text-amber-600' : 'text-red-600';
+                            const barColor = pct >= 100 ? 'bg-green-500' : pct >= 70 ? 'bg-amber-400' : 'bg-red-400';
+                            return (
+                              <div key={key} className="text-xs">
+                                <div className="flex justify-between mb-0.5">
+                                  <span className="text-gray-600">{label} <span className="text-gray-400">({perServ.toFixed(dec)} {unit} / ref. {ref} {unit})</span></span>
+                                  <span className={`font-semibold ${color}`}>{pct}%</span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                                  <div className={`h-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Porções de referência por etapa */}
+                    <Card className="border-blue-200">
+                      <CardHeader>
+                        <CardTitle>Porção de referência por etapa</CardTitle>
+                        <CardDescription>Estimativa a partir do per capita base (tratado como Fundamental I). Ajuste conforme avaliação técnica.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-1">
+                          {ETAPA_ORDER.map((etapa) => {
+                            const fator = SUGGESTED_FACTORS[etapa] / SUGGESTED_FACTORS['Fundamental 1'];
+                            const gramas = perCapita * 1000 * fator;
+                            return (
+                              <div key={etapa} className="flex justify-between text-xs border-b border-gray-100 py-1">
+                                <span className="text-gray-600">{etapa}</span>
+                                <span className="font-medium text-gray-900">{gramas.toFixed(0)} g</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : null}
+
                 <div>
                   <Label>Modo de preparo</Label>
                   <Textarea
@@ -1191,6 +1328,7 @@ export default function Recipes() {
                         <div className="flex gap-1.5 justify-end">
                           <button onClick={() => generateRecipePDF(recipe, signerLabel).catch(() => {})} title="Imprimir" className="rounded p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Printer className="h-4 w-4" /></button>
                           <button onClick={() => openEditRecipe(recipe)} title="Editar" className="rounded p-1.5 text-slate-600 hover:bg-slate-100 transition-colors"><Pencil className="h-4 w-4" /></button>
+                          <button onClick={() => handleDuplicate(recipe)} title="Duplicar" className="rounded p-1.5 text-violet-600 hover:bg-violet-50 transition-colors"><Copy className="h-4 w-4" /></button>
                           <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha excluída.'); }} title="Excluir" className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </td>
@@ -1305,11 +1443,11 @@ export default function Recipes() {
                     {recipe.usesFamilyFarm && (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Agric. Familiar</span>
                     )}
-                    {recipe.allergens.length > 0 && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                        Alérgeno: {recipe.allergens.slice(0, 2).join(', ')}{recipe.allergens.length > 2 ? '…' : ''}
+                    {recipe.allergens.map((al) => (
+                      <span key={al} className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700" title={`Contém ${al}`}>
+                        {allergenIcon(al)} {al}
                       </span>
-                    )}
+                    ))}
                     {recipe.prepTime && (
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{recipe.prepTime}</span>
                     )}
@@ -1320,6 +1458,9 @@ export default function Recipes() {
                     </button>
                     <button onClick={() => openEditRecipe(recipe)} title="Editar ficha técnica" className="flex items-center justify-center gap-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors">
                       <Pencil className="h-3.5 w-3.5" /> Editar
+                    </button>
+                    <button onClick={() => handleDuplicate(recipe)} title="Duplicar ficha técnica" className="flex items-center justify-center gap-1 rounded-md border border-violet-200 px-2 py-1.5 text-xs text-violet-600 hover:bg-violet-50 transition-colors">
+                      <Copy className="h-3.5 w-3.5" />
                     </button>
                     <button onClick={() => { deleteRecipe(recipe.id); toast.success('Ficha técnica excluída.'); }} title="Excluir ficha técnica" className="flex items-center justify-center gap-1 rounded-md border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors">
                       <Trash2 className="h-3.5 w-3.5" /> Excluir

@@ -48,9 +48,9 @@ const PLANS: Plan[] = [
       'Suporte prioritário',
     ],
     pricing: {
-      mensal:    { price: 'R$ 99',  label: '/mês',      old: null,          equiv: null,             discount: null },
-      semestral: { price: 'R$ 505', label: '/semestre', old: 'De R$ 594',   equiv: '≈ R$ 84,17/mês', discount: '15% OFF' },
-      anual:     { price: 'R$ 832', label: '/ano',      old: 'De R$ 1.188', equiv: '≈ R$ 69,33/mês', discount: '30% OFF' },
+      mensal:    { price: 'R$ 49,90', label: '/mês',     old: null,            equiv: null,             discount: null },
+      semestral: { price: 'R$ 269,46', label: '/semestre', old: 'De R$ 299', equiv: '≈ R$ 44,91/mês', discount: '10% OFF' },
+      anual:     { price: 'R$ 479,04', label: '/ano',    old: 'De R$ 599',     equiv: '≈ R$ 39,92/mês', discount: '20% OFF' },
     },
   },
 ];
@@ -62,7 +62,7 @@ const FAQS = [
   },
   {
     q: 'Qual a diferença entre mensal, semestral e anual?',
-    a: 'O plano é o mesmo — acesso completo a tudo. Muda só a forma de pagar: no semestral você economiza 15% (R$505 a cada 6 meses, ≈R$84/mês) e no anual, 30% (R$832/ano, ≈R$69/mês). Todos incluem os 30 dias de teste grátis.',
+    a: 'O plano é o mesmo — acesso completo a tudo. Muda só a forma de pagar: no semestral você economiza 10% (R$269,46 a cada 6 meses, ≈R$44,91/mês) e no anual, 20% (R$479,04/ano, ≈R$39,92/mês). Todos incluem os 30 dias de teste grátis.',
   },
   {
     q: 'A prefeitura pode pagar com empenho ou nota de empenho?',
@@ -166,7 +166,7 @@ export default function Pricing() {
         </span>
         <h1 className="text-4xl font-extrabold text-white mt-2">Um plano. Tudo incluso.</h1>
         <p className="mt-3 text-base" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          Todos os módulos, usuários ilimitados, R$ 99 por mês. Simples assim.
+          Todos os módulos, usuários ilimitados, R$ 49,90 por mês. Simples assim.
         </p>
         <div className="flex items-center justify-center gap-5 mt-6 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
           {['Pix', 'Boleto', 'Cartão de crédito', 'Empenho municipal'].map(m => (
@@ -206,14 +206,14 @@ export default function Pricing() {
                     position:'absolute', top:-10, right:-2,
                     background:'#4CAF50', color:'#fff', fontSize:9,
                     fontWeight:800, borderRadius:99, padding:'2px 6px',
-                  }}>−15%</span>
+                  }}>−10%</span>
                 )}
                 {p === 'anual' && billingPeriod !== 'anual' && (
                   <span style={{
                     position:'absolute', top:-10, right:-2,
                     background:'#1A73E8', color:'#fff', fontSize:9,
                     fontWeight:800, borderRadius:99, padding:'2px 6px',
-                  }}>−30%</span>
+                  }}>−20%</span>
                 )}
               </button>
             ))}

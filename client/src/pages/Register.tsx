@@ -110,10 +110,10 @@ export default function Register() {
               Após o 1º mês — tudo incluso
             </p>
             <p className="text-2xl font-extrabold text-center mt-1" style={{ color:'#4CAF50' }}>
-              R$ 99<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
+              R$ 49,90<span className="text-sm font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>/mês</span>
             </p>
             <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.55)' }}>
-              ou R$ 505/semestre (≈ R$ 84/mês) · R$ 832/ano (≈ R$ 69/mês)
+              ou R$ 269,46/semestre (≈ R$ 45/mês · −10%) · R$ 479,04/ano (≈ R$ 40/mês · −20%)
             </p>
             <p className="text-xs text-center mt-1" style={{ color:'rgba(255,255,255,0.35)' }}>
               Cancele no trial e não paga nada

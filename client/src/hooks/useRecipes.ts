@@ -24,6 +24,7 @@ export interface CreateRecipeInput {
   prepTime?: string;
   preparationMethod?: string;
   operationalNotes?: string;
+  medidaCaseira?: string;
   costTotal: number;
   costPerServing: number;
   nutrientsPerServing: Recipe['nutrientsPerServing'];
@@ -62,6 +63,7 @@ function normalizeRecipes(raw: unknown): Recipe[] {
       prepTime: recipe.prepTime || '',
       preparationMethod: recipe.preparationMethod || '',
       operationalNotes: recipe.operationalNotes || '',
+      medidaCaseira: recipe.medidaCaseira || '',
       costTotal: Number(recipe.costTotal) || 0,
       costPerServing: Number(recipe.costPerServing) || 0,
       nutrientsPerServing: {
@@ -143,6 +145,7 @@ export function useRecipes() {
           prepTime: input.prepTime || '',
           preparationMethod: input.preparationMethod || '',
           operationalNotes: input.operationalNotes?.trim() || '',
+          medidaCaseira: input.medidaCaseira?.trim() || '',
           costTotal: input.costTotal,
           costPerServing: input.costPerServing,
           nutrientsPerServing: input.nutrientsPerServing,
@@ -176,6 +179,7 @@ export function useRecipes() {
           ...(input.prepTime !== undefined && { prepTime: input.prepTime }),
           ...(input.preparationMethod !== undefined && { preparationMethod: input.preparationMethod }),
           ...(input.operationalNotes !== undefined && { operationalNotes: input.operationalNotes }),
+          ...(input.medidaCaseira !== undefined && { medidaCaseira: input.medidaCaseira }),
           ...(input.costTotal !== undefined && { costTotal: input.costTotal }),
           ...(input.costPerServing !== undefined && { costPerServing: input.costPerServing }),
           ...(input.nutrientsPerServing !== undefined && { nutrientsPerServing: input.nutrientsPerServing }),

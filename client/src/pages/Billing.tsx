@@ -13,9 +13,9 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 const PLAN_PRICES: Record<string, string> = {
-  essencial: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
-  pro: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
-  enterprise: 'R$ 99/mês · R$ 505/semestre · R$ 832/ano',
+  essencial: 'R$ 49,90/mês · R$ 269,46/semestre · R$ 479,04/ano',
+  pro: 'R$ 49,90/mês · R$ 269,46/semestre · R$ 479,04/ano',
+  enterprise: 'R$ 49,90/mês · R$ 269,46/semestre · R$ 479,04/ano',
 };
 
 function StatusBadge({ status }: { status: string }) {

@@ -32,7 +32,7 @@ import { apiUrl, authHeaders } from '@/lib/apiUrl';
 
 const weekdays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
-const categories = ['Creche', 'Ensino Infantil', 'Fundamental 1', 'Fundamental 2', 'Médio'] as const;
+const categories = ['Creche', 'Ensino Infantil', 'Fundamental 1', 'Fundamental 2', 'Médio', 'EJA'] as const;
 
 const mealMap: Record<(typeof categories)[number], string[]> = {
   Creche:            ['Café da manhã', 'Almoço', 'Café da tarde', 'Jantar'],
@@ -40,6 +40,7 @@ const mealMap: Record<(typeof categories)[number], string[]> = {
   'Fundamental 1':   ['Almoço/Jantar', 'Lanche'],
   'Fundamental 2':   ['Almoço/Jantar', 'Lanche'],
   Médio:             ['Almoço/Jantar', 'Lanche'],
+  EJA:               ['Almoço/Jantar', 'Lanche'],
 };
 
 const fndeTargets = [

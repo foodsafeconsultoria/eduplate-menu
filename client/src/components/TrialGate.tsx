@@ -120,9 +120,9 @@ export default function TrialGate({ children }: Props) {
           {/* Plano único — 3 períodos */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
             {[
-              { name: 'Mensal', price: 'R$ 99', sub: '/mês', color: '#1B2A4A' },
-              { name: 'Semestral', price: 'R$ 505', sub: '≈ R$ 84/mês', color: '#4CAF50', popular: true },
-              { name: 'Anual', price: 'R$ 832', sub: '≈ R$ 69/mês', color: '#1A73E8' },
+              { name: 'Mensal', price: 'R$ 49,90', sub: '/mês', color: '#1B2A4A' },
+              { name: 'Semestral', price: 'R$ 269,46', sub: '≈ R$ 45/mês', color: '#4CAF50', popular: true },
+              { name: 'Anual', price: 'R$ 479,04', sub: '≈ R$ 40/mês', color: '#1A73E8' },
             ].map(p => (
               <div key={p.name} style={{
                 border: `2px solid ${p.popular ? 'rgba(76,175,80,0.35)' : '#E6EBF2'}`,
@@ -136,7 +136,7 @@ export default function TrialGate({ children }: Props) {
                     background: '#4CAF50', color: '#fff', fontSize: 10, fontWeight: 800,
                     borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap',
                   }}>
-                    −15%
+                    −10%
                   </div>
                 )}
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#1B2A4A', marginBottom: 4 }}>{p.name}</div>

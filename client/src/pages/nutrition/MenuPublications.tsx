@@ -8,7 +8,7 @@ import { useSchools } from '@/hooks/useFirestore';
 import { CalendarDays, Globe, School } from 'lucide-react';
 import { format } from 'date-fns';
 
-const categories = ['all', 'Creche', 'Fundamental 1', 'Fundamental 2', 'Medio'] as const;
+const categories = ['all', 'Creche', 'Fundamental 1', 'Fundamental 2', 'Medio', 'EJA'] as const;
 
 export default function MenuPublications() {
   const { menus, loading } = useMenus();

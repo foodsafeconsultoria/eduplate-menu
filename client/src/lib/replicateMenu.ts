@@ -12,7 +12,7 @@
 import type { Menu, MenuSlot } from '@/types/nutrition';
 import type { CreateMenuInput } from '@/hooks/useMenus';
 
-export type EtapaCategory = 'Creche' | 'Ensino Infantil' | 'Fundamental 1' | 'Fundamental 2' | 'Médio';
+export type EtapaCategory = 'Creche' | 'Ensino Infantil' | 'Fundamental 1' | 'Fundamental 2' | 'Médio' | 'EJA';
 
 /** Fator sugerido por etapa, relativo a Fundamental 1 (6–10 anos) = 1,00 */
 export const SUGGESTED_FACTORS: Record<EtapaCategory, number> = {
@@ -21,6 +21,7 @@ export const SUGGESTED_FACTORS: Record<EtapaCategory, number> = {
   'Fundamental 1':   1.00, // 6–10 anos
   'Fundamental 2':   1.25, // 11–14 anos
   'Médio':           1.35, // 15–17 anos
+  'EJA':             1.35, // jovens e adultos
 };
 
 /** Fator sugerido para converter da etapa de origem para a etapa destino. */
