@@ -20,6 +20,7 @@ import { addPdfHeader } from '@/lib/pdfBranding';
 import { getDefaultCorrectionFactor } from '@/data/correctionFactors';
 import { detectAllergens } from '@/data/allergenMapping';
 import { DEFAULT_RECIPES } from '@/data/defaultRecipes';
+import { SEED_INGREDIENT_MAP } from '@/data/seedIngredientMap';
 import { SUGGESTED_FACTORS } from '@/lib/replicateMenu';
 import { FNDE_MEAL_REFERENCE, FNDE_REFERENCE_NOTE, adequacyPercent } from '@/data/fndeReference';
 
@@ -306,61 +307,84 @@ export default function Recipes() {
     return 'Nutricionista RT — PNAE';
   }, [orgId]);
   const { foods, loading: foodsLoading } = useFoods();
-  const { recipes, loading, addRecipe, updateRecipe, deleteRecipe } = useRecipes();
+  const { recipes, loading, addRecipe, updateRecipe, deleteRecipe, importRecipes } = useRecipes();
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('list');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // ── Match a default recipe ingredient to a real food by name ────────────────
-  const enrichWithRealFoods = useMemo(() => (recipe: typeof DEFAULT_RECIPES[0]) => {
-    if (!foods.length) return recipe;
-    const enrichedIngredients = recipe.ingredients.map((ing) => {
-      const n = ing.foodName.toLowerCase().trim();
-      // Try exact → starts-with → contains match
-      const matched =
-        foods.find((f) => f.name.toLowerCase() === n) ||
-        foods.find((f) => f.name.toLowerCase().startsWith(n) || n.startsWith(f.name.toLowerCase().split(',')[0].trim())) ||
-        foods.find((f) => f.name.toLowerCase().includes(n) || n.split(' ').every((w) => f.name.toLowerCase().includes(w)));
-      if (!matched) return ing;
-      return {
-        ...ing,
-        foodId: matched.id,
-        estimatedCost:
-          matched.unit === 'unit'
-            ? matched.price * (ing.grossWeight / 0.1)
-            : matched.price * ing.grossWeight,
-      };
-    });
-    return { ...recipe, ingredients: enrichedIngredients };
-  }, [foods]);
+  // ── Importar biblioteca-modelo (58 fichas PNAE) ─────────────────────────────
+  // Vincula cada ingrediente ao alimento real do banco (mapa explícito) e CALCULA
+  // a nutrição/custo ao vivo — mesmo motor das fichas criadas manualmente.
+  const [importing, setImporting] = useState(false);
 
-  // Auto-seed removido — fichas são criadas manualmente pela nutricionista.
-  // ── One-time cleanup: remove all seeded default recipes ──────────────────────
-  const CLEANUP_FLAG = `pnae_defaults_removed_${orgId}`;
-  useEffect(() => {
-    if (loading) return;
-    if (!orgId || orgId === 'pnae-default-org') return;
-    if (localStorage.getItem(CLEANUP_FLAG)) return;
-    if (!recipes.length) return;
+  const importDefaultLibrary = () => {
+    if (!foods.length) { toast.error('Aguarde o banco de alimentos carregar e tente de novo.'); return; }
+    setImporting(true);
+    const existingNames = new Set(recipes.map((r) => r.name.toLowerCase().trim()));
+    const inputs = DEFAULT_RECIPES
+      .filter((r) => !existingNames.has(r.name.toLowerCase().trim()))
+      .map((r) => {
+        const linkedIngredients = r.ingredients.map((ing) => {
+          const fid = SEED_INGREDIENT_MAP[ing.foodName];
+          const food = fid ? foods.find((f) => f.id === fid) : undefined;
+          const estimatedCost = food && food.price > 0
+            ? (food.unit === 'unit' ? food.price * (ing.grossWeight / 0.1) : food.price * ing.grossWeight)
+            : 0;
+          return { ...ing, foodId: fid || ing.foodId, estimatedCost };
+        });
 
-    const defaultNameSet = new Set(DEFAULT_RECIPES.map((r) => r.name.toLowerCase()));
-    const toDelete = recipes.filter((r) => defaultNameSet.has(r.name.toLowerCase()));
-    if (toDelete.length === 0) {
-      localStorage.setItem(CLEANUP_FLAG, '1');
+        const t = linkedIngredients.reduce(
+          (acc, ing) => {
+            const food = foods.find((f) => f.id === ing.foodId);
+            if (!food) return acc;
+            const factor = ing.netWeight > 0 ? ing.netWeight * 10 : 0;
+            acc.cost += ing.estimatedCost;
+            acc.ff = acc.ff || !!food.familyFarm;
+            for (const al of detectAllergens(ing.foodName)) acc.allergens.add(al);
+            acc.n.kcal += food.nutrients.kcal * factor;
+            acc.n.protein += food.nutrients.protein * factor;
+            acc.n.lipids += food.nutrients.lipids * factor;
+            acc.n.carbohydrates += food.nutrients.carbohydrates * factor;
+            acc.n.fiber += food.nutrients.fiber * factor;
+            acc.n.calcium += food.nutrients.calcium * factor;
+            acc.n.iron += food.nutrients.iron * factor;
+            acc.n.zinc += food.nutrients.zinc * factor;
+            acc.n.vitaminA += food.nutrients.vitaminA * factor;
+            acc.n.vitaminC += food.nutrients.vitaminC * factor;
+            return acc;
+          },
+          { cost: 0, ff: false, allergens: new Set<string>(), n: { ...emptyNutrients } },
+        );
+
+        const sv = r.servings || 1;
+        // Extrai "Medida caseira: ..." das observações operacionais, se houver
+        const mc = (r.operationalNotes || '').match(/medida caseira:\s*([^.]+)/i);
+
+        return {
+          ...r,
+          ingredients: linkedIngredients,
+          usesFamilyFarm: t.ff,
+          allergens: Array.from(t.allergens).sort(),
+          medidaCaseira: mc ? mc[1].trim() : '',
+          costTotal: t.cost,
+          costPerServing: t.cost / sv,
+          nutrientsPerServing: {
+            kcal: t.n.kcal / sv, protein: t.n.protein / sv, lipids: t.n.lipids / sv,
+            carbohydrates: t.n.carbohydrates / sv, fiber: t.n.fiber / sv, calcium: t.n.calcium / sv,
+            iron: t.n.iron / sv, zinc: t.n.zinc / sv, vitaminA: t.n.vitaminA / sv, vitaminC: t.n.vitaminC / sv,
+          },
+        };
+      });
+
+    if (inputs.length === 0) {
+      toast.info('Você já tem todas as fichas-modelo importadas.');
+      setImporting(false);
       return;
     }
-    (async () => {
-      for (const r of toDelete) {
-        deleteRecipe(r.id);
-        await new Promise((res) => setTimeout(res, 20));
-      }
-      localStorage.setItem(CLEANUP_FLAG, '1');
-      if (toDelete.length > 0) {
-        toast.info(`${toDelete.length} ficha${toDelete.length !== 1 ? 's' : ''} padrão removida${toDelete.length !== 1 ? 's' : ''}.`);
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, orgId, recipes.length]);
+    const n = importRecipes(inputs);
+    toast.success(`${n} fichas-modelo importadas com nutrição calculada! Revise e ajuste conforme sua realidade.`);
+    setImporting(false);
+  };
 
   const [recalculating, setRecalculating] = useState(false);
 
@@ -1260,7 +1284,16 @@ export default function Recipes() {
             <CardContent className="py-16 text-center">
               <FileText className="mx-auto mb-4 h-12 w-12 text-gray-300" />
               <p className="font-medium text-gray-600">Nenhuma ficha tecnica cadastrada.</p>
-              <p className="mt-2 text-sm text-gray-500">Crie a primeira ficha para alimentar o planejamento de cardápios.</p>
+              <p className="mt-2 text-sm text-gray-500">Comece do zero criando a sua, ou importe a biblioteca-modelo do PNAE com 58 preparações — já com nutrição calculada a partir dos alimentos do banco. Você revisa e ajusta tudo depois.</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <Button onClick={importDefaultLibrary} disabled={importing || foodsLoading} className="bg-green-600 hover:bg-green-700">
+                  <FileText className="mr-2 h-4 w-4" />
+                  {importing ? 'Importando…' : 'Importar 58 fichas-modelo'}
+                </Button>
+                <Button variant="outline" onClick={() => setOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Criar do zero
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : filteredRecipes.length === 0 ? (

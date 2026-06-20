@@ -197,6 +197,39 @@ export function useRecipes() {
         void removeHybridDocument(orgId, COLLECTION_NAME, id);
         return true;
       },
+
+      /** Importa várias fichas de uma vez (biblioteca-modelo), em um único batch. */
+      importRecipes: (inputs: CreateRecipeInput[]) => {
+        const ts = new Date();
+        const created: Recipe[] = inputs.map((input) => ({
+          id: `recipe-${crypto.randomUUID()}`,
+          name: input.name.trim(),
+          displayName: input.displayName?.trim() || '',
+          classification: input.classification,
+          recommendedMeal: input.recommendedMeal?.trim() || '',
+          yieldTotal: input.yieldTotal,
+          servings: input.servings,
+          totalGrossWeight: input.totalGrossWeight,
+          totalNetWeight: input.totalNetWeight,
+          perCapita: input.perCapita,
+          yieldPercentage: input.yieldPercentage,
+          usesFamilyFarm: input.usesFamilyFarm,
+          allergens: input.allergens,
+          prepTime: input.prepTime || '',
+          preparationMethod: input.preparationMethod || '',
+          operationalNotes: input.operationalNotes?.trim() || '',
+          medidaCaseira: input.medidaCaseira?.trim() || '',
+          costTotal: input.costTotal,
+          costPerServing: input.costPerServing,
+          nutrientsPerServing: input.nutrientsPerServing,
+          ingredients: input.ingredients,
+          createdAt: ts,
+          updatedAt: ts,
+        }));
+        persistRecipes([...created, ...recipes]);
+        created.forEach((r) => void syncHybridDocument(orgId, COLLECTION_NAME, r));
+        return created.length;
+      },
     }),
     [recipes, orgId]
   );
