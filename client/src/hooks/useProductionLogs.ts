@@ -26,6 +26,11 @@ export interface CreateProductionLogInput {
   cleanLeftover: number;
   destination: ProductionLog['destination'];
   destinationEntity?: string;
+  // RDC ANVISA 216/2004 — controle de temperatura
+  foodType?: ProductionLog['foodType'];
+  temperature?: number;
+  temperatureTime?: string;
+  observations?: string;
 }
 
 function normalizeProductionLogs(raw: unknown): ProductionLog[] {
@@ -44,6 +49,10 @@ function normalizeProductionLogs(raw: unknown): ProductionLog[] {
       cleanLeftover: Number(log.cleanLeftover) || 0,
       destination: log.destination || 'discard',
       destinationEntity: log.destinationEntity || '',
+      foodType: log.foodType,
+      temperature: log.temperature != null ? Number(log.temperature) : undefined,
+      temperatureTime: log.temperatureTime || undefined,
+      observations: log.observations || undefined,
       createdAt: toDate(log.createdAt),
       updatedAt: toDate(log.updatedAt),
     };
@@ -105,6 +114,10 @@ export function useProductionLogs() {
           cleanLeftover: input.cleanLeftover,
           destination: input.destination,
           destinationEntity: input.destinationEntity || '',
+          foodType: input.foodType,
+          temperature: input.temperature,
+          temperatureTime: input.temperatureTime,
+          observations: input.observations,
           createdAt: timestamp,
           updatedAt: timestamp,
         };
