@@ -141,6 +141,69 @@ export default function SchedulePage() {
 
   const getSchedulesForDate = (date: Date) => schedules.filter((item) => isSameDay(asValidDate(item.scheduledDate), date));
 
+  // Separa visitas futuras (hoje em diante) das que já passaram.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const sortedSchedules = [...schedules].sort(
+    (a, b) => asValidDate(a.scheduledDate).getTime() - asValidDate(b.scheduledDate).getTime(),
+  );
+  const upcomingSchedules = sortedSchedules.filter((s) => asValidDate(s.scheduledDate) >= startOfToday);
+  const pastSchedules = sortedSchedules.filter((s) => asValidDate(s.scheduledDate) < startOfToday).reverse();
+
+  const renderScheduleCard = (schedule: Schedule, isPast = false) => (
+    <Card key={schedule.id} className={isPast ? 'opacity-70' : ''}>
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-lg font-semibold text-foreground">{schedule.schoolName}</h4>
+              {isPast && (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+                  Já realizada / passou
+                </span>
+              )}
+            </div>
+            <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">Data:</span>
+                {editingId === schedule.id ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="date"
+                      value={editingDate}
+                      onChange={(e) => setEditingDate(e.target.value)}
+                      className="h-7 w-36 text-sm px-2"
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmEditDate(); if (e.key === 'Escape') setEditingId(null); }}
+                    />
+                    <button onClick={confirmEditDate} className="text-green-600 hover:text-green-700"><Check className="h-4 w-4" /></button>
+                    <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                  </div>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    {format(asValidDate(schedule.scheduledDate), "dd/MM/yyyy (EEEE)", { locale: ptBR })}
+                    <button
+                      onClick={() => startEditDate(schedule)}
+                      className="ml-1 text-blue-400 hover:text-blue-600"
+                      title="Alterar data"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <div><span className="font-semibold text-foreground">Responsável:</span> {schedule.nutritionist}</div>
+            </div>
+            {schedule.description ? <p className="text-sm text-muted-foreground">{schedule.description}</p> : null}
+          </div>
+          <Button variant="destructive" size="sm" onClick={() => handleDeleteSchedule(schedule.id)}>
+            Remover
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen flex-1 p-4 md:p-8">
       <div className="w-full space-y-8">
@@ -264,55 +327,26 @@ export default function SchedulePage() {
                 <CardContent className="pt-6 text-center text-muted-foreground">Nenhuma visita agendada.</CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {[...schedules]
-                  .sort((a, b) => asValidDate(a.scheduledDate).getTime() - asValidDate(b.scheduledDate).getTime())
-                  .map((schedule) => (
-                  <Card key={schedule.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2 flex-1">
-                          <h4 className="text-lg font-semibold text-foreground">{schedule.schoolName}</h4>
-                          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground">Data:</span>
-                              {editingId === schedule.id ? (
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="date"
-                                    value={editingDate}
-                                    onChange={(e) => setEditingDate(e.target.value)}
-                                    className="h-7 w-36 text-sm px-2"
-                                    autoFocus
-                                    onKeyDown={(e) => { if (e.key === 'Enter') confirmEditDate(); if (e.key === 'Escape') setEditingId(null); }}
-                                  />
-                                  <button onClick={confirmEditDate} className="text-green-600 hover:text-green-700"><Check className="h-4 w-4" /></button>
-                                  <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
-                                </div>
-                              ) : (
-                                <span className="flex items-center gap-1">
-                                  {format(asValidDate(schedule.scheduledDate), "dd/MM/yyyy (EEEE)", { locale: ptBR })}
-                                  <button
-                                    onClick={() => startEditDate(schedule)}
-                                    className="ml-1 text-blue-400 hover:text-blue-600"
-                                    title="Alterar data"
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              )}
-                            </div>
-                            <div><span className="font-semibold text-foreground">Responsável:</span> {schedule.nutritionist}</div>
-                          </div>
-                          {schedule.description ? <p className="text-sm text-muted-foreground">{schedule.description}</p> : null}
-                        </div>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteSchedule(schedule.id)}>
-                          Remover
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Próximas visitas ({upcomingSchedules.length})
+                  </h4>
+                  {upcomingSchedules.length === 0 ? (
+                    <Card><CardContent className="pt-6 text-center text-muted-foreground">Nenhuma visita futura agendada.</CardContent></Card>
+                  ) : (
+                    upcomingSchedules.map((schedule) => renderScheduleCard(schedule, false))
+                  )}
+                </div>
+
+                {pastSchedules.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      Histórico — visitas que já passaram ({pastSchedules.length})
+                    </h4>
+                    {pastSchedules.map((schedule) => renderScheduleCard(schedule, true))}
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>

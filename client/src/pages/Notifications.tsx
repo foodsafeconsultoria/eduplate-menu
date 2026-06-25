@@ -85,9 +85,16 @@ export default function Notifications() {
   const isAdmin = user?.role === 'admin';
   const canManageMenus = user?.role === 'admin' || user?.role === 'nutritionist';
 
-  // Show ALL pending schedules — same scope the TopNav badge uses (no date window)
+  // Apenas visitas pendentes de HOJE em diante — visitas que já passaram não
+  // devem mais notificar (mesma regra do badge do TopNav).
   const upcomingVisits = useMemo(() => {
-    return schedules.filter((schedule) => schedule.status === 'pending');
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return schedules.filter(
+      (schedule) =>
+        schedule.status === 'pending' &&
+        new Date(schedule.scheduledDate) >= startOfToday,
+    );
   }, [schedules]);
 
   const openTickets = useMemo(

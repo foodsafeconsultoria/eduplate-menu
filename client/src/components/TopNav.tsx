@@ -195,8 +195,15 @@ export default function TopNav() {
     return false;
   }).length;
 
+  // Só conta visitas pendentes de HOJE em diante — visitas que já passaram
+  // não devem mais notificar (ficam como histórico no cronograma).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
   const upcomingVisitsCount = schedules.filter(
-    (s) => s.status === 'pending' && !isSeen(`schedule:${s.id}`),
+    (s) =>
+      s.status === 'pending' &&
+      new Date(s.scheduledDate) >= startOfToday &&
+      !isSeen(`schedule:${s.id}`),
   ).length;
   const maintenanceAlertCount = tickets.filter(
     (t) => t.status === 'open' && t.priority === 'high' && !isSeen(`ticket:${t.id}`),
