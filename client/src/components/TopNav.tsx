@@ -212,7 +212,8 @@ export default function TopNav() {
     (d) => !isSeen(`doc:${d.id}:expiry`),
   ).length;
   const notificationsCount = workflowAlertCount + upcomingVisitsCount + maintenanceAlertCount + expiringDocCount;
-  const fiscalizacaoBadge = upcomingVisitsCount + maintenanceAlertCount;
+  const fiscalizacaoBadge = upcomingVisitsCount;
+  const maisBadge = maintenanceAlertCount;
 
   const alimentacaoItems: DropdownItem[] = [
     { label: 'Alimentos',        href: '/nutrition/foods',         icon: <Apple className="h-4 w-4" /> },
@@ -225,11 +226,16 @@ export default function TopNav() {
 
   const fiscalizacaoItems: DropdownItem[] = [
     { label: 'Inspeções',      href: '/inspection',    icon: <ClipboardCheck className="h-4 w-4" /> },
-    { label: 'Gestão de EPIs', href: '/ppes',          icon: <Shield className="h-4 w-4" /> },
     { label: 'Cronograma',     href: '/schedule',      icon: <Calendar className="h-4 w-4" />, badge: upcomingVisitsCount },
     { label: 'Escolas',        href: '/schools',       icon: <School className="h-4 w-4" /> },
     { label: 'Resto/Ingesta',  href: '/resto-ingesta', icon: <Utensils className="h-4 w-4" /> },
     { label: 'Aceitabilidade', href: '/acceptability', icon: <CheckCircle className="h-4 w-4" /> },
+  ];
+
+  // Gestão predial / itens de apoio — fora do caminho principal da nutricionista.
+  const maisItems: DropdownItem[] = [
+    { label: 'Gestão de EPIs', href: '/ppes',         icon: <Shield className="h-4 w-4" /> },
+    { label: 'Manutenção',     href: '/maintenance',  icon: <Wrench className="h-4 w-4" />, badge: maintenanceAlertCount || undefined },
   ];
 
   const isTopActive = (href: string) => location === href;
@@ -288,7 +294,14 @@ export default function TopNav() {
 
           {topItem('Documentos',   '/documents',   <FileText className="h-4 w-4" />, expiringDocCount || undefined)}
           {topItem('Treinamentos', '/training',     <GraduationCap className="h-4 w-4" />)}
-          {topItem('Manutenção',   '/maintenance',  <Wrench className="h-4 w-4" />, maintenanceAlertCount || undefined)}
+
+          <Dropdown
+            label="Mais"
+            icon={<Wrench className="h-4 w-4" />}
+            items={maisItems}
+            badge={maisBadge || undefined}
+            onNavigate={() => setMobileOpen(false)}
+          />
         </div>
 
         {/* Right actions */}
@@ -357,7 +370,7 @@ export default function TopNav() {
             <div className="py-1 px-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Outros</div>
             {topItem('Documentos',   '/documents',   <FileText className="h-5 w-5" />, expiringDocCount || undefined)}
             {topItem('Treinamentos', '/training',     <GraduationCap className="h-5 w-5" />)}
-            {topItem('Manutenção',   '/maintenance',  <Wrench className="h-5 w-5" />, maintenanceAlertCount || undefined)}
+            {maisItems.map(i => topItem(i.label, i.href, i.icon, i.badge))}
             {topItem('Notificações', '/notifications',<Bell className="h-5 w-5" />, notificationsCount || undefined)}
             {topItem('Meu Perfil',   '/profile',      <User className="h-5 w-5" />)}
             <div className="border-t border-white/10 pt-2 mt-2">

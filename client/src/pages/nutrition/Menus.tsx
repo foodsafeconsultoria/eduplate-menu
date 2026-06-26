@@ -27,6 +27,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
 import { apiUrl, authHeaders } from '@/lib/apiUrl';
+import { addRecipeToDoc, addFooterAllPages } from '@/lib/recipePdf';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -205,14 +206,14 @@ function deriveWeekStart(referenceMonth: string): string | null {
  * The meal grid renders ONLY nomeFantasia (not individual ingredients).
  * The nutritional summary is computed from slots[].composicao[].
  */
-async function generateMenuPDF(
+/** Desenha o cardápio (grade + resumo nutricional + rodapé) no doc informado. */
+function renderMenuPage(
+  doc: jsPDF,
   menu: Menu,
   schoolNames: string[],
   meals: string[],
-  returnBase64 = false,
   orgLogoDataUrl?: string,
-): Promise<string | void> {
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+): void {
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
   const green: [number, number, number] = [22, 101, 52];
@@ -380,9 +381,19 @@ async function generateMenuPDF(
     sc ? `Nº de alunos: ${sc} · Custo/aluno/dia: R$ ${avgCostPerDay.toFixed(2)}` : '',
   ].filter(Boolean);
   doc.text(footerParts.join('  ·  '), pw / 2, ph - 5, { align: 'center' });
+}
 
+/** Gera o PDF só do cardápio (impressão avulsa ou base64 para e-mail). */
+async function generateMenuPDF(
+  menu: Menu,
+  schoolNames: string[],
+  meals: string[],
+  returnBase64 = false,
+  orgLogoDataUrl?: string,
+): Promise<string | void> {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  renderMenuPage(doc, menu, schoolNames, meals, orgLogoDataUrl);
   if (returnBase64) {
-    // Use arraybuffer → btoa for reliable base64 without relying on datauristring
     const ab = doc.output('arraybuffer');
     const bytes = new Uint8Array(ab);
     let binary = '';
@@ -393,6 +404,46 @@ async function generateMenuPDF(
     return btoa(binary);
   }
   doc.save(`Cardapio_${menu.title.replace(/\s+/g, '_')}.pdf`);
+}
+
+/**
+ * PACOTE COMPLETO: cardápio + todas as fichas técnicas das preparações usadas,
+ * num único PDF. Recurso-âncora que integra os dois módulos em um clique.
+ */
+async function generateMenuPackagePDF(
+  menu: Menu,
+  schoolNames: string[],
+  meals: string[],
+  allRecipes: Recipe[],
+  orgLogoDataUrl?: string,
+  signerLabel?: string,
+): Promise<{ fichas: number; faltando: string[] }> {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  renderMenuPage(doc, menu, schoolNames, meals, orgLogoDataUrl);
+
+  // Coleta os ids únicos de receitas usadas no cardápio (insumos type === 'recipe')
+  const recipeIds: string[] = [];
+  for (const slot of menu.slots || []) {
+    for (const ins of slot.composicao) {
+      if (ins.type === 'recipe' && ins.referenceId && !recipeIds.includes(ins.referenceId)) {
+        recipeIds.push(ins.referenceId);
+      }
+    }
+  }
+
+  const faltando: string[] = [];
+  let fichas = 0;
+  for (const rid of recipeIds) {
+    const recipe = allRecipes.find((r) => r.id === rid);
+    if (!recipe) { faltando.push(rid); continue; }
+    doc.addPage('a4', 'portrait');           // fichas em retrato
+    await addRecipeToDoc(doc, recipe);
+    fichas++;
+  }
+
+  addFooterAllPages(doc, signerLabel);
+  doc.save(`Pacote_${menu.title.replace(/\s+/g, '_')}.pdf`);
+  return { fichas, faltando };
 }
 
 // ── Multi-school Selector ──────────────────────────────────────────────────────
@@ -541,6 +592,18 @@ export default function Menus() {
     if (skippedMeals.length > 0) {
       toast.info(`Refeições sem equivalente em ${replicateTarget} foram omitidas: ${skippedMeals.join(', ')}.`);
     }
+  };
+
+  // ── Pacote completo: cardápio + fichas técnicas das preparações ─────────────
+  const handlePrintPackage = (menu: Menu, schoolNames: string[], meals: string[]) => {
+    generateMenuPackagePDF(menu, schoolNames, meals, recipes, orgSettings?.logoDataUrl, menu.responsibleName || currentUserName)
+      .then(({ fichas, faltando }) => {
+        toast.success(`Pacote gerado: cardápio + ${fichas} ficha${fichas !== 1 ? 's' : ''} técnica${fichas !== 1 ? 's' : ''}.`);
+        if (faltando.length > 0) {
+          toast.info(`${faltando.length} preparação(ões) ainda sem ficha técnica cadastrada não entraram no pacote.`);
+        }
+      })
+      .catch(() => toast.error('Erro ao gerar o pacote completo.'));
   };
 
   // ── Email sending state ───────────────────────────────────────────────────────
@@ -1915,6 +1978,11 @@ export default function Menus() {
                             onClick={() => generateMenuPDF(menu, schoolNames, ml, false, orgSettings?.logoDataUrl).catch(() => toast.error('Erro ao gerar PDF.'))}>
                             <Printer className="h-3.5 w-3.5" />
                           </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
+                            title="Pacote completo: cardápio + fichas técnicas"
+                            onClick={() => handlePrintPackage(menu, schoolNames, ml)}>
+                            <BookOpen className="h-3.5 w-3.5" />
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50"
                             title="Editar" onClick={() => openEditMenu(menu)}>
                             <Pencil className="h-3.5 w-3.5" />
@@ -2025,6 +2093,20 @@ export default function Menus() {
                       >
                         <Printer className="h-4 w-4" />
                         Imprimir A4
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
+                        className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+                        title="Pacote completo: cardápio + fichas técnicas das preparações"
+                        onClick={() => {
+                          const names = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
+                          const cat   = menu.category as (typeof categories)[number];
+                          const ml    = mealMap[cat] ?? ['Refeição'];
+                          handlePrintPackage(menu, names, ml);
+                        }}
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        Pacote
                       </Button>
                       <Button
                         variant="outline" size="sm"
