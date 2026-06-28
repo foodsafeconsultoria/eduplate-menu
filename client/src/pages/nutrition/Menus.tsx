@@ -2080,9 +2080,9 @@ export default function Menus() {
                       Salvo em {safeFormat(menu.updatedAt, 'dd/MM/yyyy HH:mm')} · {menu.responsibleName}
                     </p>
 
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Button
-                        className="flex-1 bg-green-600 hover:bg-green-700 gap-1.5"
+                        className="bg-green-600 hover:bg-green-700 gap-1.5"
                         size="sm"
                         onClick={() => {
                           const names = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
@@ -2110,7 +2110,7 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
-                        className="border-green-200 text-green-700 hover:bg-green-50 gap-1"
+                        className="h-8 w-8 p-0 border-green-200 text-green-700 hover:bg-green-50"
                         title="Enviar cardápio por e-mail para as escolas"
                         onClick={() => {
                           setEmailModal({ open: true, menu });
@@ -2121,7 +2121,7 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
-                        className={`border-blue-200 text-blue-600 hover:bg-blue-50 ${copyPickerMenuId === menu.id ? 'bg-blue-50' : ''}`}
+                        className={`h-8 w-8 p-0 border-blue-200 text-blue-600 hover:bg-blue-50 ${copyPickerMenuId === menu.id ? 'bg-blue-50' : ''}`}
                         title="Copiar refeições deste cardápio"
                         onClick={() => setCopyPickerMenuId(copyPickerMenuId === menu.id ? null : menu.id)}
                       >
@@ -2129,7 +2129,7 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
-                        className={`border-purple-200 text-purple-600 hover:bg-purple-50 ${replicatePickerMenuId === menu.id ? 'bg-purple-50' : ''}`}
+                        className={`h-8 w-8 p-0 border-purple-200 text-purple-600 hover:bg-purple-50 ${replicatePickerMenuId === menu.id ? 'bg-purple-50' : ''}`}
                         title="Replicar para outra etapa de ensino (porções ajustadas)"
                         onClick={() => {
                           if (replicatePickerMenuId === menu.id) {
@@ -2145,7 +2145,7 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
-                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                        className="h-8 w-8 p-0 border-blue-200 text-blue-600 hover:bg-blue-50"
                         onClick={() => openEditMenu(menu)}
                         title="Editar cardápio"
                       >
@@ -2153,7 +2153,7 @@ export default function Menus() {
                       </Button>
                       <Button
                         variant="outline" size="sm"
-                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        className="h-8 w-8 p-0 border-red-200 text-red-600 hover:bg-red-50"
                         onClick={() => { deleteMenu(menu.id); toast.success('Cardápio excluído.'); }}
                         title="Excluir cardápio"
                       >
