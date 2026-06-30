@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useDocuments } from '@/hooks/useDocuments';
+import { useDocuments, expiryStatusFromISO, toISODateString } from '@/hooks/useDocuments';
 import { OrgDocument, DocumentCategory } from '@/types';
 import { storage } from '@/lib/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -59,12 +59,8 @@ const CATEGORY_COLORS: Record<DocumentCategory, string> = {
 const CATEGORIES: DocumentCategory[] = ['RDC 216','RDC 275','PNAE','CVS','ANVISA','Municipal','Outros'];
 
 function getExpiryStatus(expiryDate?: string): 'expired' | 'soon' | 'ok' | 'none' {
-  if (!expiryDate) return 'none';
-  const exp = new Date(expiryDate + 'T23:59:59');
-  const diff = Math.ceil((exp.getTime() - Date.now()) / 86400000);
-  if (diff < 0) return 'expired';
-  if (diff <= 30) return 'soon';
-  return 'ok';
+  // Usa o parser robusto compartilhado (aceita qualquer formato salvo).
+  return expiryStatusFromISO(toISODateString(expiryDate));
 }
 
 function daysUntil(iso?: string) {

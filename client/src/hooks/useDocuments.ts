@@ -16,6 +16,41 @@ function toDate(value: unknown): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
+/**
+ * Converte qualquer formato de validade (string 'AAAA-MM-DD', ISO completo,
+ * Date, Firestore Timestamp) para uma string canônica 'AAAA-MM-DD'.
+ * Retorna undefined quando não há data válida — evita falsos "vencidos".
+ */
+export function toISODateString(value: unknown): string | undefined {
+  if (!value) return undefined;
+  // Já no formato 'AAAA-MM-DD' (ou com hora) — pega só a parte da data
+  if (typeof value === 'string') {
+    const m = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
+  }
+  if (typeof (value as any).toDate === 'function') {
+    const d = (value as any).toDate();
+    return isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
+  }
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? undefined : value.toISOString().slice(0, 10);
+  }
+  return undefined;
+}
+
+/** Status de validade a partir de uma string 'AAAA-MM-DD' canônica. */
+export function expiryStatusFromISO(iso?: string): 'expired' | 'soon' | 'ok' | 'none' {
+  if (!iso) return 'none';
+  const exp = new Date(iso + 'T23:59:59');
+  if (isNaN(exp.getTime())) return 'none';
+  const diff = Math.ceil((exp.getTime() - Date.now()) / 86400000);
+  if (diff < 0) return 'expired';
+  if (diff <= 30) return 'soon';
+  return 'ok';
+}
+
 function normalizeDocuments(raw: unknown): OrgDocument[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item, index) => {
@@ -25,7 +60,8 @@ function normalizeDocuments(raw: unknown): OrgDocument[] {
       name: doc.name || 'Documento sem nome',
       category: doc.category || 'Outros',
       description: doc.description,
-      expiryDate: doc.expiryDate,
+      // Normaliza qualquer formato de validade para 'AAAA-MM-DD' (ou undefined)
+      expiryDate: toISODateString(doc.expiryDate),
       fileUrl: doc.fileUrl,
       fileName: doc.fileName,
       uploadedAt: doc.uploadedAt ? toDate(doc.uploadedAt) : undefined,
@@ -96,13 +132,14 @@ export const useDocuments = () => {
     void removeHybridDocument(orgId, COLLECTION_NAME, id);
   };
 
-  // Returns documents expiring within `days` days (or already expired)
+  // Returns documents expiring within `days` days (or already expired).
   const getExpiringDocuments = (days = 30): OrgDocument[] => {
-    const now = new Date();
-    const cutoff = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     return documents.filter(d => {
-      if (!d.expiryDate) return false;
-      const exp = new Date(d.expiryDate + 'T23:59:59');
+      const iso = toISODateString(d.expiryDate);
+      if (!iso) return false;
+      const exp = new Date(iso + 'T23:59:59');
+      if (isNaN(exp.getTime())) return false;
       return exp <= cutoff;
     });
   };
