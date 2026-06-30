@@ -305,15 +305,19 @@ export default function Documents() {
   const soon     = expiring.filter(d => getExpiryStatus(d.expiryDate) === 'soon');
 
   // merge mandatory templates with Firestore docs by name
-  const mandatoryRows = MANDATORY_DOCS.map(tpl => ({
-    name: tpl.name,
-    category: tpl.category,
-    doc: documents.find(d => d.name === tpl.name),
-  }));
+  // Cada documento usado numa linha obrigatória é "consumido" pelo seu id,
+  // para que DUPLICATAS (mesmo nome) não fiquem escondidas — elas viram linhas
+  // próprias abaixo e podem ser excluídas. Evita o "fantasma" de contagem.
+  const usedDocIds = new Set<string>();
+  const mandatoryRows = MANDATORY_DOCS.map(tpl => {
+    const doc = documents.find(d => d.name === tpl.name && !usedDocIds.has(d.id));
+    if (doc) usedDocIds.add(doc.id);
+    return { name: tpl.name, category: tpl.category, doc };
+  });
 
-  // custom docs (not in mandatory list)
+  // Documentos não usados acima (custom + duplicatas de obrigatórios)
   const customRows = documents
-    .filter(d => !MANDATORY_DOCS.some(t => t.name === d.name))
+    .filter(d => !usedDocIds.has(d.id))
     .map(d => ({
       name: d.name,
       category: d.category,
