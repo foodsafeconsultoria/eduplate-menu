@@ -29,6 +29,8 @@ export interface OrgSettings {
   nutritionistCrn?: string;
   municipio?: string;
   uf?: string;
+  /** Temperatura mínima de cocção (°C) conforme o POP do município. Padrão 70 (RDC 216). */
+  coccaoMinTemp?: number;
 }
 
 const LEGACY_ORG_ID = 'pnae-default-org';

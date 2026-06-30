@@ -35,6 +35,7 @@ const Billing            = lazy(() => import('@/pages/Billing'));
 const Cadastro           = lazy(() => import('@/pages/Cadastro'));
 const Documents          = lazy(() => import('@/pages/Documents'));
 const Team               = lazy(() => import('@/pages/Team'));
+const TemperatureControl = lazy(() => import('@/pages/TemperatureControl'));
 const Register           = lazy(() => import('@/pages/Register'));
 const ForgotPassword     = lazy(() => import('@/pages/ForgotPassword'));
 
@@ -84,6 +85,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/assinatura': 'Assinatura | EduPlate Menu',
   '/documents': 'Documentos | EduPlate Menu',
   '/team': 'Equipe | EduPlate Menu',
+  '/temperatura': 'Controle de Temperatura | EduPlate Menu',
 };
 
 function PageTitle() {
@@ -186,6 +188,7 @@ function Router() {
                   <Route path="/assinatura" component={Billing} />
                   <Route path="/documents" component={Documents} />
                   <Route path="/team" component={Team} />
+                  <Route path="/temperatura" component={TemperatureControl} />
                   <Route component={NotFound} />
                 </Switch>
               </Suspense>

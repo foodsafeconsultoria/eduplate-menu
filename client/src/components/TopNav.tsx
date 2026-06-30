@@ -8,6 +8,7 @@ import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useDocuments } from '@/hooks/useDocuments';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
+  Thermometer,
   Apple, Bell, BookOpen, Calendar, CheckCircle,
   ClipboardCheck, ClipboardList, ClipboardMinus, Factory,
   FileBarChart2, FileText, GraduationCap, LayoutDashboard,
@@ -226,6 +227,7 @@ export default function TopNav() {
 
   const fiscalizacaoItems: DropdownItem[] = [
     { label: 'Inspeções',      href: '/inspection',    icon: <ClipboardCheck className="h-4 w-4" /> },
+    { label: 'Controle de Temperatura', href: '/temperatura', icon: <Thermometer className="h-4 w-4" /> },
     { label: 'Cronograma',     href: '/schedule',      icon: <Calendar className="h-4 w-4" />, badge: upcomingVisitsCount },
     { label: 'Escolas',        href: '/schools',       icon: <School className="h-4 w-4" /> },
     { label: 'Resto/Ingesta',  href: '/resto-ingesta', icon: <Utensils className="h-4 w-4" /> },

@@ -63,12 +63,13 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
     startY: y + 4,
     body: metaRows,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.5 },
+    margin: { left: 15, right: 15 },
+    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
     columnStyles: {
-      0: { fontStyle: 'bold', fillColor: [240, 253, 244], cellWidth: 40 },
-      1: { cellWidth: 55 },
-      2: { fontStyle: 'bold', fillColor: [240, 253, 244], cellWidth: 40 },
-      3: { cellWidth: 55 },
+      0: { fontStyle: 'bold', fillColor: [240, 253, 244], textColor: [22, 101, 52], cellWidth: 38 },
+      1: { cellWidth: 52 },
+      2: { fontStyle: 'bold', fillColor: [240, 253, 244], textColor: [22, 101, 52], cellWidth: 38 },
+      3: { cellWidth: 52 },
     },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
@@ -82,21 +83,29 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
 
   const ingRows = recipe.ingredients.map(ing => [
     ing.foodName,
-    `${ing.grossWeight.toFixed(3)} kg`,
-    `${ing.netWeight.toFixed(3)} kg`,
+    ing.grossWeight.toFixed(3),
+    ing.netWeight.toFixed(3),
     ing.correctionFactor > 0 ? ing.correctionFactor.toFixed(2) : '—',
     `R$ ${ing.estimatedCost.toFixed(2)}`,
   ]);
 
   autoTable(doc, {
     startY: y,
-    head: [['Ingrediente', 'Peso Bruto (kg)', 'Peso Líquido (kg)', 'F.C.', 'Custo']],
+    head: [['Ingrediente', 'P. Bruto', 'P. Líquido', 'F.C.', 'Custo']],
     body: ingRows,
     theme: 'striped',
-    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
     bodyStyles: { fontSize: 8 },
-    foot: [['Total', `${recipe.totalGrossWeight.toFixed(3)} kg`, `${recipe.totalNetWeight.toFixed(3)} kg`, '', `R$ ${recipe.costTotal.toFixed(2)}`]],
-    footStyles: { fillColor: [240, 253, 244], fontStyle: 'bold', fontSize: 8 },
+    columnStyles: {
+      0: { cellWidth: 74 },
+      1: { cellWidth: 28, halign: 'right' },
+      2: { cellWidth: 28, halign: 'right' },
+      3: { cellWidth: 18, halign: 'center' },
+      4: { cellWidth: 32, halign: 'right' },
+    },
+    foot: [['Total', `${recipe.totalGrossWeight.toFixed(3)}`, `${recipe.totalNetWeight.toFixed(3)}`, '', `R$ ${recipe.costTotal.toFixed(2)}`]],
+    footStyles: { fillColor: [240, 253, 244], textColor: [22, 101, 52], fontStyle: 'bold', fontSize: 8 },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
 
@@ -121,12 +130,13 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
     startY: y,
     body: nutRows,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.5 },
+    margin: { left: 15, right: 15 },
+    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
     columnStyles: {
-      0: { fontStyle: 'bold', fillColor: [240, 253, 244], cellWidth: 40 },
-      1: { cellWidth: 55 },
-      2: { fontStyle: 'bold', fillColor: [240, 253, 244], cellWidth: 40 },
-      3: { cellWidth: 55 },
+      0: { fontStyle: 'bold', fillColor: [240, 253, 244], textColor: [22, 101, 52], cellWidth: 38 },
+      1: { cellWidth: 52, halign: 'right' },
+      2: { fontStyle: 'bold', fillColor: [240, 253, 244], textColor: [22, 101, 52], cellWidth: 38 },
+      3: { cellWidth: 52, halign: 'right' },
     },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
@@ -153,9 +163,15 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
     head: [['Nutriente', 'Por porção', 'Referência', 'Adequação']],
     body: adqRows,
     theme: 'striped',
-    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
     bodyStyles: { fontSize: 8 },
-    columnStyles: { 3: { fontStyle: 'bold', halign: 'right' } },
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 44, halign: 'right' },
+      2: { cellWidth: 40, halign: 'right' },
+      3: { cellWidth: 36, fontStyle: 'bold', halign: 'right' },
+    },
   });
   y = (doc as any).lastAutoTable.finalY + 4;
   doc.setFont('helvetica', 'italic');

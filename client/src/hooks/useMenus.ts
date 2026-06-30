@@ -182,6 +182,8 @@ export function useMenus() {
           category: input.category,
           targetCategories: input.targetCategories,
           referenceMonth: input.referenceMonth,
+          weekStartDate: input.weekStartDate,
+          studentCount: input.studentCount,
           schoolIds: input.schoolIds || [],
           items: input.items || [],
           slots: input.slots,
