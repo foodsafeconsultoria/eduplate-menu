@@ -226,7 +226,7 @@ export default function Dashboard() {
                 style={{ width: `${Math.min(familyFarmShare, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">Meta mínima: 45% (Resolução FNDE nº 06/2020 — vigência 2026)</p>
+            <p className="text-xs text-gray-400">Meta mínima: 45% (Resolução CD/FNDE nº 4/2026)</p>
           </div>
 
           {/* Conformidade das visitas */}

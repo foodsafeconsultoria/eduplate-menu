@@ -102,7 +102,7 @@ function MockDashboard() {
           <div style={{ background:'#F1F5F9', borderRadius:99, height:6, marginTop:8 }}>
             <div style={{ width:'23%', background:'linear-gradient(90deg,#E91E63,#F06292)', borderRadius:99, height:6 }} />
           </div>
-          <div style={{ fontSize:8, color:'#94A3B8', marginTop:5 }}>Meta mínima: 30% (Lei 11.947)</div>
+          <div style={{ fontSize:8, color:'#94A3B8', marginTop:5 }}>Meta mínima: 45% (Res. 4/2026)</div>
         </div>
       </div>
     </div>

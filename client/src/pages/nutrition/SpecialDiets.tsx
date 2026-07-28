@@ -388,7 +388,7 @@ export default function SpecialDiets() {
           <div className="flex items-start gap-3">
             <ShieldAlert className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-blue-900">Obrigações PNAE — Resolução CD/FNDE nº 06/2020 (Art. 20)</p>
+              <p className="text-sm font-semibold text-blue-900">Obrigações PNAE — Resolução CD/FNDE nº 4/2026</p>
               <p className="mt-1 text-xs text-blue-700 leading-relaxed">
                 É obrigatório oferecer cardápio específico e seguro para alunos com necessidades alimentares especiais mediante <strong>laudo médico ou prescrição de nutricionista</strong>.
                 As principais restrições exigidas são: alergia alimentar (leite, ovo, trigo, amendoim, soja, frutos do mar, gergelim), doença celíaca, diabetes, fenilcetonúria e intolerâncias.

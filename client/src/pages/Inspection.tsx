@@ -766,7 +766,7 @@ async function generateSchoolCertificatePDF(
   // Rodapé
   doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(160,160,160);
   doc.text(
-    `Emitido em ${emDateStr}  ·  ${inspection.schoolName}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009 · RDC ANVISA nº 216/2004`,
+    `Emitido em ${emDateStr}  ·  ${inspection.schoolName}  ·  Res. CD/FNDE nº 4/2026 · Lei 11.947/2009 · RDC ANVISA nº 216/2004`,
     CX, ph - 6,
   );
 

@@ -5,7 +5,7 @@
  *
  * Os fatores abaixo são SUGESTÕES iniciais, calculados a partir da proporção
  * entre as necessidades energéticas médias das faixas etárias usadas como
- * referência pelo PNAE (Resolução CD/FNDE nº 06/2020). A nutricionista RT
+ * referência pelo PNAE (Resolução CD/FNDE nº 4/2026). A nutricionista RT
  * pode ajustar o fator na hora de replicar e refinar cada porção depois,
  * no editor do cardápio.
  */

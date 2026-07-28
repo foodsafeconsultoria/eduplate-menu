@@ -59,7 +59,7 @@ const TRAINING_TYPES = [
   'Higiene e Saúde do Manipulador de Alimentos',
   'Controle de Qualidade e Segurança dos Alimentos',
   'Armazenamento e Conservação de Alimentos',
-  'Nutrição Escolar e Programa PNAE (Res. FNDE 06/2020)',
+  'Nutrição Escolar e Programa PNAE (Res. CD/FNDE 4/2026)',
   'Segurança Alimentar e Nutricional – SAN',
   'Gestão de Resíduos em Unidades de Alimentação e Nutrição',
   'Uso Seguro de Produtos de Limpeza e Sanificação',
@@ -458,7 +458,7 @@ async function generateCertificatePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(160, 160, 160);
   doc.text(
-    `Emitido em ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ID: ${attendee.id}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009`,
+    `Emitido em ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ID: ${attendee.id}  ·  Res. CD/FNDE nº 4/2026 · Lei 11.947/2009`,
     CX, ph - 6,
   );
 

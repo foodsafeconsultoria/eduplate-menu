@@ -529,7 +529,7 @@ export default function SigpcReport() {
   const af    = Number(totalFamilyFarm.replace(',', '.')) || 0;
   const afPct = spent > 0 ? (af / spent) * 100 : 0;
 
-  // Exigência mínima de AF: 30% até 2025; 45% a partir de 2026 (Resolução CD/FNDE)
+  // Exigência mínima de AF: 45% (Resolução CD/FNDE nº 4/2026); 30% na 06/2020 (revogada)
   const minAfPct = Number(year) >= 2026 ? 45 : 30;
 
   const afOk = afPct >= minAfPct || avgFamilyFarmPct >= minAfPct;

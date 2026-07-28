@@ -70,7 +70,7 @@ const FAQS = [
   },
   {
     q: 'O sistema atende à legislação do PNAE (Lei 11.947/2009)?',
-    a: 'Sim. O EduPlate Menu foi desenvolvido especificamente para as exigências do PNAE: controle dos 30% da agricultura familiar, relatórios compatíveis com o SIGPC/FNDE, fichas técnicas com valor nutricional e registros de aceitabilidade conforme as normas do CFN.',
+    a: 'Sim. O EduPlate Menu foi desenvolvido especificamente para as exigências do PNAE: controle dos 45% da agricultura familiar (Resolução CD/FNDE nº 4/2026), relatórios compatíveis com o SIGPC/FNDE, fichas técnicas com valor nutricional e registros de aceitabilidade conforme as normas do CFN.',
   },
   {
     q: 'Quantos usuários posso cadastrar?',

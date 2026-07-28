@@ -992,7 +992,8 @@ export default function Menus() {
     const complianceAlerts: string[] = [];
     if (missingTargets.length > 0)       complianceAlerts.push(`Metas abaixo: ${missingTargets.join(', ')}`);
     if (repeatedPreparations.length > 0) complianceAlerts.push(`Repetições: ${repeatedPreparations.join(', ')}`);
-    if (familyFarmShare < 30)            complianceAlerts.push('Agricultura familiar abaixo de 30%.');
+    const minAf = new Date().getFullYear() >= 2026 ? 45 : 30; // Res. CD/FNDE 4/2026 exige 45%
+    if (familyFarmShare < minAf)         complianceAlerts.push(`Agricultura familiar abaixo de ${minAf}%.`);
 
     return {
       averageCost: totalCost / daysCount,

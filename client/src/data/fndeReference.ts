@@ -4,7 +4,7 @@
  * IMPORTANTE: estes valores são os MESMOS já adotados na tela de Cardápios
  * (constante fndeTargets), referentes a UMA refeição que cobre cerca de 20%
  * das necessidades diárias (almoço/refeição principal, ensino fundamental),
- * conforme a Resolução CD/FNDE nº 06/2020. Servem como PARÂMETRO de conferência
+ * conforme a Resolução CD/FNDE nº 4/2026 (vigente, revogou a 06/2020). Servem como PARÂMETRO de conferência
  * na ficha técnica — a nutricionista RT valida conforme a etapa e o percentual
  * de cobertura da unidade (parcial 20%/30% ou integral 70%).
  *
@@ -30,7 +30,7 @@ export const FNDE_MEAL_REFERENCE: FndeReferenceItem[] = [
 ];
 
 export const FNDE_REFERENCE_NOTE =
-  'Referência: refeição cobrindo ~20% das necessidades diárias (Ensino Fundamental, Res. CD/FNDE 06/2020). Ajuste conforme a etapa e o percentual de cobertura da unidade.';
+  'Referência: refeição cobrindo ~20% das necessidades diárias (Ensino Fundamental, Res. CD/FNDE nº 4/2026). Ajuste conforme a etapa e o percentual de cobertura da unidade.';
 
 /** Calcula o % de adequação de um valor frente à referência da refeição. */
 export function adequacyPercent(value: number, ref: number): number {

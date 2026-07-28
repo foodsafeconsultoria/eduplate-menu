@@ -319,7 +319,7 @@ async function generateCertificatePDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(160, 160, 160);
   doc.text(
-    `Emitido em ${emDateStr}  ·  ${cert.schoolName}  ·  Res. FNDE/CD nº 06/2020 · Lei 11.947/2009 · RDC ANVISA nº 216/2004`,
+    `Emitido em ${emDateStr}  ·  ${cert.schoolName}  ·  Res. CD/FNDE nº 4/2026 · Lei 11.947/2009 · RDC ANVISA nº 216/2004`,
     CX, ph - 6,
   );
 
