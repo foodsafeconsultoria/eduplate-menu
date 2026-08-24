@@ -3,7 +3,7 @@
  * Gera o relatório de prestação de contas ao FNDE (PNAE) com dados já inseridos no sistema.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -91,8 +91,6 @@ const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
 // ── entity config (saved to localStorage, org-scoped) ────────────────────────
 
-const LEGACY_ORG_ID = 'pnae-default-org';
-
 function configKey(orgId: string): string {
   return `pnae_sigpc_entity_config_${orgId}`;
 }
@@ -107,9 +105,9 @@ interface EntityConfig {
   crn: string;
 }
 
-function loadEntityConfig(orgId: string): EntityConfig {
+function loadEntityConfig(orgId?: string): EntityConfig {
   try {
-    const raw = localStorage.getItem(configKey(orgId));
+    const raw = (orgId ? localStorage.getItem(configKey(orgId)) : null);
     if (raw) return { ...defaultEntity(), ...JSON.parse(raw) };
     // Backward-compat: try old flat key once
     const legacy = localStorage.getItem('pnae_sigpc_entity_config');
@@ -456,7 +454,7 @@ async function generateSigpcPDF(params: {
 
 export default function SigpcReport() {
   const { user }   = useAuth();
-  const orgId      = user?.organizationId || LEGACY_ORG_ID;
+  const orgId      = user?.organizationId;
   const { menus }   = useMenus();
   const { schools } = useSchools();
 
@@ -468,6 +466,10 @@ export default function SigpcReport() {
   // Entity config (lazy init so orgId is available)
   const [entity, setEntity] = useState<EntityConfig>(() => loadEntityConfig(orgId));
   const [entityOpen, setEntityOpen] = useState(false);
+
+  useEffect(() => {
+    setEntity(loadEntityConfig(orgId));
+  }, [orgId]);
 
   // Financial data
   const [totalReceived,   setTotalReceived]   = useState('');
@@ -488,6 +490,10 @@ export default function SigpcReport() {
   ]);
 
   const saveEntity = (next: EntityConfig) => {
+    if (!orgId) {
+      toast.error('Organização não encontrada para salvar os dados da entidade.');
+      return;
+    }
     setEntity(next);
     localStorage.setItem(configKey(orgId), JSON.stringify(next));
     toast.success('Dados da entidade salvos.');

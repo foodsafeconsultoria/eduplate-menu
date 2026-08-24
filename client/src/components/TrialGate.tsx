@@ -83,7 +83,7 @@ export default function TrialGate({ children }: Props) {
             {isCancl  && 'Assinatura cancelada'}
           </h2>
           <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.55)', fontSize: 13, lineHeight: 1.6 }}>
-            {isExpired && 'Os 14 dias de acesso gratuito chegaram ao fim. Para continuar usando o EduPlate Menu, escolha um plano e assine agora.'}
+            {isExpired && 'Os 30 dias de acesso gratuito chegaram ao fim. Para continuar usando o EduPlate Menu, escolha um plano e assine agora.'}
             {isPast    && 'Houve um problema com o seu pagamento. Acesse a área de cobrança para regularizar e continuar usando o sistema.'}
             {isCancl   && 'Sua assinatura foi cancelada. Para reativar o acesso, escolha um plano abaixo.'}
           </p>

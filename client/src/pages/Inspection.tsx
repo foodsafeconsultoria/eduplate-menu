@@ -17,11 +17,9 @@ import { useSchools, useInspections } from '@/hooks/useFirestore';
 import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useAuth } from '@/contexts/AuthContext';
 
-const LEGACY_ORG_ID_INSP = 'pnae-default-org';
-
-function loadInspectionSigner(orgId: string): { name: string; crn: string; municipality: string } {
+function loadInspectionSigner(orgId?: string): { name: string; crn: string; municipality: string } {
   try {
-    const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
+    const raw = (orgId ? localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`) : null)
       || localStorage.getItem('pnae_sigpc_entity_config');
     if (raw) {
       const cfg = JSON.parse(raw);
@@ -778,7 +776,7 @@ async function generateSchoolCertificatePDF(
 // ── Component ────────────────────────────────────────────────────────────────
 export default function InspectionPage() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID_INSP;
+  const orgId = user?.organizationId;
   const { schools } = useSchools();
   const { inspections, setInspections } = useInspections();
   const { addTicket: addMaintenanceTicket } = useMaintenanceTickets();

@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import stripeRouter from "./stripe.js";
 import emailRouter from "./email.js";
 import aiRouter from "./ai.js";
+import { getAdminDb } from "./firebase-admin.js";
 import { requireAuth } from "./auth-middleware.js";
 import { rateLimit } from "./rate-limit.js";
 
@@ -60,6 +61,36 @@ async function startServer() {
 
   // ── AI routes (require login — prevents anonymous credit burn) ───────────
   app.use('/api/ai', requireAuth, aiRouter);
+
+  // ── Org helper routes ─────────────────────────────────────────────────────
+  app.post('/api/org/resolve-invite', requireAuth, async (req, res) => {
+    try {
+      const inviteCode = String(req.body?.inviteCode || '').trim().toUpperCase();
+      if (!inviteCode) {
+        return res.status(400).json({ error: 'inviteCode é obrigatório.' });
+      }
+
+      const snap = await getAdminDb()
+        .collection('organizations')
+        .where('inviteCode', '==', inviteCode)
+        .limit(1)
+        .get();
+
+      if (snap.empty) {
+        return res.status(404).json({ error: 'Código de convite inválido.' });
+      }
+
+      return res.json({ orgId: snap.docs[0].id });
+    } catch (err: any) {
+      console.error('[resolve-invite]', err.message);
+      return res.status(500).json({ error: 'Erro ao validar código de convite.' });
+    }
+  });
+
+  // ── Unmatched API routes should return JSON, not the SPA shell ───────────
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Rota de API não encontrada.' });
+  });
 
   // ── Static files (production build) ──────────────────────────────────────
   const staticPath =

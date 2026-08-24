@@ -92,10 +92,10 @@ async function generateAllRecipesPDF(recipes: Recipe[], signerLabel?: string) {
 
 export default function Recipes() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || 'pnae-default-org';
+  const orgId = user?.organizationId;
   const signerLabel = useMemo(() => {
     try {
-      const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
+      const raw = (orgId ? localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`) : null)
         || localStorage.getItem('pnae_sigpc_entity_config');
       if (raw) {
         const cfg = JSON.parse(raw);

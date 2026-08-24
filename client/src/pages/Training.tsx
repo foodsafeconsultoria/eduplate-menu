@@ -24,8 +24,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
 
-const LEGACY_ORG_ID = 'pnae-default-org';
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Training {
@@ -584,7 +582,7 @@ function QRDisplay({
 
 export default function TrainingPage() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || LEGACY_ORG_ID;
+  const orgId = user?.organizationId ?? '';
   const { settings: orgSettings, saving: orgSaving, saveSettings, uploadImage } = useOrgSettings();
 
   const trainingsKey = `pnae_trainings_${orgId}`;
@@ -666,7 +664,7 @@ export default function TrainingPage() {
       };
     }
     try {
-      const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
+      const raw = (orgId ? localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`) : null)
         || localStorage.getItem('pnae_sigpc_entity_config');
       if (raw) {
         const cfg = JSON.parse(raw);

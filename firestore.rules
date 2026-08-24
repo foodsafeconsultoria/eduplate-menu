@@ -53,11 +53,9 @@ service cloud.firestore {
 
     // ── Organizations ─────────────────────────────────────────────────────────
     match /organizations/{orgId} {
-      // Any signed-in user can READ org metadata.
-      // Necessary so the invite-code query (getDocs where inviteCode == X)
-      // works during registration before the new user has joined the org.
-      // Trade-off: org name and invite code are visible to any authenticated user.
-      allow read: if isSignedIn();
+      // Only members of the org can read org metadata directly.
+      // Invite-code resolution for new members is handled by the server.
+      allow read: if belongsToOrg(orgId);
 
       // Only the registering user can create an org, and only with their own email.
       // Because org creation now happens after createUserWithEmailAndPassword,

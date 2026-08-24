@@ -335,8 +335,11 @@ export default function Documents() {
   };
 
   const handleFile = async (name: string, category: DocumentCategory, file: File) => {
-    // Use organizationId with fallback — same pattern as other hooks
-    const orgId = user?.organizationId || 'pnae-default-org';
+    const orgId = user?.organizationId;
+    if (!orgId) {
+      toast.error('Organização não encontrada para este usuário.');
+      return;
+    }
 
     // Validate file size (max 10 MB)
     if (file.size > 10 * 1024 * 1024) {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@/types';
 import { auth, db } from '@/lib/firebase';
+import { apiUrl, authHeaders } from '@/lib/apiUrl';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -11,10 +12,26 @@ import {
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 /**
- * Legacy org ID: users who registered before multi-tenancy was added are
- * automatically placed in this shared org so they keep seeing each other's data.
+ * Creates an isolated recovery org for accounts that are missing organization
+ * data, avoiding accidental placement into a shared tenant.
  */
-const LEGACY_ORG_ID = 'pnae-default-org';
+async function createRecoveryOrganization(email: string) {
+  const orgId = crypto.randomUUID();
+  const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await setDoc(doc(db, 'organizations', orgId), {
+    id: orgId,
+    inviteCode,
+    ownerEmail: email,
+    createdAt: new Date(),
+    subscriptionStatus: 'trial',
+    plan: null,
+    trialEndsAt,
+  });
+
+  return orgId;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -46,10 +63,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // Back-fill organizationId for users registered before multi-tenancy
           if (!data.organizationId) {
-            await setDoc(docRef, { organizationId: LEGACY_ORG_ID }, { merge: true });
-            data.organizationId = LEGACY_ORG_ID;
+            const recoveryOrgId = await createRecoveryOrganization(firebaseUser.email || '');
+            await setDoc(docRef, { organizationId: recoveryOrgId }, { merge: true });
+            data.organizationId = recoveryOrgId;
           }
           setUser({ uid: firebaseUser.uid, ...data } as User);
         } else {
@@ -59,11 +76,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
             displayName:
-              firebaseUser.displayName ||
+            firebaseUser.displayName ||
               firebaseUser.email?.split('@')[0] ||
               'Usuário',
             role: 'nutricionista',
-            organizationId: LEGACY_ORG_ID,
+            organizationId: await createRecoveryOrganization(firebaseUser.email || ''),
             createdAt: new Date(),
           };
           await setDoc(docRef, fallback, { merge: true });
@@ -122,11 +139,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let orgId: string;
 
       if (inviteCode) {
-        // User is now signed in → org read is allowed by Firestore rules.
-        const orgsRef = collection(db, 'organizations');
-        const q = query(orgsRef, where('inviteCode', '==', inviteCode.trim().toUpperCase()));
-        const snap = await getDocs(q);
-        if (snap.empty) {
+        const response = await fetch(apiUrl('/api/org/resolve-invite'), {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.orgId) {
           // Invalid code — delete the just-created auth user to avoid orphans,
           // then surface the error.
           await res.user.delete();
@@ -134,22 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setError('Código de convite inválido. Verifique e tente novamente.');
           return;
         }
-        orgId = snap.docs[0].id;
+        orgId = data.orgId;
       } else {
-        // Create a brand-new organisation. User is signed in, so the rule
-        // `request.resource.data.ownerEmail == request.auth.token.email` passes.
-        orgId = crypto.randomUUID();
-        const newInviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 days (1 mês)
-        await setDoc(doc(db, 'organizations', orgId), {
-          id: orgId,
-          inviteCode: newInviteCode,
-          ownerEmail: email,
-          createdAt: new Date(),
-          subscriptionStatus: 'trial',
-          plan: null,
-          trialEndsAt,
-        });
+        orgId = await createRecoveryOrganization(email);
       }
 
       // ── Step 3: Write the user document ──────────────────────────────────

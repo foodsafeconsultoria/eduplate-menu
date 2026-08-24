@@ -107,16 +107,13 @@ export default function Pricing() {
       }
       try {
         setLoading(planKey);
-        const res = await fetch(apiUrl('/api/stripe/checkout'), {
+        const res = await fetch(apiUrl('/api/stripe/checkout-subscribe'), {
           method: 'POST',
           headers: await authHeaders(),
           body: JSON.stringify({
             orgId: user.organizationId,
             plan: planKey,
             period: billingPeriod,
-            userId: user.uid,
-            userEmail: user.email,
-            orgName: user.organizationId,
           }),
         });
         const data = await res.json();

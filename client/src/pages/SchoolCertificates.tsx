@@ -344,7 +344,7 @@ function scoreBarClass(score: number) {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function SchoolCertificates() {
   const { user } = useAuth();
-  const orgId = user?.organizationId || 'pnae-default-org';
+  const orgId = user?.organizationId ?? '';
   const { inspections } = useInspections();
   const { schools } = useSchools();
   const { settings: orgSettings } = useOrgSettings();
@@ -360,7 +360,7 @@ export default function SchoolCertificates() {
       };
     }
     try {
-      const raw = localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`)
+      const raw = (orgId ? localStorage.getItem(`pnae_sigpc_entity_config_${orgId}`) : null)
         || localStorage.getItem('pnae_sigpc_entity_config');
       if (raw) {
         const cfg = JSON.parse(raw);
