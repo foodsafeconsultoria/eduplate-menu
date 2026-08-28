@@ -20,6 +20,7 @@ import {
   Factory,
   FileBarChart2,
   GraduationCap,
+  HeartPulse,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -62,7 +63,8 @@ const alimentacaoChildren: NavItem[] = [
   { label: 'Fichas Técnicas', href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
   { label: 'Dietas Especiais',href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
   { label: 'Produção',        href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
-  { label: 'SIGPC',          href: '/nutrition/sigpc',          icon: <FileBarChart2 className="h-4 w-4" /> },
+  { label: 'Relatório Gerencial', href: '/nutrition/reports',   icon: <FileBarChart2 className="h-4 w-4" /> },
+  { label: 'Avaliação Nutricional', href: '/nutrition/assessment', icon: <HeartPulse className="h-4 w-4" /> },
 ];
 
 const fiscalizacaoChildren: NavItem[] = [

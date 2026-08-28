@@ -11,7 +11,7 @@ import {
   Thermometer,
   Apple, Bell, BookOpen, Calendar, CheckCircle,
   ClipboardCheck, ClipboardList, ClipboardMinus, Factory,
-  FileBarChart2, FileText, GraduationCap, LayoutDashboard,
+  FileBarChart2, FileText, GraduationCap, HeartPulse, LayoutDashboard,
   LogOut, Menu, School, Shield, ShieldAlert, Trophy,
   User, Users, Utensils, Wrench, X, ChevronDown,
 } from 'lucide-react';
@@ -222,7 +222,8 @@ export default function TopNav() {
     { label: 'Fichas Técnicas',  href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
     { label: 'Dietas Especiais', href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
     { label: 'Manejo de Sobras', href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
-    { label: 'SIGPC',            href: '/nutrition/sigpc',         icon: <FileBarChart2 className="h-4 w-4" /> },
+    { label: 'Relatório Gerencial', href: '/nutrition/reports',    icon: <FileBarChart2 className="h-4 w-4" /> },
+    { label: 'Avaliação Nutricional', href: '/nutrition/assessment', icon: <HeartPulse className="h-4 w-4" /> },
   ];
 
   const fiscalizacaoItems: DropdownItem[] = [

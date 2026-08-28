@@ -158,6 +158,36 @@ export interface Acceptability {
   createdBy: string;
 }
 
+export type NutritionalAssessmentSex = 'F' | 'M';
+
+export type NutritionalAssessmentStatus =
+  | 'Magreza acentuada'
+  | 'Magreza'
+  | 'Eutrofia'
+  | 'Sobrepeso'
+  | 'Obesidade'
+  | 'Obesidade grave';
+
+export interface NutritionalAssessment {
+  id: string;
+  studentName: string;
+  schoolId: string;
+  schoolName: string;
+  className?: string;
+  sex: NutritionalAssessmentSex;
+  birthDate: Date;
+  assessmentDate: Date;
+  ageMonths: number;
+  weightKg: number;
+  heightCm: number;
+  bmi: number;
+  zScoreApprox?: number;
+  status: NutritionalAssessmentStatus;
+  notes?: string;
+  createdAt: Date;
+  createdBy: string;
+}
+
 // Manutenção - Tickets
 export interface MaintenanceTicket {
   id: string;

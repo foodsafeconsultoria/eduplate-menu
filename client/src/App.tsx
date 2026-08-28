@@ -41,11 +41,12 @@ const ForgotPassword     = lazy(() => import('@/pages/ForgotPassword'));
 
 // ── Módulos de nutrição (lazy — os mais pesados) ──────────────────────────────
 const Foods        = lazy(() => import('@/pages/nutrition/Foods'));
+const GeneralReport = lazy(() => import('@/pages/nutrition/GeneralReport'));
 const Menus        = lazy(() => import('@/pages/nutrition/Menus'));
 const NutritionHub = lazy(() => import('@/pages/nutrition/NutritionHub'));
+const NutritionalAssessment = lazy(() => import('@/pages/nutrition/NutritionalAssessment'));
 const Production   = lazy(() => import('@/pages/nutrition/Production'));
 const Recipes      = lazy(() => import('@/pages/nutrition/Recipes'));
-const SigpcReport  = lazy(() => import('@/pages/nutrition/SigpcReport'));
 const SpecialDiets       = lazy(() => import('@/pages/nutrition/SpecialDiets'));
 const MenuPublications   = lazy(() => import('@/pages/nutrition/MenuPublications'));
 const ShoppingList       = lazy(() => import('@/pages/nutrition/ShoppingList'));
@@ -68,7 +69,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/nutrition/menus': 'Cardápios | EduPlate Menu',
   '/nutrition/special-diets': 'Dietas especiais | EduPlate Menu',
   '/nutrition/production': 'Produção | EduPlate Menu',
-  '/nutrition/sigpc': 'Relatório SIGPC | EduPlate Menu',
+  '/nutrition/reports': 'Relatório gerencial | EduPlate Menu',
+  '/nutrition/sigpc': 'Relatório gerencial | EduPlate Menu',
+  '/nutrition/assessment': 'Avaliação nutricional | EduPlate Menu',
   '/nutrition/publications': 'Publicações de cardápio | EduPlate Menu',
   '/nutrition/shopping-list': 'Lista de compras | EduPlate Menu',
   '/inspection': 'Fiscalização | EduPlate Menu',
@@ -171,7 +174,9 @@ function Router() {
                   <Route path="/nutrition/menus" component={Menus} />
                   <Route path="/nutrition/special-diets" component={SpecialDiets} />
                   <Route path="/nutrition/production" component={Production} />
-                  <Route path="/nutrition/sigpc" component={SigpcReport} />
+                  <Route path="/nutrition/reports" component={GeneralReport} />
+                  <Route path="/nutrition/sigpc" component={GeneralReport} />
+                  <Route path="/nutrition/assessment" component={NutritionalAssessment} />
                   <Route path="/nutrition/publications" component={MenuPublications} />
                   <Route path="/nutrition/shopping-list" component={ShoppingList} />
                   <Route path="/inspection" component={Inspection} />

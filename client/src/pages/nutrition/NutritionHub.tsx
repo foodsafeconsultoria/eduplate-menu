@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'wouter';
-import { Apple, BookOpen, ClipboardMinus, Factory, ShieldAlert, ShoppingCart } from 'lucide-react';
+import { Apple, BookOpen, ClipboardMinus, Factory, FileBarChart2, HeartPulse, ShieldAlert, ShoppingCart } from 'lucide-react';
 
 const moduleCards = [
   {
@@ -45,6 +45,18 @@ const moduleCards = [
     icon: ShoppingCart,
     href: '/nutrition/shopping-list',
   },
+  {
+    title: 'Relatório Gerencial',
+    description: 'Relatório consolidado para redes públicas, particulares ou mistas com foco em gestão e apresentação institucional.',
+    icon: FileBarChart2,
+    href: '/nutrition/reports',
+  },
+  {
+    title: 'Avaliação Nutricional',
+    description: 'Lançamento em lote de alunos com IMC, classificação e curva operacional por idade.',
+    icon: HeartPulse,
+    href: '/nutrition/assessment',
+  },
 ];
 
 export default function NutritionHub() {
@@ -54,15 +66,15 @@ export default function NutritionHub() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Alimentacao Escolar</h1>
           <p className="text-gray-600 mt-2">
-            Novo módulo estruturado para centralizar cardápios, fichas, dietas, produção e conformidade PNAE.
+            Centralize cardápios, dietas, produção, relatórios gerenciais e avaliação nutricional em uma única operação.
           </p>
         </div>
 
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-emerald-200 bg-emerald-50">
           <CardHeader>
-            <CardTitle>Fase atual da fusao</CardTitle>
+            <CardTitle>Gestão alimentar mais completa</CardTitle>
             <CardDescription>
-              Estrutura inicial criada no sistema base. O próximo passo será migrar a lógica real do app de cardápios para estas áreas.
+              O módulo agora atende tanto redes públicas quanto particulares e ganha uma frente nova para acompanhamento nutricional dos alunos em escala.
             </CardDescription>
           </CardHeader>
         </Card>
