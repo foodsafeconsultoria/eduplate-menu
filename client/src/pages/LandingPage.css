@@ -850,3 +850,74 @@
   margin-bottom: 6px;
   letter-spacing: 0.3px;
 }
+
+/* Editorial direction: restrained typography, flat surfaces and clear hierarchy. */
+.lp-root { --lp-green: #28734f; --lp-green-dark: #205e41; --lp-navy: #20392f; --lp-text: #394a42; --lp-muted: #637069; --lp-line: #dce1da; font-family: 'Poppins', sans-serif; background: #fff; }
+.lp-root button { font-family: inherit; }
+.lp-root h1, .lp-root h2, .lp-root h3 { font-weight: 500; letter-spacing: -0.035em; line-height: 1.2; }
+.lp-root h1 { font-size: clamp(2.15rem, 4vw, 3.7rem); }
+.lp-root h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.lp-root h3 { font-size: 1.1rem; letter-spacing: -0.02em; }
+.lp-root section[id] { scroll-margin-top: 100px; }
+.lp-root a:focus-visible, .lp-root button:focus-visible { outline: 3px solid #a66b29; outline-offset: 4px; }
+.lp-header { background: #fff; backdrop-filter: none; }
+.lp-nav-links { font-size: 13px; font-weight: 500; gap: 22px; }
+.lp-btn { border-radius: 5px; font-weight: 500; padding: 14px 22px; }
+.lp-btn-primary { background: var(--lp-green); box-shadow: none; color: white; }
+.lp-btn-primary:hover { background: var(--lp-green-dark); box-shadow: none; }
+.lp-btn:hover { transform: none; }
+.lp-btn-secondary { box-shadow: none; }
+.lp-hero { background: #f3f3ed; padding: 76px 0; }
+.lp-hero::before, .lp-hero-card::before, .lp-hero-card::after, .lp-eyebrow::before, .lp-cta-box::before, .lp-cta-box::after, .lp-cta-eyebrow::before { display: none; }
+.lp-eyebrow, .lp-hero .lp-eyebrow { border: 0; border-radius: 0; background: none; padding: 0; font-size: 12px; font-weight: 500; color: var(--lp-green-dark); letter-spacing: .06em; }
+.lp-hero .lp-hero-copy h1 { color: var(--lp-navy); text-shadow: none; }
+.lp-hero .lp-hero-copy p { color: var(--lp-muted); }
+.lp-lead { font-size: 16px; line-height: 1.8; }
+.lp-hero .lp-btn-secondary { background: transparent; border-color: #bcc8bf; color: var(--lp-navy); }
+.lp-hero .lp-btn-secondary:hover { background: #e6ebe3; }
+.lp-hero-note { font-size: 12px; margin-top: 16px !important; }
+.lp-author-note { font-size: 13px; line-height: 1.8; border-top: 1px solid #d6ddd3; padding-top: 20px; margin-top: 28px !important; max-width: 440px; }
+.lp-hero-card { border-radius: 8px; padding: 0; background: white; border: 1px solid #cbd4cc; box-shadow: 12px 16px 0 #e1e6dc; }
+.lp-mock-browser { border-radius: 0; box-shadow: none; border: 0; }
+.lp-browser-top { background: #e9ede5; }
+.lp-dot { display: none; }
+.lp-url-bar { background: transparent; margin: 0; color: #596b5e; }
+.lp-section { padding: 72px 0; }
+.lp-band { background: #f7f8f4; }
+.lp-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
+.lp-card { border: 0; border-top: 1px solid var(--lp-line); border-radius: 0; padding: 26px 0; background: transparent; box-shadow: none; }
+.lp-card:hover { transform: none; box-shadow: none; }
+.lp-card p { font-size: 14px; line-height: 1.8; }
+.lp-feature-number { display: block; font-size: 12px; color: #708375; margin-bottom: 14px; }
+.lp-origin { background: #243f33; padding: 52px 0; }
+.lp-origin .lp-container > div { display: none !important; }
+.lp-step { border: 0; border-top: 1px solid var(--lp-line); border-radius: 0; box-shadow: none; padding: 24px 0; }
+.lp-step-num { background: none; color: var(--lp-green); width: auto; height: auto; font-weight: 500; font-size: 14px; margin-bottom: 20px; }
+.lp-price-card, .lp-price-card.popular { border: 1px solid #c7d4c9; border-radius: 8px; box-shadow: none; transform: none; }
+.lp-popular-badge { border-radius: 3px; font-weight: 500; background: #edf2eb; color: var(--lp-green-dark); }
+.lp-price { font-weight: 500; }
+.lp-faq { max-width: 880px; }
+.lp-faq-item { border: 0; border-bottom: 1px solid var(--lp-line); border-radius: 0; box-shadow: none; background: transparent; }
+.lp-faq-q { padding: 22px 0; font-weight: 500; font-family: inherit; }
+.lp-faq-a { padding: 0 0 22px; border: 0; }
+.lp-faq-icon { color: var(--lp-green); }
+.lp-cta-box { background: #243f33; border-radius: 8px; box-shadow: none; padding: 44px; }
+.lp-cta-eyebrow { background: none; padding: 0; font-weight: 400; }
+.lp-footer { padding-bottom: 90px; }
+.lp-root > a[aria-label="Falar no WhatsApp"] { width: 46px !important; height: 46px !important; right: 18px !important; bottom: 18px !important; background: #28734f !important; box-shadow: none !important; }
+@media (max-width: 1024px) { .lp-hero-card { max-height: none; max-width: 700px; } }
+@media (max-width: 640px) {
+  .lp-section { padding: 48px 0; }
+  .lp-hero { padding: 36px 0 48px; }
+  .lp-hero-grid { gap: 32px; }
+  .lp-grid-3 { grid-template-columns: 1fr; }
+  .lp-hero-card { max-height: none; overflow: auto; box-shadow: 5px 7px 0 #e1e6dc; }
+  .lp-hero-card .lp-mock-browser { min-width: 480px; }
+  .lp-nav { gap: 8px; }
+  .lp-brand img { max-width: 130px; }
+  .lp-nav-actions { gap: 8px; }
+  .lp-nav-actions .lp-btn { padding: 9px 12px !important; font-size: 12px !important; }
+  .lp-cta-box { padding: 28px 22px; }
+  .lp-steps { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .lp-root *, .lp-root *::before, .lp-root *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

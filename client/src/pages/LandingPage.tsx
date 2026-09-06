@@ -16,21 +16,22 @@ import './LandingPage.css';
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 const FEATURES = [
+  { icon: <Users size={22} color="#fff" />, bg: '#28734f', title: 'Avaliação nutricional dos alunos', desc: 'Registre peso e altura, calcule o IMC automaticamente e organize as avaliações por escola e turma. Exporte os resultados em relatórios PDF ou planilhas CSV.' },
   { icon: <BookOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#4CAF50,#66BB6A)', title: 'Cardápios digitais', desc: 'Elabore, revise e publique cardápios com organização, padronização e visibilidade por escola, etapa e período.' },
   { icon: <ClipboardList size={22} color="#fff" />, bg: 'linear-gradient(135deg,#1A73E8,#3D8FFF)', title: 'Fiscalização de escolas', desc: 'Checklists digitais com fotos, observações e histórico por unidade escolar — com índice de conformidade por visita.' },
   { icon: <GraduationCap size={22} color="#fff" />, bg: 'linear-gradient(135deg,#FF9800,#FFB74D)', title: 'Treinamentos e certificados', desc: 'Registre presença por QR Code no telão e gere certificados PDF com assinatura digital em segundos.' },
   { icon: <FolderOpen size={22} color="#fff" />, bg: 'linear-gradient(135deg,#9C27B0,#BA68C8)', title: 'Documentos com validade', desc: 'Controle alvarás, RDC 216, PNAE e outros — alertas automáticos antes do vencimento.' },
-  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#E91E63,#F06292)', title: 'Relatório SIGPC/FNDE', desc: 'Dados preenchidos automaticamente do sistema. Gere o PDF do SIGPC com um clique, por quadrimestre.' },
+  { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#E91E63,#F06292)', title: 'Relatório geral', desc: 'Reúna as informações registradas no sistema em um relatório geral para acompanhar a alimentação escolar.' },
   { icon: <Users size={22} color="#fff" />, bg: 'linear-gradient(135deg,#00BCD4,#4DD0E1)', title: 'Dietas especiais', desc: 'Centralize restrições alimentares de alunos com etiquetas, prescrições e acompanhamento por escola.' },
   { icon: <BarChart2 size={22} color="#fff" />, bg: 'linear-gradient(135deg,#43A047,#1B5E20)', title: 'Banco de 5.000+ alimentos (TACO + TBCA)', desc: 'Banco de alimentos baseado nas tabelas TACO/UNICAMP e TBCA/USP com cálculo automático dos nutrientes obrigatórios pelo PNAE — kcal, proteínas, ferro, zinco, vitaminas A e C e mais.' },
 ];
 
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 const FAQS = [
-  { q: 'O EduPlate Menu funciona para escolas particulares também?', a: 'Sim. O sistema atende tanto redes públicas (PNAE) quanto escolas particulares. Nutricionistas de colégios privados usam para organizar cardápios, dietas especiais de alunos, documentação e treinamentos da equipe de cozinha — sem precisar da parte de SIGPC/FNDE.' },
+  { q: 'O EduPlate Menu funciona para escolas particulares também?', a: 'Sim. O sistema atende tanto redes públicas (PNAE) quanto escolas particulares. Nutricionistas de colégios privados usam para organizar cardápios, dietas especiais de alunos, documentação e treinamentos da equipe de cozinha.' },
   { q: 'O EduPlate Menu funciona para qualquer município?', a: 'Sim. A plataforma foi desenvolvida para municípios de diferentes portes — e o plano é único, com todos os módulos e usuários ilimitados, do município pequeno ao consórcio.' },
   { q: 'Preciso instalar algum software?', a: 'Não. O EduPlate Menu é 100% online. Acesse pelo navegador em computador, tablet ou celular — sem instalação, sem configuração de servidor.' },
-  { q: 'Como funciona o 1 mês grátis?', a: 'Você acessa todas as funcionalidades do plano escolhido por 30 dias sem custo e sem cartão. Ao final do trial, você escolhe se quer continuar — só então solicitamos uma forma de pagamento.' },
+  { q: 'Como funciona o 1 mês grátis?', a: 'Você acessa todas as funcionalidades do plano completo por 30 dias sem custo e sem cartão. Ao final do teste, você escolhe se quer continuar — só então solicitamos uma forma de pagamento.' },
   { q: 'Quem pode usar o sistema além da nutricionista RT?', a: 'Cada organização conta com perfis de nutricionista RT e agente escolar. Os dados são isolados por organização, com segurança LGPD.' },
   { q: 'Os dados estão seguros? O sistema segue a LGPD?', a: 'Sim. O sistema opera em nuvem com autenticação segura, isolamento de dados por organização e práticas alinhadas à LGPD.' },
   { q: 'E se eu precisar cancelar?', a: 'Você pode cancelar a qualquer momento, sem burocracia e sem multa. Os dados ficam disponíveis para exportação conforme nossa política de retenção.' },
@@ -346,7 +347,7 @@ export default function LandingPage() {
               <button className="lp-btn lp-btn-primary" onClick={goToRegister} style={{ padding:'10px 20px', fontSize:14 }}>
                 Teste grátis
               </button>
-              <button className="lp-hamburger" onClick={() => setMobileOpen(v => !v)} aria-label="Menu">
+              <button className="lp-hamburger" onClick={() => setMobileOpen(v => !v)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen}>
                 {mobileOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
@@ -371,14 +372,10 @@ export default function LandingPage() {
             <div className="lp-hero-copy">
               <span className="lp-eyebrow">Nutrição escolar · PNAE e escolas particulares</span>
               <h1 style={{ marginTop:20 }}>
-                A plataforma de{' '}
-                <span style={{ color:'var(--lp-green)' }}>nutrição escolar</span>{' '}
-                para redes públicas e particulares
+                Sua rotina de nutrição escolar organizada em um só lugar.
               </h1>
               <p className="lp-lead" style={{ marginTop:22 }}>
-                O EduPlate Menu organiza cardápios, fiscalização, treinamentos,
-                certificados, dietas especiais e documentos — para nutricionistas
-                responsáveis técnicas de municípios, consórcios e escolas particulares.
+                Do planejamento do cardápio à visita na escola. Reúna as informações da sua rede e acompanhe o que precisa de atenção, sem refazer o trabalho em várias planilhas.
               </p>
               <div className="lp-btn-row">
                 <button className="lp-btn lp-btn-primary" onClick={goToRegister}>
@@ -386,11 +383,7 @@ export default function LandingPage() {
                 </button>
                 <a className="lp-btn lp-btn-secondary" href="#sistema">Ver o sistema</a>
               </div>
-              <div className="lp-hero-meta">
-                <span className="lp-pill">Sem cobranças por 1 mês</span>
-                <span className="lp-pill">Cancele a qualquer momento</span>
-                <span className="lp-pill">Dados seguros na nuvem</span>
-              </div>
+              <p className="lp-hero-note">30 dias grátis. Sem cartão de crédito.</p><p className="lp-author-note">Desenvolvido por uma nutricionista responsável técnica que atua no PNAE.</p>
             </div>
 
             {/* Hero mockup — Dashboard real */}
@@ -403,187 +396,21 @@ export default function LandingPage() {
                   <div className="lp-url-bar">www.eduplate.com.br</div>
                 </div>
                 <MockNav />
-                <MockDashboard />
+                <MockMenus />
               </div>
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="lp-container lp-stats">
-            {[
-              { icon: <Clock size={20} color="#4CAF50" />, big:'1 mês', label:'de acesso grátis para testar' },
-              { icon: <Wifi size={20} color="#1A73E8" />, big:'100%', label:'online e na nuvem' },
-              { icon: <ShieldCheck size={20} color="#4CAF50" />, big:'5.000+', label:'alimentos (TACO + TBCA) com nutrientes calculados automaticamente' },
-              { icon: <Award size={20} color="#FF9800" />, big:'1 dia', label:'para começar a operar' },
-            ].map(s => (
-              <div key={s.big} className="lp-stat">
-                <div style={{ marginBottom:8 }}>{s.icon}</div>
-                <div className="lp-stat-big">{s.big}</div>
-                <div className="lp-stat-label">{s.label}</div>
-              </div>
-            ))}
-          </div>
         </section>
 
-        {/* ── Para quem é (com fotos) ─────────────────────────────── */}
-        <section className="lp-section lp-band">
-          <div className="lp-container">
-            <span className="lp-eyebrow">Para quem é o EduPlate Menu</span>
-            <h2 style={{ marginTop:18, maxWidth:780 }}>
-              Para quem cuida da alimentação de crianças nas escolas
-            </h2>
-            <p className="lp-lead" style={{ marginTop:14 }}>
-              Redes públicas, particulares ou consórcios — onde há nutrição escolar, há lugar para o EduPlate Menu.
-            </p>
-
-            <div className="lp-who-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20, marginTop:32 }}>
-
-              {/* Card 1 — PNAE */}
-              <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
-                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
-                  <img
-                    src="/foto-consorcio.png"
-                    alt="Pratos saudáveis para crianças"
-                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
-                  />
-                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
-                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(76,175,80,0.85)', borderRadius:99, padding:'3px 10px' }}>PNAE · Rede Pública</span>
-                </div>
-                <div style={{ padding:'20px 22px' }}>
-                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Municípios e consórcios</h3>
-                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
-                    Secretarias de educação e nutricionistas RT que gerenciam o PNAE com múltiplas escolas e precisam de rastreabilidade, SIGPC e conformidade.
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 2 — Escolas particulares */}
-              <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
-                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
-                  <img
-                    src="/foto-escolas.png"
-                    alt="Crianças almoçando na escola"
-                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
-                  />
-                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
-                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(26,115,232,0.85)', borderRadius:99, padding:'3px 10px' }}>Escola Particular</span>
-                </div>
-                <div style={{ padding:'20px 22px' }}>
-                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Escolas particulares</h3>
-                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
-                    Nutricionistas de escolas privadas que precisam organizar cardápios, controlar dietas especiais dos alunos e documentar tudo de forma profissional.
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3 — Nutricionista RT */}
-              <div style={{ borderRadius:24, overflow:'hidden', boxShadow:'0 12px 36px rgba(27,42,74,0.10)', border:'1px solid #E6EBF2', background:'#fff' }}>
-                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
-                  <img
-                    src="/foto-nutricionista.png"
-                    alt="Nutricionista RT no consultório"
-                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
-                  />
-                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
-                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(255,152,0,0.9)', borderRadius:99, padding:'3px 10px' }}>Nutricionista RT</span>
-                </div>
-                <div style={{ padding:'20px 22px' }}>
-                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Nutricionista responsável técnica</h3>
-                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
-                    Profissional autônoma ou vinculada a uma rede que atende múltiplas unidades e precisa centralizar toda a gestão da alimentação escolar em um único sistema.
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        {/* ── Features ───────────────────────────────────────────── */}
-        <section className="lp-section" id="funcionalidades">
-          <div className="lp-container">
-            <span className="lp-eyebrow">Tudo em um só lugar</span>
-            <h2 style={{ marginTop:18, maxWidth:700 }}>
-              Funcionalidades pensadas para a rotina real da nutrição escolar
-            </h2>
-            <p className="lp-lead" style={{ marginTop:18 }}>
-              O EduPlate Menu foi desenhado para nutricionistas que precisam organizar cardápios, fiscalização e documentação com clareza, padronização e rapidez — em redes públicas ou particulares.
-            </p>
-            <div className="lp-grid-3" style={{ marginTop:34 }}>
-              {FEATURES.map(f => (
-                <article key={f.title} className="lp-card">
-                  <div className="lp-icon" style={{ background:f.bg }}>{f.icon}</div>
-                  <h3>{f.title}</h3>
-                  <p>{f.desc}</p>
-                </article>
-              ))}
-            </div>
-            <div className="lp-grid-2" style={{ marginTop:18 }}>
-              <article className="lp-card" style={{ display:'flex', gap:18, alignItems:'flex-start' }}>
-                <div className="lp-icon" style={{ background:'linear-gradient(135deg,#FF5722,#FF8A65)', flexShrink:0 }}><QrCode size={22} color="#fff" /></div>
-                <div>
-                  <h3>QR Code de presença</h3>
-                  <p>Projete no telão durante o treinamento. Participantes escaneiam e se registram diretamente pelo celular — sem papel, sem lista manual.</p>
-                </div>
-              </article>
-              <article className="lp-card" style={{ display:'flex', gap:18, alignItems:'flex-start' }}>
-                <div className="lp-icon" style={{ background:'linear-gradient(135deg,#4CAF50,#66BB6A)', flexShrink:0 }}><Mail size={22} color="#fff" /></div>
-                <div>
-                  <h3>Cardápio por e-mail</h3>
-                  <p>Envie o cardápio semanal direto para as escolas com um clique. Sem WhatsApp, sem papel, sem retrabalho — rastreável e organizado.</p>
-                </div>
-              </article>
-            </div>
-
-            {/* ── Destaque banco TACO ──────────────────────────────── */}
-            <div style={{
-              marginTop: 28,
-              background: 'linear-gradient(135deg, #1B2A4A 0%, #243A66 100%)',
-              borderRadius: 24,
-              padding: '28px 32px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 32,
-              flexWrap: 'wrap',
-            }}>
-              <div style={{ flex: 1, minWidth: 260 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#43A047,#1B5E20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <BarChart2 size={20} color="#fff" />
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>Diferencial exclusivo</span>
-                </div>
-                <h3 style={{ color: '#fff', fontSize: '1.25rem' }}>Banco de 5.000+ alimentos com cálculo nutricional automático</h3>
-                <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 10, lineHeight: 1.65 }}>
-                  O EduPlate Menu inclui banco de alimentos baseado nas tabelas <strong style={{ color: '#81C784' }}>TACO (UNICAMP) e TBCA (USP)</strong> — as referências oficiais do PNAE. Monte receitas e o sistema calcula automaticamente kcal, proteínas, carboidratos, ferro, vitaminas e muito mais, por porção.
-                </p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, width: '100%' }}>
-                {[
-                  { n: '5.000+', l: 'alimentos cadastrados' },
-                  { n: 'TACO+TBCA', l: 'tabelas oficiais' },
-                  { n: 'PNAE', l: 'nutrientes PNAE calculados' },
-                  { n: '1 clique', l: 'para gerar ficha técnica' },
-                ].map(s => (
-                  <div key={s.n} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 10px', textAlign: 'center', minWidth: 0 }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>{s.n}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600, wordBreak: 'break-word' }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* ── Sistema em ação (tab switcher com mockups reais) ──── */}
+  {/* ── Sistema em ação (tab switcher com mockups reais) ──── */}
         <section className="lp-section lp-band" id="sistema">
           <div className="lp-container">
-            <span className="lp-eyebrow">O sistema por dentro</span>
-            <h2 style={{ marginTop:18 }}>Cada módulo pensado para a sua rotina</h2>
+            <span className="lp-eyebrow">Explore os módulos</span>
+            <h2 style={{ marginTop:18 }}>Conheça o sistema por dentro.</h2>
             <p className="lp-lead" style={{ marginTop:18 }}>
               Navegue pelos módulos e veja como o EduPlate Menu funciona na prática,
-              com dados reais de municípios que já usam a plataforma.
+              com prévias ilustrativas das telas.
             </p>
 
             {/* Tab bar */}
@@ -622,7 +449,103 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Vídeo Demo ─────────────────────────────────────────── */}
+
+        {/* ── Para quem é (com fotos) ─────────────────────────────── */}
+        <section className="lp-section lp-band">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Para quem é o EduPlate Menu</span>
+            <h2 style={{ marginTop:18, maxWidth:780 }}>
+              Para quem cuida da alimentação de crianças nas escolas
+            </h2>
+            <p className="lp-lead" style={{ marginTop:14 }}>
+              Redes públicas, particulares ou consórcios — onde há nutrição escolar, há lugar para o EduPlate Menu.
+            </p>
+
+            <div className="lp-who-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20, marginTop:32 }}>
+
+              {/* Card 1 — PNAE */}
+              <div style={{ borderRadius:8, overflow:'hidden', boxShadow:'none', border:'1px solid #E6EBF2', background:'#fff' }}>
+                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
+                  <img
+                    src="/foto-consorcio.png"
+                    alt="Pratos saudáveis para crianças"
+                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                  />
+                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
+                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(76,175,80,0.85)', borderRadius:99, padding:'3px 10px' }}>PNAE · Rede Pública</span>
+                </div>
+                <div style={{ padding:'20px 22px' }}>
+                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Municípios e consórcios</h3>
+                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
+                    Secretarias de educação e nutricionistas RT que gerenciam o PNAE com múltiplas escolas e precisam de registros organizados e um relatório geral para acompanhar a rede.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2 — Escolas particulares */}
+              <div style={{ borderRadius:8, overflow:'hidden', boxShadow:'none', border:'1px solid #E6EBF2', background:'#fff' }}>
+                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
+                  <img
+                    src="/foto-escolas.png"
+                    alt="Crianças almoçando na escola"
+                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                  />
+                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
+                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(26,115,232,0.85)', borderRadius:99, padding:'3px 10px' }}>Escola Particular</span>
+                </div>
+                <div style={{ padding:'20px 22px' }}>
+                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Escolas particulares</h3>
+                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
+                    Nutricionistas de escolas privadas que precisam organizar cardápios, controlar dietas especiais dos alunos e documentar tudo de forma profissional.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3 — Nutricionista RT */}
+              <div style={{ borderRadius:8, overflow:'hidden', boxShadow:'none', border:'1px solid #E6EBF2', background:'#fff' }}>
+                <div style={{ height:200, overflow:'hidden', position:'relative' }}>
+                  <img
+                    src="/foto-nutricionista.png"
+                    alt="Nutricionista RT no consultório"
+                    style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                  />
+                  <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(27,42,74,0.55))' }} />
+                  <span style={{ position:'absolute', bottom:14, left:16, fontSize:11, fontWeight:800, color:'#fff', background:'rgba(255,152,0,0.9)', borderRadius:99, padding:'3px 10px' }}>Nutricionista RT</span>
+                </div>
+                <div style={{ padding:'20px 22px' }}>
+                  <h3 style={{ fontSize:'1rem', color:'#1B2A4A' }}>Nutricionista responsável técnica</h3>
+                  <p style={{ fontSize:13, color:'#64748B', marginTop:8, lineHeight:1.65 }}>
+                    Profissional autônoma ou vinculada a uma rede que atende múltiplas unidades e precisa centralizar toda a gestão da alimentação escolar em um único sistema.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* ── Features ───────────────────────────────────────────── */}
+        <section className="lp-section" id="funcionalidades">
+          <div className="lp-container">
+            <span className="lp-eyebrow">Tudo em um só lugar</span>
+            <h2 style={{ marginTop:18, maxWidth:700 }}>
+              Do cardápio ao registro da visita.
+            </h2>
+            <p className="lp-lead" style={{ marginTop:18 }}>
+              Planeje as refeições, acompanhe as escolas e mantenha os registros em dia.
+            </p>
+            <div className="lp-grid-3" style={{ marginTop:34 }}>
+              {FEATURES.map(f => (
+                <article key={f.title} className="lp-card">
+                  <span className="lp-feature-number">{String(FEATURES.indexOf(f) + 1).padStart(2, "0")}</span>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── Faixa de fotos ──────────────────────────────────────── */}
         <div className="lp-photo-strip" style={{ display:'flex', gap:6, height:220, overflow:'hidden' }}>
           {[
@@ -641,10 +564,10 @@ export default function LandingPage() {
           ))}
         </div>
 
-        <section className="lp-section" style={{ background:'linear-gradient(180deg,#F5F7FA 0%,#EEF2FF 100%)' }}>
+        <section className="lp-section" style={{ background:'#f4f4ee' }}>
           <div className="lp-container" style={{ textAlign:'center' }}>
             <span className="lp-eyebrow">Veja o sistema em ação</span>
-            <h2 style={{ marginTop:18 }}>Uma demonstração vale mais do que mil palavras</h2>
+            <h2 style={{ marginTop:18 }}>Veja como montar seu próximo cardápio.</h2>
             <p className="lp-lead" style={{ margin:'16px auto 32px', textAlign:'center' }}>
               Veja como montar e publicar cardápios para todas as escolas em poucos cliques —
               diretamente no EduPlate Menu.
@@ -728,21 +651,21 @@ export default function LandingPage() {
         </section>
 
         {/* ── Credibilidade: Feita por RT ──────────────────────────── */}
-        <section style={{ background:'linear-gradient(135deg,#1B2A4A,#243A66)', padding:'52px 0' }}>
+        <section className="lp-origin">
           <div className="lp-container" style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:24 }}>
             <span style={{ fontSize:11, fontWeight:800, color:'rgba(76,175,80,0.9)', textTransform:'uppercase', letterSpacing:2 }}>
               Desenvolvida por quem entende a sua rotina
             </span>
             <h2 style={{ color:'#fff', fontSize:'clamp(1.6rem,3.5vw,2.4rem)', maxWidth:720, lineHeight:1.25, margin:0 }}>
-              Feita por uma Nutricionista RT ativa no PNAE — que conhece cada formulário, cada prazo e cada dor da rotina.
+              Criado a partir da rotina de uma nutricionista RT.
             </h2>
             <p style={{ color:'rgba(255,255,255,0.65)', fontSize:15, maxWidth:620, lineHeight:1.7, margin:0 }}>
-              O EduPlate Menu não foi criado por desenvolvedores que nunca viram um cardápio escolar. Cada funcionalidade nasceu de uma necessidade real vivida no município — de quem sabe o que é preencher SIGPC, fiscalizar 20 escolas por mês e ainda gerar relatórios para o FNDE.
+              Cada funcionalidade nasceu de uma necessidade vivida na alimentação escolar: planejar refeições, registrar visitas, acompanhar documentos e reunir os dados para os relatórios.
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:12, justifyContent:'center', marginTop:8 }}>
               {[
                 'Banco TACO + TBCA integrado',
-                'Relatório SIGPC com 1 clique',
+                'Relatório geral',
                 'Certificados com assinatura digital',
                 'Checklist de fiscalização completo',
                 'Fichas técnicas com cálculo nutricional',
@@ -756,75 +679,18 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Problema / Dores ────────────────────────────────────── */}
-        <section className="lp-section lp-band">
-          <div className="lp-container lp-problem-wrap">
-            <div className="lp-problem-panel">
-              <span className="lp-eyebrow">O problema que a gente resolve</span>
-              <h2 style={{ marginTop:18 }}>
-                Se a nutrição escolar ainda depende de planilha, papel e WhatsApp, você perde tempo e controle
-              </h2>
-              <p className="lp-lead" style={{ marginTop:18, maxWidth:'100%' }}>
-                Em redes públicas ou particulares, a nutricionista responsável técnica acaba absorvendo
-                retrabalho que poderia estar automatizado: documentação manual, checklists em papel,
-                certificados demorados e informações espalhadas por escola.
-              </p>
-            </div>
-            <div className="lp-pain-list">
-              {[
-                { t:'Cardápios soltos em conversas e anexos', s:'Sem histórico, sem rastreabilidade e sem controle de versão.' },
-                { t:'Fiscalização com papel e caneta', s:'Relatórios demorados e pouca evidência para acompanhamento por unidade.' },
-                { t:'Documentos vencendo sem alerta', s:'Risco de pendências em inspeções e perda de prazo por falta de visibilidade.' },
-                { t:'Treinamentos sem presença padronizada', s:'Registro manual, certificados demorados e pouca organização do histórico.' },
-                { t:'Relatórios refeitos todo mês', s:'Muito esforço operacional para consolidar dados do município.' },
-              ].map(item => (
-                <div key={item.t} className="lp-pain-item">
-                  <span className="lp-pain-bullet" />
-                  <div><strong>{item.t}</strong><span>{item.s}</span></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Antes / Depois ─────────────────────────────────────── */}
-        <section className="lp-section">
-          <div className="lp-container">
-            <span className="lp-eyebrow">Por que escolher o EduPlate Menu</span>
-            <h2 style={{ marginTop:18 }}>Menos retrabalho para a equipe. Mais controle para o município.</h2>
-            <div className="lp-compare">
-              <div className="lp-compare-col" style={{ borderColor:'#FECACA', background:'#FFFAFA' }}>
-                <h3 style={{ color:'#DC2626' }}>Antes</h3>
-                <ul className="lp-compare-list">
-                  {['Processos espalhados em planilhas, papel e mensagens.','Pouca padronização entre escolas e equipes.','Documentos e evidências difíceis de localizar.','Mais risco de esquecimento e retrabalho constante.'].map(t => (
-                    <li key={t}><Minus size={16} style={{ color:'#EF4444', flexShrink:0, marginTop:2 }} />{t}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="lp-compare-col" style={{ borderColor:'rgba(76,175,80,0.28)', background:'#F7FBF7' }}>
-                <h3 style={{ color:'#2E7D32' }}>Com o EduPlate Menu</h3>
-                <ul className="lp-compare-list">
-                  {['Operação centralizada em uma plataforma especialista em PNAE.','Fluxos digitais para cardápios, fiscalização e treinamentos.','Histórico organizado por unidade escolar e rotina.','Mais clareza para acompanhar o município e agir com antecedência.'].map(t => (
-                    <li key={t}><Check size={16} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{t}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ── Como funciona ───────────────────────────────────────── */}
         <section className="lp-section lp-band" id="como-funciona">
           <div className="lp-container">
             <span className="lp-eyebrow">Simples e rápido</span>
-            <h2 style={{ marginTop:18 }}>Comece a funcionar em um dia</h2>
+            <h2 style={{ marginTop:18 }}>Comece pelo que você já faz todos os dias.</h2>
             <p className="lp-lead" style={{ marginTop:18 }}>
               Sem implantação longa, sem instalação complexa, com acesso em computador, tablet ou celular.
             </p>
             <div className="lp-steps">
               {[
                 { n:'01', title:'Crie sua conta', desc:'Ative o teste grátis de 30 dias — sem cartão e sem cobrança no primeiro mês. Acesso completo desde o primeiro minuto.' },
-                { n:'02', title:'Configure em minutos', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
+                { n:'02', title:'Cadastre suas escolas', desc:'Cadastre escolas, equipe e identidade visual do município para começar com a estrutura organizada.' },
                 { n:'03', title:'Use de qualquer lugar', desc:'Acesse a plataforma pela web e trabalhe com tudo salvo na nuvem, com praticidade e segurança.' },
               ].map(s => (
                 <article key={s.n} className="lp-step">
@@ -905,7 +771,7 @@ export default function LandingPage() {
                   30 dias grátis para testar · cancele quando quiser
                 </p>
                 <ul className="lp-price-list">
-                  {['Usuários ilimitados','Cardápios e fichas técnicas — 5.000+ alimentos (TACO + TBCA)','Replicação de cardápio por etapa de ensino','Fiscalização de escolas com score e relatório','Treinamentos com certificado por QR Code','Dietas especiais de alunos com etiquetas','Documentos com alerta de vencimento','Relatório SIGPC/FNDE com um clique','Envio de cardápio por e-mail às escolas','Suporte prioritário'].map(i => (
+                  {['Usuários ilimitados','Avaliação nutricional dos alunos com relatórios PDF e CSV','Cardápios e fichas técnicas — 5.000+ alimentos (TACO + TBCA)','Replicação de cardápio por etapa de ensino','Fiscalização de escolas com score e relatório','Treinamentos com certificado por QR Code','Dietas especiais de alunos com etiquetas','Documentos com alerta de vencimento','Relatório geral','Envio de cardápio por e-mail às escolas','Suporte prioritário'].map(i => (
                     <li key={i}><Check size={14} style={{ color:'#4CAF50', flexShrink:0, marginTop:2 }} />{i}</li>
                   ))}
                 </ul>
@@ -947,8 +813,8 @@ export default function LandingPage() {
           <div className="lp-container">
             <div className="lp-cta-box">
               <div className="lp-cta-content">
-                <span className="lp-cta-eyebrow">Pronto para profissionalizar a gestão do PNAE</span>
-                <h2>Seu município merece uma gestão do PNAE mais organizada, segura e profissional</h2>
+                <span className="lp-cta-eyebrow">Vamos começar?</span>
+                <h2>Seu próximo cardápio pode começar aqui.</h2>
                 <p>
                   Experimente o EduPlate Menu por 30 dias gratuitamente e veja como a rotina da alimentação
                   escolar pode funcionar com mais controle, visibilidade e padronização.
@@ -987,7 +853,7 @@ export default function LandingPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 8px 28px rgba(37,211,102,0.45)',
+          boxShadow: 'none',
           transition: 'transform 0.2s, box-shadow 0.2s',
           textDecoration: 'none',
         }}
@@ -1000,15 +866,6 @@ export default function LandingPage() {
           (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(37,211,102,0.45)';
         }}
       >
-        {/* Pulse ring */}
-        <span style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          background: 'rgba(37,211,102,0.35)',
-          animation: 'lp-wpp-pulse 2s ease-out infinite',
-        }} />
         {/* WhatsApp SVG icon */}
         <svg width="30" height="30" viewBox="0 0 24 24" fill="white" style={{ position: 'relative', zIndex: 1 }}>
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
