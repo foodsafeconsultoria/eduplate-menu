@@ -104,7 +104,7 @@ export interface MenuInsumo {
 
 /**
  * One day+meal slot in the menu (e.g. Segunda / Almoço).
- * nomeFantasia is the ONLY field rendered in the PDF.
+ * The PDF renders the preparation, ingredients and (for nurseries) consistency.
  * composicao drives all nutritional calculations.
  */
 export interface MenuSlot {
@@ -113,6 +113,7 @@ export interface MenuSlot {
   mealLabel: string;
   /** Display name printed on the PDF (e.g. "Arroz, Feijão e Frango") */
   nomeFantasia: string;
+  consistency?: string;
   composicao: MenuInsumo[];
 }
 

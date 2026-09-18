@@ -77,6 +77,7 @@ function normalizeSlot(raw: any, idx: number): MenuSlot {
     dayLabel:     raw?.dayLabel     || '',
     mealLabel:    raw?.mealLabel    || '',
     nomeFantasia: raw?.nomeFantasia || '',
+    consistency: raw?.consistency || '',
     composicao:   Array.isArray(raw?.composicao)
       ? raw.composicao.map((ins: any, i: number) => normalizeInsumo(ins, i))
       : [],

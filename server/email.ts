@@ -5,6 +5,9 @@
  */
 import express, { Request, Response } from 'express';
 import { Resend } from 'resend';
+import { requireOrgMember } from './auth-middleware.js';
+import { getAdminDb } from './firebase-admin.js';
+import { menuMailSchema, buildSchoolEmail, mailHash, deliveryDecision, sendSchoolEmail, type DeliveryRecord } from './menu-mail.js';
 
 const router = express.Router();
 
@@ -15,6 +18,62 @@ function getResend() {
 }
 
 // ── POST /api/email/send-menu ─────────────────────────────────────────────────
+// Each batch request carries exactly one school's PDF. Retrying the same school
+// uses the same provider key and a durable delivery record scoped to its organization.
+router.post('/send-menu-school', requireOrgMember, async (req: Request, res: Response) => {
+  const parsed = menuMailSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Dados do envio inválidos. Confira escola, e-mail e anexo PDF.' });
+  const input = parsed.data;
+  try {
+    const resend = getResend();
+    const org = getAdminDb().collection('organizations').doc(input.orgId);
+    const schoolDoc = await org.collection('schools').doc(input.schoolId).get();
+    const school = schoolDoc.data();
+    if (!schoolDoc.exists || !school?.email || school.email.trim() !== input.expectedEmail) {
+      return res.status(409).json({ error: 'A escola ou seu e-mail mudou ou ainda não foi sincronizado. Atualize o cadastro e abra um novo lote.' });
+    }
+    const payload = buildSchoolEmail(input, { name: school.name || 'Escola', email: school.email.trim() }, process.env.RESEND_FROM || 'onboarding@resend.dev');
+    const hash = mailHash(JSON.stringify(payload));
+    const key = mailHash(`${input.orgId}:${input.batchId}:${input.schoolId}`);
+    const ref = org.collection('menu_email_deliveries').doc(key);
+    const now = Date.now();
+    const decision = await getAdminDb().runTransaction(async transaction => {
+      const snapshot = await transaction.get(ref);
+      const record = snapshot.exists ? snapshot.data() as DeliveryRecord : undefined;
+      const action = deliveryDecision(record, hash, now);
+      if (action === 'send') transaction.set(ref, {
+        batchId: input.batchId, schoolId: input.schoolId, menuId: input.menuId,
+        status: 'sending', payloadHash: hash, firstAttemptAt: record?.firstAttemptAt ?? now,
+        leaseUntil: now + 60000, updatedAt: now,
+      }, { merge: true });
+      return action;
+    });
+    if (decision === 'sent') return res.json({ schoolId: input.schoolId, status: 'sent', alreadySent: true });
+    if (decision !== 'send') {
+      const errors = {
+        busy: 'Este envio ainda está em andamento. Aguarde um minuto e repita somente as falhas.',
+        changed: 'O conteúdo deste envio mudou. Confira o resultado anterior antes de abrir um novo lote.',
+        expired: 'A janela de repetição segura terminou. Confira o envio no serviço de e-mail antes de abrir um novo lote.',
+      };
+      return res.status(409).json({ error: errors[decision] });
+    }
+    try {
+      const providerId = await sendSchoolEmail((data, options) => resend.emails.send(data, options), payload, key);
+      await ref.set({ status: 'sent', providerId, leaseUntil: 0, updatedAt: Date.now() }, { merge: true });
+      return res.json({ schoolId: input.schoolId, status: 'sent' });
+    } catch (error) {
+      // If delivery succeeded but the write failed, the provider key still protects the retry.
+      await getAdminDb().runTransaction(async transaction => {
+        const latest = await transaction.get(ref);
+        if (latest.data()?.status !== 'sent') transaction.set(ref, { status: 'error', leaseUntil: 0, updatedAt: Date.now() }, { merge: true });
+      }).catch(() => {});
+      throw error;
+    }
+  } catch (error) {
+    return res.status(502).json({ error: error instanceof Error ? error.message : 'Não foi possível confirmar o envio.' });
+  }
+});
+
 // Sends a menu PDF (or HTML) to one or more schools.
 // Body: { schools: { name, email }[], menuTitle: string, menuHtml: string, senderName: string }
 router.post('/send-menu', async (req: Request, res: Response) => {
@@ -50,7 +109,7 @@ router.post('/send-menu', async (req: Request, res: Response) => {
         continue;
       }
       try {
-        await resend.emails.send({
+        const result = await resend.emails.send({
           from: `${fromName} <${fromEmail}>`,
           to: [school.email],
           subject: `📋 ${menuTitle} — ${school.name}`,
@@ -59,6 +118,7 @@ router.post('/send-menu', async (req: Request, res: Response) => {
             ? { attachments: [{ filename: pdfFilename, content: pdfBuffer }] }
             : {}),
         });
+        if (result.error) throw new Error(result.error.message);
         results.push({ school: school.name, status: 'sent' });
       } catch (err: any) {
         results.push({ school: school.name, status: 'error', error: err.message });

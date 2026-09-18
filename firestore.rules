@@ -81,7 +81,8 @@ service cloud.firestore {
       // Only admin and nutritionist roles can CREATE, UPDATE, DELETE.
       match /{collection}/{docId} {
         allow read:   if belongsToOrg(orgId);
-        allow write:  if canWrite(orgId);
+        // Only the API records email delivery outcomes and idempotency claims.
+        allow write:  if collection != 'menu_email_deliveries' && canWrite(orgId);
       }
     }
 

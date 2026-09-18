@@ -23,6 +23,9 @@ export interface School {
   name: string;
   email?: string;
   address?: string;
+  mealSchedules?: { mealLabel: string; time: string }[];
+  educationNetwork?: 'municipal' | 'estadual' | 'federal' | 'outra';
+  educationStages?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

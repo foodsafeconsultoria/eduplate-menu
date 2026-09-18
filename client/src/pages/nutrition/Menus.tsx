@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,10 +24,10 @@ import { replicateMenuForCategory, suggestedFactor, type EtapaCategory } from '@
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { renderSchoolMenus, menuMeals, numberMenuPages, slotCompositionIssues, type MenuPdfContext } from '@/lib/menuPdf';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
-import { apiUrl, authHeaders } from '@/lib/apiUrl';
-import { addRecipeToDoc, addFooterAllPages } from '@/lib/recipePdf';
+import { MenuDistributionDialog } from '@/components/MenuDistributionDialog';
+import { addRecipeToDoc } from '@/lib/recipePdf';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -160,227 +160,12 @@ function migrateItemsToSlots(items: Menu['items']): MenuSlot[] {
   return Array.from(slotMap.values());
 }
 
-// ── PDF helpers ────────────────────────────────────────────────────────────────
-
-const PT_MONTHS_MAP: Record<string, number> = {
-  janeiro: 0, jan: 0, fevereiro: 1, fev: 1, marco: 2, março: 2, mar: 2,
-  abril: 3, abr: 3, maio: 4, mai: 4, junho: 5, jun: 5,
-  julho: 6, jul: 6, agosto: 7, ago: 7, setembro: 8, set: 8,
-  outubro: 9, out: 9, novembro: 10, nov: 10, dezembro: 11, dez: 11,
-};
-
-/**
- * Tenta derivar a data de início da semana (segunda-feira) a partir do
- * campo referenceMonth, por ex.: "Semana 1 Junho 2026" → "2026-06-01".
- * Retorna null se não conseguir.
- */
-function deriveWeekStart(referenceMonth: string): string | null {
-  if (!referenceMonth) return null;
-  const lower = referenceMonth.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  let month = -1;
-  for (const [name, num] of Object.entries(PT_MONTHS_MAP)) {
-    if (lower.includes(name)) { month = num; break; }
-  }
-  if (month < 0) return null;
-  const yearMatch = lower.match(/\b(20\d{2})\b/);
-  const year = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
-  const weekMatch = lower.match(/semana\s*(\d)/i);
-  const weekNum = weekMatch ? Math.max(1, Number(weekMatch[1])) : 1;
-  // Encontra a primeira segunda-feira do mês
-  const firstDay = new Date(year, month, 1);
-  const dow = firstDay.getDay(); // 0=Dom, 1=Seg...
-  const toMonday = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
-  const firstMonday = new Date(year, month, 1 + toMonday);
-  // Avança (weekNum - 1) semanas
-  firstMonday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
-  const y = firstMonday.getFullYear();
-  const m = String(firstMonday.getMonth() + 1).padStart(2, '0');
-  const d = String(firstMonday.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-// ── PDF Generator ──────────────────────────────────────────────────────────────
-
-/**
- * Generates the A4 landscape cardápio PDF.
- * The meal grid renders ONLY nomeFantasia (not individual ingredients).
- * The nutritional summary is computed from slots[].composicao[].
- */
-/** Desenha o cardápio (grade + resumo nutricional + rodapé) no doc informado. */
-function renderMenuPage(
-  doc: jsPDF,
-  menu: Menu,
-  schoolNames: string[],
-  meals: string[],
-  orgLogoDataUrl?: string,
-): void {
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
-  const green: [number, number, number] = [22, 101, 52];
-  const margin = 10;
-
-  // ── Header ───────────────────────────────────────────────────────────────
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, pw, 38, 'F');
-  doc.setFillColor(...green);
-  doc.rect(0, 36, pw, 2, 'F');
-
-  // Logo esquerdo: logo personalizado do assinante
-  if (orgLogoDataUrl) {
-    try { doc.addImage(orgLogoDataUrl, 'PNG', margin, 3, 30, 30); } catch { /* skip */ }
-  }
-  doc.setTextColor(20, 20, 20);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('CARDÁPIO DE ALIMENTAÇÃO ESCOLAR - PNAE', pw / 2, 13, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(60, 60, 60);
-  const schoolLabel = schoolNames.length > 0 ? schoolNames.join(', ') : 'Toda a rede';
-  doc.text(`Escola: ${schoolLabel}  |  Etapa: ${menu.category}`, pw / 2, 22, { align: 'center' });
-  doc.text(`Referência: ${menu.referenceMonth || '—'}`, pw / 2, 29, { align: 'center' });
-
-  // ── Meal grid — only nomeFantasia ────────────────────────────────────────
-  const startY = 40;
-  const weekStart = (menu as any).weekStartDate || deriveWeekStart(menu.referenceMonth || '');
-  const head = [[
-    'REFEIÇÃO',
-    ...weekdays.map((d, i) => {
-      if (!weekStart) return d.toUpperCase();
-      const dt = new Date(weekStart + 'T12:00:00');
-      dt.setDate(dt.getDate() + i);
-      return `${d.toUpperCase()}\n${format(dt, 'dd/MM')}`;
-    }),
-  ]];
-
-  const slots = menu.slots || [];
-
-  const body = meals.map((meal) => {
-    const row: string[] = [meal.toUpperCase()];
-    weekdays.forEach((day) => {
-      const slot = slots.find((s) => s.dayLabel === day && s.mealLabel === meal);
-      if (slot) {
-        // Use nomeFantasia if filled; otherwise auto-build from composicao names
-        const label = slot.nomeFantasia.trim()
-          || slot.composicao.map((ins) => ins.nome).join(', ')
-          || '—';
-        row.push(label);
-      } else {
-        // backward compat: fall back to legacy items
-        const legacyItems = (menu.items || []).filter(
-          (i) => i.dayLabel === day && i.mealLabel === meal,
-        );
-        row.push(legacyItems.length > 0 ? legacyItems.map((i) => i.displayName).join(', ') : '—');
-      }
-    });
-    return row;
-  });
-
-  const colW = (pw - margin * 2 - 32) / 5;
-  autoTable(doc, {
-    head,
-    body,
-    startY,
-    theme: 'grid',
-    styles: {
-      fontSize: 8,
-      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-      overflow: 'linebreak',
-      valign: 'middle',
-      lineColor: [210, 210, 210],
-      lineWidth: 0.25,
-      textColor: [30, 30, 30],
-    },
-    headStyles: {
-      fillColor: green,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8,
-      halign: 'center',
-    },
-    columnStyles: {
-      0: { cellWidth: 32, fontStyle: 'bold', halign: 'center', fillColor: [240, 253, 244], textColor: green },
-      1: { cellWidth: colW, halign: 'center' },
-      2: { cellWidth: colW, halign: 'center' },
-      3: { cellWidth: colW, halign: 'center' },
-      4: { cellWidth: colW, halign: 'center' },
-      5: { cellWidth: colW, halign: 'center' },
-    },
-    alternateRowStyles: { fillColor: [250, 255, 250] },
-    margin: { left: margin, right: margin },
-    tableWidth: pw - margin * 2,
-  });
-
-  // ── Nutritional summary ──────────────────────────────────────────────────
-  const tableEndY = (doc as any).lastAutoTable?.finalY ?? (ph - 35);
-
-  // Compute from slots
-  const allInsumos = slots.flatMap((s) => s.composicao);
-  const daysWithContent = new Set(
-    slots.filter((s) => s.composicao.length > 0).map((s) => s.dayLabel),
-  );
-  const daysCount = daysWithContent.size || 1;
-
-  let totalNutrients: NutritionNutrientSet;
-  if (allInsumos.length > 0) {
-    totalNutrients = sumNutrients(allInsumos.map(insumoNutrients));
-  } else {
-    // legacy fallback
-    totalNutrients = sumNutrients((menu.items || []).map((i) => i.nutrients));
-  }
-
-  const avg: Record<string, number> = Object.fromEntries(
-    Object.entries(totalNutrients).map(([k, v]) => [k, v / daysCount]),
-  );
-
-  if (tableEndY + 22 < ph - 8) {
-    autoTable(doc, {
-      head: [['KCAL', 'CHO (g)', 'PTN (g)', 'LIP (g)', 'Ca (mg)', 'Fe (mg)', 'Vit A (µg)', 'Vit C (mg)', 'Fibra (g)']],
-      body: [[
-        avg.kcal.toFixed(2),
-        avg.carbohydrates.toFixed(2),
-        avg.protein.toFixed(2),
-        avg.lipids.toFixed(2),
-        avg.calcium.toFixed(2),
-        avg.iron.toFixed(2),
-        avg.vitaminA.toFixed(2),
-        avg.vitaminC.toFixed(2),
-        avg.fiber.toFixed(2),
-      ]],
-      startY: tableEndY + 4,
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
-        halign: 'center',
-        valign: 'middle',
-        lineColor: [210, 210, 210],
-        lineWidth: 0.25,
-      },
-      headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'center' },
-      margin: { left: margin, right: margin },
-      tableWidth: pw - margin * 2,
-    });
-  }
-
-  // ── Footer ───────────────────────────────────────────────────────────────
-  doc.setDrawColor(...green);
-  doc.setLineWidth(0.3);
-  doc.line(margin, ph - 10, pw - margin, ph - 10);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  const sc = (menu as any).studentCount;
-  const totalCostForPdf = allInsumos.reduce((sum, ins) => {
-    const scale = ins.pesoReferencia > 0 ? ins.pesoAtual / ins.pesoReferencia : 0;
-    return sum + ins.custoBase * scale;
-  }, 0);
-  const avgCostPerDay = daysCount > 0 ? totalCostForPdf / daysCount : 0;
-  const footerParts = [
-    `${menu.responsibleName} — Nutricionista Responsável Técnica — PNAE`,
-    sc ? `Nº de alunos: ${sc} · Custo/aluno/dia: R$ ${avgCostPerDay.toFixed(2)}` : '',
-  ].filter(Boolean);
-  doc.text(footerParts.join('  ·  '), pw / 2, ph - 5, { align: 'center' });
+async function preparePdfContext(context: MenuPdfContext): Promise<MenuPdfContext> {
+  if (context.loading) throw new Error('Aguarde o carregamento das escolas, dietas e dados da RT.');
+  const settings = { ...context.settings };
+  if (!settings.logoDataUrl && settings.logoUrl) settings.logoDataUrl = await assetToDataUrl(settings.logoUrl).catch(() => undefined);
+  if (!settings.signatureDataUrl && settings.signatureUrl) settings.signatureDataUrl = await assetToDataUrl(settings.signatureUrl).catch(() => undefined);
+  return { ...context, settings };
 }
 
 /** Gera o PDF só do cardápio (impressão avulsa ou base64 para e-mail). */
@@ -389,10 +174,12 @@ async function generateMenuPDF(
   schoolNames: string[],
   meals: string[],
   returnBase64 = false,
-  orgLogoDataUrl?: string,
+  pdfContext?: MenuPdfContext,
 ): Promise<string | void> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  renderMenuPage(doc, menu, schoolNames, meals, orgLogoDataUrl);
+  if (!pdfContext) throw new Error('Dados do cardápio indisponíveis');
+  renderSchoolMenus(doc, menu, meals, await preparePdfContext(pdfContext));
+  numberMenuPages(doc);
   if (returnBase64) {
     const ab = doc.output('arraybuffer');
     const bytes = new Uint8Array(ab);
@@ -415,11 +202,12 @@ async function generateMenuPackagePDF(
   schoolNames: string[],
   meals: string[],
   allRecipes: Recipe[],
-  orgLogoDataUrl?: string,
+  pdfContext?: MenuPdfContext,
   signerLabel?: string,
 ): Promise<{ fichas: number; faltando: string[] }> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  renderMenuPage(doc, menu, schoolNames, meals, orgLogoDataUrl);
+  if (!pdfContext) throw new Error('Dados do cardápio indisponíveis');
+  renderSchoolMenus(doc, menu, meals, await preparePdfContext(pdfContext));
 
   // Coleta os ids únicos de receitas usadas no cardápio (insumos type === 'recipe')
   const recipeIds: string[] = [];
@@ -441,7 +229,7 @@ async function generateMenuPackagePDF(
     fichas++;
   }
 
-  addFooterAllPages(doc, signerLabel);
+  numberMenuPages(doc);
   doc.save(`Pacote_${menu.title.replace(/\s+/g, '_')}.pdf`);
   return { fichas, faltando };
 }
@@ -525,12 +313,14 @@ function MultiSchoolSelector({ schools, selected, onChange }: MultiSchoolSelecto
 
 export default function Menus() {
   const { user } = useAuth();
-  const { schools } = useSchools();
+  const { schools, loading: schoolsLoading } = useSchools();
   const { foods } = useFoods();
-  const { recipes } = useRecipes();
+  const { recipes, loading: recipesLoading } = useRecipes();
   const { menus, loading, addMenu, updateMenu, deleteMenu } = useMenus();
-  const { specialDiets } = useSpecialDiets();
-  const { settings: orgSettings } = useOrgSettings();
+  const { specialDiets, loading: dietsLoading } = useSpecialDiets();
+  const { settings: orgSettings, loading: settingsLoading } = useOrgSettings();
+  const pdfContext: MenuPdfContext = { schools, recipes, specialDiets, settings: orgSettings, loading: dietsLoading || schoolsLoading || recipesLoading || settingsLoading };
+
 
   // ── Form meta ────────────────────────────────────────────────────────────────
   const [open, setOpen] = useState(false);
@@ -596,7 +386,7 @@ export default function Menus() {
 
   // ── Pacote completo: cardápio + fichas técnicas das preparações ─────────────
   const handlePrintPackage = (menu: Menu, schoolNames: string[], meals: string[]) => {
-    generateMenuPackagePDF(menu, schoolNames, meals, recipes, orgSettings?.logoDataUrl, menu.responsibleName || currentUserName)
+    generateMenuPackagePDF(menu, schoolNames, meals, recipes, pdfContext, menu.responsibleName || currentUserName)
       .then(({ fichas, faltando }) => {
         toast.success(`Pacote gerado: cardápio + ${fichas} ficha${fichas !== 1 ? 's' : ''} técnica${fichas !== 1 ? 's' : ''}.`);
         if (faltando.length > 0) {
@@ -608,84 +398,6 @@ export default function Menus() {
 
   // ── Email sending state ───────────────────────────────────────────────────────
   const [emailModal, setEmailModal] = useState<{ open: boolean; menu: Menu | null }>({ open: false, menu: null });
-  const [emailSelectedSchools, setEmailSelectedSchools] = useState<string[]>([]);
-  const [emailSending, setEmailSending] = useState(false);
-
-  const handleSendMenuEmail = async () => {
-    if (!emailModal.menu || emailSelectedSchools.length === 0) return;
-    const menu = emailModal.menu;
-    const selectedSchoolObjects = schools.filter(s => emailSelectedSchools.includes(s.id) && s.email);
-    const noEmail = schools.filter(s => emailSelectedSchools.includes(s.id) && !s.email);
-    if (noEmail.length > 0 && selectedSchoolObjects.length === 0) {
-      toast.error('Nenhuma escola selecionada tem e-mail cadastrado.');
-      return;
-    }
-    if (noEmail.length > 0) {
-      toast.warning(`${noEmail.length} escola(s) sem e-mail serão ignoradas.`);
-    }
-    setEmailSending(true);
-    try {
-      const menuHtml = buildMenuEmailHtml(menu);
-
-      // Generate PDF as base64 to attach to the email
-      let pdfBase64: string | undefined;
-      let pdfFilename: string | undefined;
-      try {
-        const schoolNamesForPdf = selectedSchoolObjects.map(s => s.name);
-        // Use the same mealMap as the UI so slot labels match exactly
-        const mealsForPdf = mealMap[menu.category as keyof typeof mealMap] ?? ['Almoço/Jantar', 'Lanche'];
-        const b64 = await generateMenuPDF(menu, schoolNamesForPdf, mealsForPdf, true, orgSettings?.logoDataUrl);
-        if (b64) {
-          pdfBase64 = b64;
-          // Sanitize filename: remove accents + special chars (comma breaks MIME headers)
-          const safeTitle = menu.title
-            .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
-            .replace(/[^a-zA-Z0-9_\-]/g, '_')                // replace anything else with _
-            .replace(/_+/g, '_')                              // collapse repeated underscores
-            .replace(/^_|_$/g, '');                           // trim leading/trailing _
-          pdfFilename = `Cardapio_${safeTitle}.pdf`;
-        }
-      } catch (pdfErr) {
-        console.warn('[Email] PDF generation failed, sending without attachment:', pdfErr);
-      }
-
-      const res = await fetch(apiUrl('/api/email/send-menu'), {
-        method: 'POST',
-        headers: await authHeaders(),
-        body: JSON.stringify({
-          schools: selectedSchoolObjects.map(s => ({ name: s.name, email: s.email })),
-          menuTitle: menu.title,
-          menuHtml,
-          senderName: user?.displayName || 'Nutricionista',
-          pdfBase64,
-          pdfFilename,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success(`✅ Cardápio enviado para ${data.sent} escola(s)!`);
-      setEmailModal({ open: false, menu: null });
-      setEmailSelectedSchools([]);
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao enviar e-mails.');
-    } finally {
-      setEmailSending(false);
-    }
-  };
-
-  const buildMenuEmailHtml = (menu: Menu): string => {
-    const slots = menu.slots?.length ? menu.slots : migrateItemsToSlots(menu.items);
-    const rows = weekdays.map(day => {
-      const daySlots = slots.filter(s => s.dayLabel === day && s.composicao.length > 0);
-      if (daySlots.length === 0) return '';
-      const meals = daySlots.map(s =>
-        `<tr><td style="padding:4px 8px;color:#6b7280;font-size:13px;">${s.mealLabel}</td><td style="padding:4px 8px;font-size:13px;">${s.composicao.map(c => c.nome).join(', ')}</td></tr>`
-      ).join('');
-      return `<tr><td colspan="2" style="padding:8px 8px 2px;font-weight:700;font-size:13px;color:#1B2A4A;border-top:1px solid #e5e7eb;">${day}</td></tr>${meals}`;
-    }).filter(Boolean).join('');
-    return `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>`;
-  };
-
   // Target meal label for meal-based paste (set by the user in the editor)
   const [pasteMealTarget, setPasteMealTarget] = useState('');
 
@@ -703,7 +415,11 @@ export default function Menus() {
     return 'Fundamental 1';
   }, [targetCategories]);
 
-  const meals = mealMap[effectiveCategory];
+  const selectedSchools = schools.filter(s => targetSchoolIds.length === 0 || targetSchoolIds.includes(s.id));
+  const meals = menuMeals(slots, selectedSchools, mealMap[effectiveCategory]);
+  useEffect(() => {
+    if (!meals.includes(targetMeal)) setTargetMeal(meals[0]);
+  }, [meals.join('|'), targetMeal]);
 
   const currentUserName = user?.displayName?.trim() || 'Nutricionista';
   const currentMonth    = new Date().getMonth();
@@ -990,10 +706,9 @@ export default function Menus() {
     );
 
     const complianceAlerts: string[] = [];
-    if (missingTargets.length > 0)       complianceAlerts.push(`Metas abaixo: ${missingTargets.join(', ')}`);
+    if (missingTargets.length > 0)       complianceAlerts.push(`Referências gerais abaixo (validar por faixa etária e jornada): ${missingTargets.join(', ')}`);
     if (repeatedPreparations.length > 0) complianceAlerts.push(`Repetições: ${repeatedPreparations.join(', ')}`);
-    const minAf = new Date().getFullYear() >= 2026 ? 45 : 30; // Res. CD/FNDE 4/2026 exige 45%
-    if (familyFarmShare < minAf)         complianceAlerts.push(`Agricultura familiar abaixo de ${minAf}%.`);
+    // Ingredient counts do not establish legal compliance with procurement spending requirements.
 
     return {
       averageCost: totalCost / daysCount,
@@ -1073,7 +788,12 @@ export default function Menus() {
       missingTargets:       summary?.missingTargets        ?? [],
       repeatedPreparations: summary?.repeatedPreparations  ?? [],
       emptySlots:           summary?.emptySlots            ?? [],
-      complianceAlerts:     summary?.complianceAlerts      ?? [],
+      complianceAlerts: [
+        ...(summary?.complianceAlerts ?? []),
+        ...slots.flatMap(s => slotCompositionIssues(s, recipes).map(issue => `${s.dayLabel} / ${s.mealLabel}: ${issue}`)),
+        ...(targetCategories.includes('Creche') ? slots.filter(s => (s.nomeFantasia.trim() || s.composicao.length) && !s.consistency?.trim())
+          .map(s => `${s.dayLabel} / ${s.mealLabel}: informar a consistência das preparações.`) : []),
+      ],
       responsibleName:      currentUserName,
     };
 
@@ -1367,6 +1087,11 @@ export default function Menus() {
                   </div>
                 </div>
 
+                <div className="rounded-lg border bg-green-50 p-3 text-sm space-y-1">
+                  <p className="font-medium">Refeições e horários das escolas</p>
+                  {selectedSchools.map(s => <p key={s.id}><strong>{s.name}:</strong> {s.mealSchedules?.length ? s.mealSchedules.map(r => `${r.mealLabel} às ${r.time}`).join(' · ') : 'Horários não cadastrados. Edite a escola para informar.'}</p>)}
+                  <p className="text-xs text-muted-foreground">O PDF usa os horários atuais do cadastro de cada escola. Nome, CRN e assinatura são obtidos em Perfil.</p>
+                </div>
                 {/* ── Ingredient / recipe picker ──────────────────────────────── */}
                 <Card className="border-green-200 bg-green-50/30">
                   <CardContent className="p-4 space-y-3">
@@ -1616,7 +1341,7 @@ export default function Menus() {
                                 </div>
                               </div>
 
-                              {/* Nome Fantasia — único campo visível no PDF */}
+                              {/* Nome da preparação impresso no PDF */}
                               <Input
                                 value={slot?.nomeFantasia ?? ''}
                                 onChange={(e) => updateNomeFantasia(day, meal, e.target.value)}
@@ -1624,6 +1349,19 @@ export default function Menus() {
                                 className="mt-1 h-7 text-[11px] px-2 font-semibold border-green-300 focus:border-green-500"
                               />
 
+                              {targetCategories.includes('Creche') && <Input
+                                aria-label={`Consistência - ${day} - ${meal}`}
+                                value={slot?.consistency || ''}
+                                onChange={e => mutateSlot(day, meal, s => ({ ...s, consistency: e.target.value }))}
+                                placeholder="Consistência de cada preparação (creche)"
+                                className="mt-1 h-7 text-[11px]"
+                              />}
+                              {slot && !recipesLoading && slotCompositionIssues(slot, recipes).map(issue => (
+                                <p key={issue} role="status" className="mt-1 rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">{issue}</p>
+                              ))}
+                              {slot && targetCategories.includes('Creche') && (slot.nomeFantasia.trim() || composicao.length > 0) && !slot.consistency?.trim() && (
+                                <p className="mt-1 text-[11px] text-amber-800">Informe a consistência de cada preparação para o PDF da creche.</p>
+                              )}
                               {/* ── Composição — ingredientes com gramagem editável ── */}
                               <div className="mt-1.5 space-y-1">
                                 {composicao.map((ins) => {
@@ -1703,9 +1441,9 @@ export default function Menus() {
                           { label: 'Kcal média',      value: summary.averageNutrients.kcal.toFixed(0) },
                           { label: studentCount ? `Custo/aluno (${studentCount} alunos)` : 'Proteína média',
                             value: studentCount ? `R$ ${summary.averageCost.toFixed(2)}` : `${summary.averageNutrients.protein.toFixed(1)} g` },
-                          { label: studentCount ? 'Custo total semana' : 'Ag. Familiar',
+                          { label: studentCount ? 'Custo total semana' : 'Insumos da ag. familiar',
                             value: studentCount ? `R$ ${(summary.averageCost * 5 * Number(studentCount)).toFixed(2)}` : `${summary.familyFarmShare.toFixed(0)}%`,
-                            ok: studentCount ? undefined : summary.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30) },
+                            ok: undefined },
                         ].map(({ label, value, ok }) => (
                           <div key={label} className="rounded-lg border bg-white p-3">
                             <p className="text-xs text-gray-500">{label}</p>
@@ -1716,6 +1454,7 @@ export default function Menus() {
                         ))}
                       </div>
 
+                      <p className="text-xs text-muted-foreground">Referências gerais de triagem. A adequação ao Anexo IV depende da faixa etária, jornada e número de refeições e deve ser validada pela RT. A proporção de insumos da agricultura familiar não mede o percentual legal de recursos utilizados nas compras.</p>
                       <div className="grid gap-2 md:grid-cols-7">
                         {fndeTargets.map((t) => {
                           const val = summary.averageNutrients[t.key];
@@ -1736,7 +1475,7 @@ export default function Menus() {
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                           <div className="mb-1 flex items-center gap-2 text-amber-800">
                             <AlertTriangle className="h-4 w-4" />
-                            <span className="text-sm font-semibold">Alertas de conformidade</span>
+                            <span className="text-sm font-semibold">Alertas para revisão técnica</span>
                           </div>
                           {summary.complianceAlerts.map((a) => (
                             <p key={a} className="text-sm text-amber-800">{a}</p>
@@ -1976,8 +1715,13 @@ export default function Menus() {
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-700 hover:bg-green-50"
                             title="Imprimir PDF"
-                            onClick={() => generateMenuPDF(menu, schoolNames, ml, false, orgSettings?.logoDataUrl).catch(() => toast.error('Erro ao gerar PDF.'))}>
+                            onClick={() => generateMenuPDF(menu, schoolNames, ml, false, pdfContext).catch(() => toast.error('Erro ao gerar PDF.'))}>
                             <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-700 hover:bg-green-50"
+                            title="Distribuir por grupo: e-mail ou ZIP" aria-label="Distribuir cardápio por grupo"
+                            onClick={() => setEmailModal({ open: true, menu })}>
+                            <Mail className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
                             title="Pacote completo: cardápio + fichas técnicas"
@@ -2089,7 +1833,7 @@ export default function Menus() {
                           const names = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
                           const cat   = menu.category as (typeof categories)[number];
                           const ml    = mealMap[cat] ?? ['Refeição'];
-                          generateMenuPDF(menu, names, ml, false, orgSettings?.logoDataUrl).catch(() => toast.error('Erro ao gerar PDF.'));
+                          generateMenuPDF(menu, names, ml, false, pdfContext).catch(() => toast.error('Erro ao gerar PDF.'));
                         }}
                       >
                         <Printer className="h-4 w-4" />
@@ -2112,10 +1856,9 @@ export default function Menus() {
                       <Button
                         variant="outline" size="sm"
                         className="h-8 w-8 p-0 border-green-200 text-green-700 hover:bg-green-50"
-                        title="Enviar cardápio por e-mail para as escolas"
+                        title="Distribuir por grupo: e-mail ou ZIP"
                         onClick={() => {
                           setEmailModal({ open: true, menu });
-                          setEmailSelectedSchools(menu.schoolIds ?? []);
                         }}
                       >
                         <Mail className="h-4 w-4" />
@@ -2279,106 +2022,23 @@ export default function Menus() {
       </div>
     </div>
 
-    {/* ── Email modal ── */}
-
-    {emailModal.open && emailModal.menu && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.45)' }}
-        onClick={() => setEmailModal({ open: false, menu: null })}
-      >
-        <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setEmailModal({ open: false, menu: null })}
-            className="absolute top-4 right-4 text-gray-300 hover:text-gray-500"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
-              <Mail className="w-4 h-4 text-green-600" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800">Enviar cardápio por e-mail</h3>
-              <p className="text-xs text-gray-400">{emailModal.menu.title}</p>
-            </div>
-          </div>
-
-          <p className="text-sm text-gray-600 mb-3">Selecione as escolas que receberão este cardápio:</p>
-
-          <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
-            {schools.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">Nenhuma escola cadastrada.</p>
-            ) : (
-              schools.map(school => (
-                <label
-                  key={school.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    emailSelectedSchools.includes(school.id)
-                      ? 'border-green-300 bg-green-50'
-                      : 'border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="rounded"
-                    checked={emailSelectedSchools.includes(school.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEmailSelectedSchools(prev => [...prev, school.id]);
-                      } else {
-                        setEmailSelectedSchools(prev => prev.filter(id => id !== school.id));
-                      }
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{school.name}</p>
-                    {school.email
-                      ? <p className="text-xs text-green-600">{school.email}</p>
-                      : <p className="text-xs text-amber-500">⚠ Sem e-mail cadastrado</p>
-                    }
-                  </div>
-                </label>
-              ))
-            )}
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-            <button
-              type="button"
-              onClick={() => setEmailSelectedSchools(schools.map(s => s.id))}
-              className="underline hover:text-gray-600"
-            >
-              Selecionar todas
-            </button>
-            <button
-              type="button"
-              onClick={() => setEmailSelectedSchools([])}
-              className="underline hover:text-gray-600"
-            >
-              Limpar seleção
-            </button>
-          </div>
-
-          <button
-            onClick={handleSendMenuEmail}
-            disabled={emailSending || emailSelectedSchools.length === 0}
-            className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
-            style={{ background: '#4CAF50', opacity: (emailSending || emailSelectedSchools.length === 0) ? 0.5 : 1 }}
-          >
-            {emailSending ? (
-              <><span className="animate-spin">⏳</span> Enviando…</>
-            ) : (
-              <><Mail className="w-4 h-4" /> Enviar para {emailSelectedSchools.length} escola(s)</>
-            )}
-          </button>
-        </div>
-      </div>
-    )}
+    {emailModal.open && emailModal.menu && <MenuDistributionDialog
+      key={emailModal.menu.id}
+      menu={emailModal.menu}
+      context={pdfContext}
+      meals={mealMap[emailModal.menu.category as keyof typeof mealMap] || ['Almoço/Jantar', 'Lanche']}
+      onClose={() => setEmailModal({ open: false, menu: null })}
+      generatePdf={async school => {
+        const menu = emailModal.menu!;
+        const content = await generateMenuPDF(
+          { ...menu, schoolIds: [school.id] }, [school.name],
+          mealMap[menu.category as keyof typeof mealMap] || ['Almoço/Jantar', 'Lanche'], true,
+          { ...pdfContext, schools: [school] },
+        );
+        if (!content) throw new Error('Não foi possível gerar o PDF da escola.');
+        return content;
+      }}
+    />}
     </>
   );
 }

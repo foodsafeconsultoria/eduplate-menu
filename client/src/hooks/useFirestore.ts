@@ -140,6 +140,11 @@ function normalizeSchools(raw: unknown): School[] {
     };
     if (school.email) normalized.email = school.email;
     if (school.address) normalized.address = school.address;
+    if (school.educationNetwork) normalized.educationNetwork = school.educationNetwork;
+    normalized.educationStages = Array.isArray(school.educationStages) ? school.educationStages.filter(s => typeof s === 'string') : [];
+    normalized.mealSchedules = Array.isArray(school.mealSchedules)
+      ? school.mealSchedules.filter(row => typeof row?.mealLabel === 'string' && typeof row?.time === 'string')
+      : [];
     return normalized;
   });
 }

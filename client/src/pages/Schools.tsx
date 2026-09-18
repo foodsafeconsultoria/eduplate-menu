@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus, Mail, Pencil, MapPin } from 'lucide-react';
 import { School } from '@/types';
+import { SchoolMealSchedules, validMealSchedules } from '@/components/SchoolMealSchedules';
+import { SchoolEducationFields } from '@/components/SchoolEducationFields';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
 import { toast } from 'sonner';
 
@@ -44,6 +46,12 @@ export default function Schools() {
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [newMeals, setNewMeals] = useState<NonNullable<School['mealSchedules']>>([]);
+  const [editMeals, setEditMeals] = useState<NonNullable<School['mealSchedules']>>([]);
+  const [newNetwork, setNewNetwork] = useState<School['educationNetwork'] | ''>('');
+  const [editNetwork, setEditNetwork] = useState<School['educationNetwork'] | ''>('');
+  const [newStages, setNewStages] = useState<string[]>([]);
+  const [editStages, setEditStages] = useState<string[]>([]);
 
   // ── Per-school inspection evolution (real data from visits) ────────────────
   const schoolEvolution = useMemo(() => {
@@ -77,6 +85,7 @@ export default function Schools() {
     }
 
     try {
+      if (!validMealSchedules(newMeals)) { toast.error('Preencha horários válidos e nomes de refeições distintos.'); return; }
       setSubmitting(true);
 
       const newSchool: School = {
@@ -84,6 +93,9 @@ export default function Schools() {
         name: newSchoolName.trim(),
         email: newSchoolEmail.trim() || undefined,
         address: newSchoolAddress.trim() || undefined,
+        mealSchedules: newMeals.map(r => ({ ...r, mealLabel: r.mealLabel.trim() })),
+        educationNetwork: newNetwork || undefined,
+        educationStages: newStages,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -94,6 +106,9 @@ export default function Schools() {
       setNewSchoolName('');
       setNewSchoolEmail('');
       setNewSchoolAddress('');
+      setNewMeals([]);
+      setNewNetwork('');
+      setNewStages([]);
       setDialogOpen(false);
       toast.success('Escola adicionada com sucesso');
     } catch (error) {
@@ -125,6 +140,9 @@ export default function Schools() {
     setEditName(school.name);
     setEditEmail(school.email || '');
     setEditAddress(school.address || '');
+    setEditMeals(school.mealSchedules || []);
+    setEditNetwork(school.educationNetwork || '');
+    setEditStages(school.educationStages || []);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -134,12 +152,16 @@ export default function Schools() {
       return;
     }
     try {
+      if (!validMealSchedules(editMeals)) { toast.error('Preencha horários válidos e nomes de refeições distintos.'); return; }
       setEditSubmitting(true);
       const updated: School = {
         ...editSchool,
         name: editName.trim(),
         email: editEmail.trim() || undefined,
         address: editAddress.trim() || undefined,
+        mealSchedules: editMeals.map(r => ({ ...r, mealLabel: r.mealLabel.trim() })),
+        educationNetwork: editNetwork || undefined,
+        educationStages: editStages,
         updatedAt: new Date(),
       };
       const updatedSchools = schools.map(s => s.id === updated.id ? updated : s);
@@ -201,7 +223,7 @@ export default function Schools() {
                   Nova Escola
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Adicionar Nova Escola</DialogTitle>
                   <DialogDescription>
@@ -210,6 +232,8 @@ export default function Schools() {
                 </DialogHeader>
 
                 <form onSubmit={handleAddSchool} className="space-y-4">
+                  <SchoolMealSchedules value={newMeals} onChange={setNewMeals} />
+                  <SchoolEducationFields network={newNetwork} stages={newStages} onNetwork={setNewNetwork} onStages={setNewStages} />
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">Nome da escola *</label>
                     <Input
@@ -256,12 +280,14 @@ export default function Schools() {
 
             {/* Edit School Dialog */}
             <Dialog open={!!editSchool} onOpenChange={(open) => { if (!open) setEditSchool(null); }}>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Editar Escola</DialogTitle>
                   <DialogDescription>Atualize os dados da escola</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSaveEdit} className="space-y-4">
+                  <SchoolMealSchedules value={editMeals} onChange={setEditMeals} />
+                  <SchoolEducationFields network={editNetwork} stages={editStages} onNetwork={setEditNetwork} onStages={setEditStages} />
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">Nome da escola *</label>
                     <Input
