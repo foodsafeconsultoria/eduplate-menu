@@ -5,6 +5,7 @@ import { menuMeals, numberMenuPages, renderSchoolMenus, schoolDietNote, slotIngr
 import type { MenuPdfContext } from './menuPdf';
 import type { Menu, Recipe, SpecialDiet } from '../types/nutrition';
 import type { School } from '../types';
+import { partialSlots, mealScheduleText } from './menuAttendance';
 
 const now = new Date('2026-09-17T12:00:00');
 const school: School = { id: 'a', name: 'Escola Municipal de Educação Infantil - Unidade Jardim das Flores',
@@ -21,6 +22,28 @@ const diet = { id: 'd', schoolId: 'a', schoolName: school.name, studentName: 'NO
 const context: MenuPdfContext = { schools: [school], recipes: [recipe], specialDiets: [diet], settings: { nutritionistName: 'Nutricionista de exemplo', nutritionistCrn: 'EXEMPLO', municipio: 'Município de exemplo', uf: 'SP' } };
 
 describe('Cardápio por escola', () => {
+  it('conta turnos alternativos uma vez e preserva horários e escolhas de porção', () => {
+    const slots = ['Café da manhã', 'Café da tarde', 'Almoço', 'Jantar'].map((mealLabel, i) => ({ ...menu.slots[0], id: String(i), mealLabel }));
+    const converted = partialSlots(slots);
+    expect(converted.conflicts).toHaveLength(0);
+    expect(converted.slots.map(s => s.mealLabel)).toEqual(['Café manhã/tarde', 'Almoço/Jantar']);
+    const unit = { ...school, mealSchedules: slots.map((s, i) => ({ mealLabel: s.mealLabel, time: ['07:00', '13:00', '11:00', '17:00'][i] })) };
+    expect(mealScheduleText('Café manhã/tarde', unit, 'partial')).toBe('Café da manhã: 07:00\nCafé da tarde: 13:00');
+    expect(menuMeals(slots, [unit], [], 'partial')).toHaveLength(2);
+    expect(menuMeals(slots, [unit], [], 'integral')).toHaveLength(4);
+    const changed = slots.map((s, i) => i === 1 ? { ...s, composicao: s.composicao.map(ins => ({ ...ins, pesoAtual: 200 })) } : s);
+    const conflict = partialSlots(changed).conflicts[0];
+    expect(conflict.options).toHaveLength(2);
+    expect(partialSlots(changed, { [conflict.key]: '1' }).slots[0].composicao[0].pesoAtual).toBe(200);
+    const doc = new jsPDF({ orientation: 'landscape' });
+    renderSchoolMenus(doc, { ...menu, attendanceMode: 'partial', slots }, [], { ...context, schools: [unit] });
+    expect(doc.output()).toContain('07:00');
+    expect(doc.output()).toContain('17:00');
+    expect(doc.output()).toContain('(900.0)');
+    expect(doc.output()).not.toContain('(1800.0)');
+    expect(() => renderSchoolMenus(new jsPDF(), { ...menu, attendanceMode: 'partial', slots: changed }, [], context)).toThrow('Revise');
+    if (process.env.MENU_PDF_QA) writeFileSync('tmp/pdfs/cardapio-parcial.pdf', Buffer.from(doc.output('arraybuffer')));
+  });
   it('usa refeições cadastradas e preserva preparações de cardápios antigos', () => {
     expect(menuMeals(menu.slots, [school], ['Jantar'])).toEqual(['Almoço', 'Lanche']);
     expect(menuMeals([...menu.slots, { ...menu.slots[0], mealLabel: 'Jantar' }], [school], [])).toContain('Jantar');

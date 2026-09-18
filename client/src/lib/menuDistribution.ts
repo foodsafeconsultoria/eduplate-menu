@@ -2,6 +2,7 @@ import type { School } from '../types';
 import type { Menu } from '../types/nutrition';
 import type { MenuPdfContext } from './menuPdf';
 import { menuMeals, slotCompositionIssues } from './menuPdf';
+import { mealScheduleText } from './menuAttendance';
 
 export const validSchoolEmail = (email?: string) => /^[^\s@<>;,]+@[^\s@<>;,]+\.[^\s@<>;,]+$/.test(email?.trim() || '');
 export function schoolsInGroup(schools: School[], network: string, stage: string): School[] {
@@ -15,7 +16,7 @@ export function distributionWarnings(menu: Menu, school: School, context: MenuPd
   if (!school.educationStages?.length) warnings.push('Etapas atendidas não cadastradas.');
   else if (!stages.some(stage => school.educationStages!.includes(stage))) warnings.push('A etapa do cardápio não corresponde às etapas da escola.');
   if (!school.educationNetwork) warnings.push('Rede de ensino não cadastrada.');
-  const missingTimes = menuMeals(menu.slots || [], [school], fallback).filter(meal => !school.mealSchedules?.some(row => row.mealLabel === meal && /^([01]\d|2[0-3]):[0-5]\d$/.test(row.time)));
+  const missingTimes = menuMeals(menu.slots || [], [school], fallback, menu.attendanceMode).filter(meal => mealScheduleText(meal, school, menu.attendanceMode).includes('Horário não informado'));
   if (missingTimes.length) warnings.push(`Horários ausentes: ${missingTimes.join(', ')}.`);
   if (menu.slots?.some(slot => slotCompositionIssues(slot, context.recipes).length)) warnings.push('Preparações com ficha técnica ou composição pendente.');
   if (stages.includes('Creche') && menu.slots?.some(s => (s.nomeFantasia.trim() || s.composicao.length) && !s.consistency?.trim())) warnings.push('Consistências da creche pendentes.');

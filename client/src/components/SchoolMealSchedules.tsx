@@ -8,7 +8,7 @@ export function SchoolMealSchedules({ value, onChange }: {
 }) {
   return <fieldset className="space-y-2 rounded-lg border p-3">
     <legend className="px-1 text-sm font-medium">Refeições e horários</legend>
-    <p className="text-xs text-muted-foreground">Definidos pela RT. Use nomes distintos para turnos diferentes, como Lanche da manhã e Lanche da tarde.</p>
+    <p className="text-xs text-muted-foreground">Cadastre os horários de Café da manhã, Café da tarde, Almoço e Jantar separadamente. No cardápio parcial, os cafés e Almoço/Jantar compartilham a preparação e exibem os respectivos horários.</p>
     {value.map((row, index) => <div key={index} className="flex gap-2">
       <Input aria-label={`Nome da refeição ${index + 1}`} placeholder="Ex.: Almoço" required maxLength={60}
         value={row.mealLabel} onChange={e => onChange(value.map((r, i) => i === index ? { ...r, mealLabel: e.target.value } : r))} />

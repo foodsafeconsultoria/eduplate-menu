@@ -134,6 +134,7 @@ export interface Menu {
   category: string;
   /** All student stages this menu covers (e.g. ['Fundamental 1','Fundamental 2','Médio']) */
   targetCategories: string[];
+  attendanceMode?: 'partial' | 'integral';
   referenceMonth: string;
   weekStartDate?: string;   // ISO date (YYYY-MM-DD) of the Monday of the reference week
   studentCount?: number;    // number of students served by this menu

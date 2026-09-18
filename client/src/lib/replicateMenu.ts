@@ -76,7 +76,7 @@ export function replicateMenuForCategory(
 
   const slots: MenuSlot[] = [];
   for (const slot of menu.slots || []) {
-    const mappedMeal = mapMealLabel(slot.mealLabel, target);
+    const mappedMeal = menu.attendanceMode === 'partial' ? slot.mealLabel : mapMealLabel(slot.mealLabel, target);
     if (mappedMeal === null) {
       if (slot.composicao.length > 0) skipped.add(slot.mealLabel);
       continue;
@@ -99,6 +99,7 @@ export function replicateMenuForCategory(
     title: `${menu.title} — ${target}`,
     category: target,
     targetCategories: [target],
+    attendanceMode: menu.attendanceMode || 'integral',
     referenceMonth: menu.referenceMonth,
     weekStartDate: menu.weekStartDate,
     schoolIds: menu.schoolIds || [],

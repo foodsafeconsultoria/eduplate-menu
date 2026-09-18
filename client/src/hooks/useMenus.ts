@@ -13,6 +13,7 @@ export interface CreateMenuInput {
   title: string;
   category: string;
   targetCategories: string[];
+  attendanceMode?: 'partial' | 'integral';
   referenceMonth: string;
   weekStartDate?: string;
   studentCount?: number;
@@ -93,6 +94,7 @@ function normalizeMenus(raw: unknown): Menu[] {
       id:             menu.id             || `menu-imported-${index}`,
       title:          menu.title          || 'Cardápio sem título',
       category:       menu.category       || 'Geral',
+      attendanceMode: menu.attendanceMode === 'partial' ? 'partial' : 'integral',
       // targetCategories: backward-compat — default to [category] if missing
       targetCategories: Array.isArray(menu.targetCategories) && menu.targetCategories.length > 0
         ? menu.targetCategories
@@ -182,6 +184,7 @@ export function useMenus() {
           title: input.title.trim(),
           category: input.category,
           targetCategories: input.targetCategories,
+          attendanceMode: input.attendanceMode || 'integral',
           referenceMonth: input.referenceMonth,
           weekStartDate: input.weekStartDate,
           studentCount: input.studentCount,
@@ -231,6 +234,7 @@ export function useMenus() {
           ...(input.title              !== undefined && { title:              input.title.trim() }),
           ...(input.category           !== undefined && { category:           input.category }),
           ...(input.targetCategories   !== undefined && { targetCategories:   input.targetCategories }),
+          ...(input.attendanceMode !== undefined && { attendanceMode: input.attendanceMode }),
           ...(input.referenceMonth     !== undefined && { referenceMonth:     input.referenceMonth }),
           ...(input.weekStartDate      !== undefined && { weekStartDate:      input.weekStartDate }),
           ...(input.studentCount       !== undefined && { studentCount:       input.studentCount }),

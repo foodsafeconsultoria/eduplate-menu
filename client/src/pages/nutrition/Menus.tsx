@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
 import { renderSchoolMenus, menuMeals, numberMenuPages, slotCompositionIssues, type MenuPdfContext } from '@/lib/menuPdf';
+import { partialSlots, type AttendanceMode } from '@/lib/menuAttendance';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
 import { MenuDistributionDialog } from '@/components/MenuDistributionDialog';
 import { addRecipeToDoc } from '@/lib/recipePdf';
@@ -337,7 +338,23 @@ export default function Menus() {
   const [targetSchoolIds, setTargetSchoolIds] = useState<string[]>([]);
 
   // ── Slot state (replaces items + customTitles) ───────────────────────────────
-  const [slots, setSlots] = useState<MenuSlot[]>([]);
+  const [slots, setRawSlots] = useState<MenuSlot[]>([]);
+  const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>('partial');
+  const [partialChoices, setPartialChoices] = useState<Record<string, string>>({});
+  const [convertingPartial, setConvertingPartial] = useState(false);
+  const conversion = partialSlots(slots, partialChoices);
+  const setSlots = (next: MenuSlot[] | ((previous: MenuSlot[]) => MenuSlot[])) => {
+    setRawSlots(previous => {
+      const value = typeof next === 'function' ? next(previous) : next;
+      if (attendanceMode !== 'partial') return value;
+      const converted = partialSlots(value);
+      if (converted.conflicts.length) {
+        toast.error('Há preparações diferentes para a mesma refeição parcial. Copie uma refeição por vez.');
+        return previous;
+      }
+      return converted.slots;
+    });
+  };
 
   // ── Picker state ─────────────────────────────────────────────────────────────
   const [targetDay, setTargetDay] = useState('Segunda');
@@ -416,7 +433,7 @@ export default function Menus() {
   }, [targetCategories]);
 
   const selectedSchools = schools.filter(s => targetSchoolIds.length === 0 || targetSchoolIds.includes(s.id));
-  const meals = menuMeals(slots, selectedSchools, mealMap[effectiveCategory]);
+  const meals = menuMeals(slots, selectedSchools, mealMap[effectiveCategory], attendanceMode);
   useEffect(() => {
     if (!meals.includes(targetMeal)) setTargetMeal(meals[0]);
   }, [meals.join('|'), targetMeal]);
@@ -725,6 +742,7 @@ export default function Menus() {
   // ── Form open / reset ─────────────────────────────────────────────────────────
 
   const resetForm = () => {
+    setAttendanceMode('partial'); setConvertingPartial(false); setPartialChoices({});
     setTitle(''); setTargetCategories(['Fundamental 1']); setReferenceMonth('');
     setTargetSchoolIds([]); setWeekStartDate(''); setStudentCount(''); setTargetDay('Segunda');
     setTargetMeal(mealMap['Fundamental 1'][0]); setSourceType('recipe');
@@ -733,6 +751,7 @@ export default function Menus() {
   };
 
   const openEditMenu = (menu: Menu) => {
+    setAttendanceMode(menu.attendanceMode || 'integral'); setConvertingPartial(false); setPartialChoices({});
     setEditingMenuId(menu.id);
     setTitle(menu.title);
     // Load targetCategories — backward compat for old menus that only have category
@@ -747,9 +766,9 @@ export default function Menus() {
 
     // Load slots — migrate from legacy items if necessary
     if (menu.slots && menu.slots.length > 0) {
-      setSlots(menu.slots);
+      setRawSlots(menu.slots);
     } else if (menu.items && menu.items.length > 0) {
-      setSlots(migrateItemsToSlots(menu.items));
+      setRawSlots(migrateItemsToSlots(menu.items));
     } else {
       setSlots([]);
     }
@@ -767,11 +786,13 @@ export default function Menus() {
   // ── Save ──────────────────────────────────────────────────────────────────────
 
   const handleSave = () => {
+    if (convertingPartial) { toast.error('Conclua ou cancele a conversão para período parcial.'); return; }
     if (!title.trim()) { toast.error('Informe o título do cardápio.'); return; }
     const hasContent = slots.some((s) => s.composicao.length > 0);
     if (!hasContent) { toast.error('Adicione pelo menos um ingrediente ao cardápio.'); return; }
 
     const payload = {
+      attendanceMode,
       title,
       category:             effectiveCategory,
       targetCategories,
@@ -974,6 +995,43 @@ export default function Menus() {
               </DialogHeader>
 
               <div className="space-y-5">
+                <div className="space-y-2 rounded-md border p-3">
+                  <Label>Período de atendimento</Label>
+                  <Select value={attendanceMode} onValueChange={(value: AttendanceMode) => {
+                    if (value === 'partial') {
+                      setPartialChoices({});
+                      const result = partialSlots(slots);
+                      if (result.conflicts.length) { setConvertingPartial(true); return; }
+                      setRawSlots(result.slots);
+                    } else {
+                      setRawSlots(slots.flatMap(slot => {
+                        const labels = slot.mealLabel === 'Café manhã/tarde' ? ['Café da manhã', 'Café da tarde'] : slot.mealLabel === 'Almoço/Jantar' ? ['Almoço', 'Jantar'] : [slot.mealLabel];
+                        return labels.map(mealLabel => ({ ...slot, id: crypto.randomUUID(), mealLabel, composicao: slot.composicao.map(i => ({ ...i, id: crypto.randomUUID() })) }));
+                      }));
+                    }
+                    setConvertingPartial(false);
+                    setAttendanceMode(value);
+                  }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="partial">Parcial — manhã ou tarde</SelectItem>
+                      <SelectItem value="integral">Integral / refeições independentes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">No parcial, Café manhã/tarde e Almoço/Jantar compartilham a preparação. Cada refeição entra uma única vez nos valores por aluno; os horários vêm do cadastro da escola.</p>
+                </div>
+                {convertingPartial && <div className="space-y-3 rounded-md border border-amber-400 p-3">
+                  <p>Existem preparações ou porções diferentes entre turnos. Escolha qual será usada na refeição compartilhada.</p>
+                  {partialSlots(slots).conflicts.map(group => <div key={group.key}>
+                    <Label>{group.key}</Label>
+                    <Select value={partialChoices[group.key] || ''} onValueChange={value => setPartialChoices(previous => ({ ...previous, [group.key]: value }))}>
+                      <SelectTrigger><SelectValue placeholder="Escolha a preparação" /></SelectTrigger>
+                      <SelectContent>{group.options.map(option => <SelectItem key={option.id} value={option.id}>{option.mealLabel}: {option.nomeFantasia || 'Sem nome'} — {option.composicao.map(i => `${i.nome} ${i.pesoAtual}g`).join(', ')}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>)}
+                  <Button type="button" disabled={conversion.conflicts.length > 0} onClick={() => { setRawSlots(conversion.slots); setAttendanceMode('partial'); setConvertingPartial(false); }}>Aplicar refeições compartilhadas</Button>
+                  <Button type="button" variant="outline" onClick={() => setConvertingPartial(false)}>Cancelar conversão</Button>
+                </div>}
 
                 {/* Meta fields */}
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">

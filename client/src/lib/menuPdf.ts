@@ -4,6 +4,7 @@ import type { School } from '../types';
 import type { Menu, MenuSlot, Recipe, SpecialDiet } from '../types/nutrition';
 import type { OrgSettings } from '../hooks/useOrgSettings';
 import { DIET_LABEL_MAP } from '../data/dietLabels';
+import { partialMeal, partialSlots, mealScheduleText, type AttendanceMode } from './menuAttendance';
 
 export interface MenuPdfContext {
   schools: School[];
@@ -15,9 +16,9 @@ export interface MenuPdfContext {
 const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 const green: [number, number, number] = [22, 101, 52];
 
-export function menuMeals(slots: MenuSlot[], schools: School[], fallback: string[]): string[] {
+export function menuMeals(slots: MenuSlot[], schools: School[], fallback: string[], mode?: AttendanceMode): string[] {
   const configured = schools.flatMap(s => (s.mealSchedules || []).map(r => r.mealLabel));
-  return Array.from(new Set([...(configured.length ? configured : fallback), ...slots.map(s => s.mealLabel)]));
+  return Array.from(new Set([...(configured.length ? configured : fallback), ...slots.map(s => s.mealLabel)].map(label => mode === 'partial' ? partialMeal(label) : label)));
 }
 
 export function schoolDietNote(menu: Menu, school: School | undefined, diets: SpecialDiet[]): string {
@@ -92,8 +93,11 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   const settings = context.settings;
   const stages = menu.targetCategories?.length ? menu.targetCategories : [menu.category];
   const nursery = stages.includes('Creche');
-  const slots = menu.slots?.length ? menu.slots : legacySlots(menu);
-  const meals = menuMeals(slots, school ? [school] : [], fallback);
+  const rawSlots = menu.slots?.length ? menu.slots : legacySlots(menu);
+  const converted = partialSlots(rawSlots);
+  if (menu.attendanceMode === 'partial' && converted.conflicts.length) throw new Error('Revise as preparações dos turnos no editor antes de exportar o cardápio parcial.');
+  const slots = menu.attendanceMode === 'partial' ? converted.slots : rawSlots;
+  const meals = menuMeals(slots, school ? [school] : [], fallback, menu.attendanceMode);
   const textX = settings?.logoDataUrl ? 42 : 14;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
   const titleLines = doc.splitTextToSize(school?.name || 'Rede escolar - unidade não cadastrada', width - textX - 14);
@@ -202,7 +206,7 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
     return `${day} ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
   });
   let y = table(['Refeição / horário', ...dateLabels], meals.map(meal => [
-    `${meal}\n${school?.mealSchedules?.find(r => r.mealLabel === meal)?.time || 'Horário não informado'}`,
+    `${meal}\n${mealScheduleText(meal, school, menu.attendanceMode)}`,
     ...days.map(day => {
       const slot = slots.find(s => s.dayLabel === day && s.mealLabel === meal);
       if (!slot || (!slot.nomeFantasia && !slot.composicao.length)) return 'Não planejado';
@@ -221,7 +225,7 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
       * (ins.pesoReferencia > 0 ? ins.pesoAtual / ins.pesoReferencia : 0), 0)));
   const pending: string[] = [];
   if (!school) pending.push('Cadastrar e selecionar a escola.');
-  if (meals.some(m => !school?.mealSchedules?.find(r => r.mealLabel === m)?.time)) pending.push('Informar os horários das refeições no cadastro da escola.');
+  if (meals.some(m => mealScheduleText(m, school, menu.attendanceMode).includes('Horário não informado'))) pending.push('Informar os horários das refeições no cadastro da escola.');
   if (!settings?.nutritionistName?.trim() || !settings?.nutritionistCrn?.trim()) pending.push('Completar nome e CRN da RT em Perfil.');
   if (!settings?.signatureDataUrl) pending.push('Assinatura da RT pendente; assinar antes de divulgar.');
   if (slots.some(s => slotCompositionIssues(s, context.recipes).length)) pending.push('Completar as composições e fichas técnicas das preparações indicadas no editor.');
@@ -230,6 +234,7 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   const dietNote = schoolDietNote(menu, school, context.specialDiets);
   const notes = ['Os itens ou o cardápio poderão sofrer alterações conforme a disponibilidade de alimentos.',
     dietNote, pending.length ? `PENDÊNCIAS PARA REVISÃO: ${pending.join(' ')}` : '',
+    menu.attendanceMode === 'partial' ? 'Atendimento parcial: manhã OU tarde. As refeições compartilhadas são contabilizadas uma única vez nos valores por aluno.' : '',
     'Valores calculados a partir das porções e composições cadastradas. A RT deve validar as necessidades por faixa etária, período de atendimento e os cardápios adaptados.',
     'Referência: Resolução CD/FNDE nº 4/2026, arts. 17 e 18.'].filter(Boolean);
   y = table(['Observações e revisão técnica'], notes.map(n => [n]), y);
