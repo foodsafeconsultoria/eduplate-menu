@@ -339,6 +339,8 @@ export default function Menus() {
 
   // ── Slot state (replaces items + customTitles) ───────────────────────────────
   const [slots, setRawSlots] = useState<MenuSlot[]>([]);
+  const [editorView, setEditorView] = useState<'day' | 'week'>('day');
+  const [savedMealStructure, setSavedMealStructure] = useState<string[] | null>(null);
   const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>('partial');
   const [partialChoices, setPartialChoices] = useState<Record<string, string>>({});
   const [convertingPartial, setConvertingPartial] = useState(false);
@@ -433,7 +435,7 @@ export default function Menus() {
   }, [targetCategories]);
 
   const selectedSchools = schools.filter(s => targetSchoolIds.length === 0 || targetSchoolIds.includes(s.id));
-  const meals = menuMeals(slots, selectedSchools, mealMap[effectiveCategory], attendanceMode);
+  const meals = menuMeals([], [], [...(savedMealStructure ?? mealMap[effectiveCategory]), ...slots.map(slot => slot.mealLabel)], attendanceMode);
   useEffect(() => {
     if (!meals.includes(targetMeal)) setTargetMeal(meals[0]);
   }, [meals.join('|'), targetMeal]);
@@ -742,6 +744,8 @@ export default function Menus() {
   // ── Form open / reset ─────────────────────────────────────────────────────────
 
   const resetForm = () => {
+    setEditorView('day');
+    setSavedMealStructure(null);
     setAttendanceMode('partial'); setConvertingPartial(false); setPartialChoices({});
     setTitle(''); setTargetCategories(['Fundamental 1']); setReferenceMonth('');
     setTargetSchoolIds([]); setWeekStartDate(''); setStudentCount(''); setTargetDay('Segunda');
@@ -751,6 +755,9 @@ export default function Menus() {
   };
 
   const openEditMenu = (menu: Menu) => {
+    setEditorView('day');
+    const savedMeals = Array.from(new Set((menu.slots?.length ? menu.slots : menu.items || []).map(slot => slot.mealLabel)));
+    setSavedMealStructure(savedMeals.length ? savedMeals : null);
     setAttendanceMode(menu.attendanceMode || 'integral'); setConvertingPartial(false); setPartialChoices({});
     setEditingMenuId(menu.id);
     setTitle(menu.title);
@@ -1004,6 +1011,7 @@ export default function Menus() {
                       if (result.conflicts.length) { setConvertingPartial(true); return; }
                       setRawSlots(result.slots);
                     } else {
+                      setSavedMealStructure(meals.flatMap(meal => meal === 'Café manhã/tarde' ? ['Café da manhã', 'Café da tarde'] : meal === 'Almoço/Jantar' ? ['Almoço', 'Jantar'] : [meal]));
                       setRawSlots(slots.flatMap(slot => {
                         const labels = slot.mealLabel === 'Café manhã/tarde' ? ['Café da manhã', 'Café da tarde'] : slot.mealLabel === 'Almoço/Jantar' ? ['Almoço', 'Jantar'] : [slot.mealLabel];
                         return labels.map(mealLabel => ({ ...slot, id: crypto.randomUUID(), mealLabel, composicao: slot.composicao.map(i => ({ ...i, id: crypto.randomUUID() })) }));
@@ -1058,14 +1066,14 @@ export default function Menus() {
                                 ? targetCategories.filter((c) => c !== cat)
                                 : [...targetCategories, cat];
                               if (next.length === 0) return; // keep at least one
-                              // Clear slots when meal structure changes (Creche / Ensino Infantil / Fundamental)
+                              // Update defaults without deleting saved preparations.
                               const getEff = (cats: string[]) =>
                                 cats.includes('Creche') ? 'Creche'
                                 : cats.includes('Ensino Infantil') && cats.every(c => c === 'Ensino Infantil') ? 'Ensino Infantil'
                                 : 'Fundamental 1';
                               const prevEff = getEff(targetCategories);
                               const nextEff = getEff(next);
-                              if (prevEff !== nextEff) setSlots([]);
+                              if (prevEff !== nextEff) setSavedMealStructure(null);
                               setTargetCategories(next);
                               const newEff = next.includes('Creche') ? 'Creche' : next.includes('Ensino Infantil') && next.every(c => c === 'Ensino Infantil') ? 'Ensino Infantil' : (next[0] as (typeof categories)[number]);
                               setTargetMeal(mealMap[newEff][0]);
@@ -1352,8 +1360,15 @@ export default function Menus() {
                 </Card>
 
                 {/* ── Weekly grid ─────────────────────────────────────────────── */}
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-                  {weekdays.map((day) => (
+                <div className="flex flex-wrap items-center gap-2" aria-label="Visualização do cardápio">
+                  <Button type="button" variant={editorView === 'day' ? 'default' : 'outline'} aria-pressed={editorView === 'day'} onClick={() => setEditorView('day')}>Editar por dia</Button>
+                  <Button type="button" variant={editorView === 'week' ? 'default' : 'outline'} aria-pressed={editorView === 'week'} onClick={() => setEditorView('week')}>Ver semana</Button>
+                  {editorView === 'day' && weekdays.map(day => (
+                    <Button key={day} type="button" variant={targetDay === day ? 'default' : 'outline'} aria-pressed={targetDay === day} onClick={() => setTargetDay(day)}>{day}</Button>
+                  ))}
+                </div>
+                <div className={editorView === 'week' ? 'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5' : 'grid grid-cols-1 gap-3'}>
+                  {(editorView === 'day' ? [targetDay] : weekdays).map((day) => (
                     <Card key={day} className="overflow-hidden">
                       <CardHeader className="border-b bg-green-700 py-2 px-3">
                         <div className="flex items-center justify-between">
@@ -1373,7 +1388,7 @@ export default function Menus() {
                         </div>
                       </CardHeader>
 
-                      <CardContent className="space-y-2 p-2">
+                      <CardContent className={editorView === 'day' ? 'grid grid-cols-1 gap-4 p-4 lg:grid-cols-2' : 'space-y-2 p-2'}>
                         {meals.map((meal) => {
                           const slot        = slots.find((s) => s.dayLabel === day && s.mealLabel === meal);
                           const composicao  = slot?.composicao ?? [];
@@ -1401,18 +1416,19 @@ export default function Menus() {
 
                               {/* Nome da preparação impresso no PDF */}
                               <Input
+                                aria-label={`Nome do prato - ${day} - ${meal}`}
                                 value={slot?.nomeFantasia ?? ''}
                                 onChange={(e) => updateNomeFantasia(day, meal, e.target.value)}
-                                placeholder="Nome do prato (só aparece no PDF)"
-                                className="mt-1 h-7 text-[11px] px-2 font-semibold border-green-300 focus:border-green-500"
+                                placeholder="Nome do prato no PDF"
+                                className="mt-1 h-9 text-sm px-2 font-semibold border-green-300 focus:border-green-500"
                               />
 
                               {targetCategories.includes('Creche') && <Input
                                 aria-label={`Consistência - ${day} - ${meal}`}
                                 value={slot?.consistency || ''}
                                 onChange={e => mutateSlot(day, meal, s => ({ ...s, consistency: e.target.value }))}
-                                placeholder="Consistência de cada preparação (creche)"
-                                className="mt-1 h-7 text-[11px]"
+                                placeholder="Consistência (creche)"
+                                className="mt-1 h-9 text-sm"
                               />}
                               {slot && !recipesLoading && slotCompositionIssues(slot, recipes).map(issue => (
                                 <p key={issue} role="status" className="mt-1 rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">{issue}</p>

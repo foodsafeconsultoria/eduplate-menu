@@ -14,60 +14,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Menu } from '@/types/nutrition';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface ShoppingItem {
-  nome: string;
-  totalGrams: number;       // soma de (pesoAtual * studentCount * dias)
-  familyFarm: boolean;
-  menus: string[];          // titulos dos cardapios que usam este item
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Conta quantos dias unicos esse cardapio tem com slots preenchidos */
-function countMenuDays(menu: Menu): number {
-  const days = new Set(menu.slots.filter(s => s.composicao.length > 0).map(s => s.dayLabel));
-  return days.size || 5;
-}
-
-/** Consolida todos os insumos dos cardapios selecionados em uma lista unica */
-function buildShoppingList(menus: Menu[]): ShoppingItem[] {
-  const map = new Map<string, ShoppingItem>();
-
-  for (const menu of menus) {
-    const students = menu.studentCount || 100;
-    const days = countMenuDays(menu);
-
-    for (const slot of menu.slots) {
-      for (const insumo of slot.composicao) {
-        const key = insumo.nome.toLowerCase().trim();
-        // pesoAtual = gramas per capita por refeicao; multiplicamos por alunos e dias
-        const grams = insumo.pesoAtual * students * days;
-
-        if (map.has(key)) {
-          const existing = map.get(key)!;
-          existing.totalGrams += grams;
-          if (!existing.menus.includes(menu.title)) existing.menus.push(menu.title);
-        } else {
-          map.set(key, {
-            nome: insumo.nome,
-            totalGrams: grams,
-            familyFarm: Boolean(insumo.familyFarm),
-            menus: [menu.title],
-          });
-        }
-      }
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-}
-
-function fmtKg(grams: number): string {
-  if (grams >= 1000) return `${(grams / 1000).toFixed(1)} kg`;
-  return `${Math.round(grams)} g`;
-}
+import { buildShoppingList, formatShoppingAmount, hasStudentCount, type ShoppingItem } from '@/lib/shoppingList';
 
 // ── PDF ───────────────────────────────────────────────────────────────────────
 
@@ -116,7 +63,7 @@ async function generateShoppingPDF(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
   selectedMenus.forEach(m => {
-    const students = m.studentCount || 100;
+    const students = m.studentCount;
     doc.text(`- ${m.title} (${m.referenceMonth || 'sem referencia'}, ${students} alunos)`, 16, y);
     y += 4.5;
   });
@@ -133,7 +80,7 @@ async function generateShoppingPDF(
     body: items.map(item => [
       item.nome,
       item.familyFarm ? 'SIM' : '-',
-      fmtKg(item.totalGrams),
+      formatShoppingAmount(item),
       item.menus.join(', '),
     ]),
     theme: 'striped',
@@ -221,8 +168,10 @@ export default function ShoppingList() {
     [menus, selectedMenuIds],
   );
 
+  const missingStudents = selectedMenus.filter(menu => !hasStudentCount(menu));
+
   const shoppingItems = useMemo(() => {
-    if (selectedMenus.length === 0) return [];
+    if (selectedMenus.length === 0 || selectedMenus.some(menu => !hasStudentCount(menu))) return [];
     return buildShoppingList(selectedMenus);
   }, [selectedMenus]);
 
@@ -248,6 +197,7 @@ export default function ShoppingList() {
 
   async function handlePrint() {
     if (selectedMenus.length === 0) { toast.error('Selecione pelo menos um cardapio.'); return; }
+    if (missingStudents.length) { toast.error('Informe o número de alunos dos cardápios selecionados.'); return; }
     if (shoppingItems.length === 0) { toast.error('Nenhum insumo encontrado nos cardapios selecionados.'); return; }
     setGenerating(true);
     try {
@@ -275,7 +225,7 @@ export default function ShoppingList() {
         </div>
         <Button
           onClick={handlePrint}
-          disabled={selectedMenus.length === 0 || generating}
+          disabled={selectedMenus.length === 0 || missingStudents.length > 0 || generating || loading}
           className="bg-green-700 hover:bg-green-800 text-white gap-2"
         >
           <Printer className="w-4 h-4" />
@@ -363,12 +313,19 @@ export default function ShoppingList() {
                 </p>
               </CardContent>
             </Card>
+          ) : missingStudents.length > 0 ? (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="pt-6" role="status">
+                <p className="font-medium">Informe o número de alunos para calcular as quantidades.</p>
+                <p className="mt-2 text-sm">Edite os cardápios: {missingStudents.map(menu => menu.title).join(', ')}.</p>
+              </CardContent>
+            </Card>
           ) : shoppingItems.length === 0 ? (
             <Card>
               <CardContent className="py-16 text-center">
                 <p className="text-gray-500 text-sm">Os cardápios selecionados não possuem insumos cadastrados.</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Verifique se os slots dos cardápios têm composição preenchida.
+                  Adicione ingredientes ou fichas técnicas às refeições dos cardápios.
                 </p>
               </CardContent>
             </Card>
@@ -410,7 +367,7 @@ export default function ShoppingList() {
                     >
                       <span className="col-span-5 font-medium text-gray-800 truncate">{item.nome}</span>
                       <span className="col-span-3 text-right font-mono text-gray-700">
-                        {fmtKg(item.totalGrams)}
+                        {formatShoppingAmount(item)}
                       </span>
                       <span className="col-span-4 flex items-center gap-1">
                         {item.familyFarm && (

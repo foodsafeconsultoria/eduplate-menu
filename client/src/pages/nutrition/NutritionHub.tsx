@@ -5,19 +5,19 @@ import { Apple, BookOpen, ClipboardMinus, Factory, FileBarChart2, HeartPulse, Sh
 const moduleCards = [
   {
     title: 'Alimentos',
-    description: 'Base padronizada de alimentos, composicao nutricional, precos e origem.',
+    description: 'Base padronizada de alimentos, composição nutricional, preços e origem.',
     icon: Apple,
     href: '/nutrition/foods',
   },
   {
-    title: 'Fichas Tecnicas',
-    description: 'Preparo padronizado com ingredientes, rendimento, custo e nutrientes por porcao.',
+    title: 'Fichas Técnicas',
+    description: 'Preparo padronizado com ingredientes, rendimento, custo e nutrientes por porção.',
     icon: ClipboardMinus,
     href: '/nutrition/recipes',
   },
   {
     title: 'Cardápios',
-    description: 'Planejamento alimentar por categoria, periodo, escola e conformidade PNAE.',
+    description: 'Planejamento alimentar por categoria, período, escola e conformidade PNAE.',
     icon: BookOpen,
     href: '/nutrition/menus',
   },
@@ -29,13 +29,13 @@ const moduleCards = [
   },
   {
     title: 'Dietas Especiais',
-    description: 'Controle de restricoes alimentares com rastreabilidade por aluno e unidade.',
+    description: 'Controle de restrições alimentares com rastreabilidade por aluno e unidade.',
     icon: ShieldAlert,
     href: '/nutrition/special-diets',
   },
   {
     title: 'Produção',
-    description: 'Acompanhamento da execucao diaria, sobras e indicadores operacionais.',
+    description: 'Acompanhamento da execução diária, sobras e indicadores operacionais.',
     icon: Factory,
     href: '/nutrition/production',
   },
@@ -64,7 +64,7 @@ export default function NutritionHub() {
     <div className="min-h-screen flex-1 p-4 md:p-8">
       <div className="w-full space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Alimentacao Escolar</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Alimentação Escolar</h1>
           <p className="text-gray-600 mt-2">
             Centralize cardápios, dietas, produção, relatórios gerenciais e avaliação nutricional em uma única operação.
           </p>
@@ -74,7 +74,7 @@ export default function NutritionHub() {
           <CardHeader>
             <CardTitle>Gestão alimentar mais completa</CardTitle>
             <CardDescription>
-              O módulo agora atende tanto redes públicas quanto particulares e ganha uma frente nova para acompanhamento nutricional dos alunos em escala.
+              Planeje cardápios, acompanhe as escolas e reúna os registros da alimentação escolar em um só lugar.
             </CardDescription>
           </CardHeader>
         </Card>

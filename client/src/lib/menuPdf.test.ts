@@ -44,10 +44,15 @@ describe('Cardápio por escola', () => {
     expect(() => renderSchoolMenus(new jsPDF(), { ...menu, attendanceMode: 'partial', slots: changed }, [], context)).toThrow('Revise');
     if (process.env.MENU_PDF_QA) writeFileSync('tmp/pdfs/cardapio-parcial.pdf', Buffer.from(doc.output('arraybuffer')));
   });
-  it('usa refeições cadastradas e preserva preparações de cardápios antigos', () => {
+  it('usa a estrutura do cardápio e preserva preparações de cardápios antigos', () => {
     expect(menuMeals(menu.slots, [school], ['Jantar'])).toEqual(['Almoço', 'Lanche']);
     expect(menuMeals([...menu.slots, { ...menu.slots[0], mealLabel: 'Jantar' }], [school], [])).toContain('Jantar');
     expect(menuMeals([], [], ['Lanche'])).toEqual(['Lanche']);
+  });
+  it('não cria refeições a partir dos horários de várias escolas', () => {
+    const other = { ...school, id: 'b', mealSchedules: ['Desjejum', 'Jantar', 'Lanche da Manhã', 'Lanche da manhã', 'Almoço da tarde'].map(mealLabel => ({ mealLabel, time: '10:00' })) };
+    expect(menuMeals([], [school, other], ['Almoço/Jantar', 'Lanche'], 'partial')).toEqual(['Almoço/Jantar', 'Lanche']);
+    expect(menuMeals(menu.slots, [school, other], ['Almoço', 'Lanche'], 'integral')).toEqual(['Almoço', 'Lanche']);
   });
   it('filtra dietas por escola, etapa e situação, sem divulgar dados individuais', () => {
     const note = schoolDietNote(menu, school, [diet]);

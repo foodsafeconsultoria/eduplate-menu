@@ -104,7 +104,7 @@ export default function Login() {
 
           {/* Feature pills */}
           <div className="mt-6 flex flex-wrap gap-2 justify-center">
-            {['Cardápios', 'Fiscalização', 'SIGPC', 'Treinamentos', 'Certificados'].map((f) => (
+            {['Cardápios', 'Fiscalização', 'Relatório gerencial', 'Treinamentos', 'Certificados'].map((f) => (
               <span
                 key={f}
                 className="text-xs px-3 py-1 rounded-full"

@@ -16,9 +16,11 @@ export interface MenuPdfContext {
 const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 const green: [number, number, number] = [22, 101, 52];
 
-export function menuMeals(slots: MenuSlot[], schools: School[], fallback: string[], mode?: AttendanceMode): string[] {
-  const configured = schools.flatMap(s => (s.mealSchedules || []).map(r => r.mealLabel));
-  return Array.from(new Set([...(configured.length ? configured : fallback), ...slots.map(s => s.mealLabel)].map(label => mode === 'partial' ? partialMeal(label) : label)));
+export function menuMeals(slots: MenuSlot[], _schools: School[], fallback: string[], mode?: AttendanceMode): string[] {
+  // School schedules describe serving times, not the structure of a menu.
+  // Keep saved meal labels so existing preparations remain accessible.
+  const labels = slots.length ? slots.map(s => s.mealLabel) : fallback;
+  return Array.from(new Set(labels.map(label => mode === 'partial' ? partialMeal(label) : label)));
 }
 
 export function schoolDietNote(menu: Menu, school: School | undefined, diets: SpecialDiet[]): string {
