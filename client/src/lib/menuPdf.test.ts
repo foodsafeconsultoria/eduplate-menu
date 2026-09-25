@@ -159,15 +159,19 @@ describe('Cardápio por escola', () => {
     const nurseryDoc = new jsPDF({ orientation: 'landscape' });
     renderSchoolMenus(nurseryDoc, { ...menu, slots: menu.slots.map(s => ({ ...s, consistency: '' })) }, [], context);
     expect(nurseryDoc.output()).toContain('Consistência: não informada');
-    expect(nurseryDoc.output()).toContain('Informar a consistência');
+    expect(nurseryDoc.output()).not.toContain('PENDÊNCIAS PARA REVISÃO');
   });
-  it('pagina conteúdo longo e registra pendências', () => {
+  it('pagina conteúdo longo sem imprimir o bloco de pendências', () => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const longMenu = { ...menu, slots: menu.slots.map(s => ({ ...s, nomeFantasia: 'Preparação com descrição extensa. '.repeat(18), consistency: '' })) };
     renderSchoolMenus(doc, longMenu, [], { ...context, settings: null });
     numberMenuPages(doc);
     expect(doc.getNumberOfPages()).toBeGreaterThan(1);
     expect(doc.output()).toContain('assinatura pendente');
+    expect(doc.output()).not.toContain('PENDÊNCIAS PARA REVISÃO');
+    expect(doc.output()).not.toContain('Informar os horários');
+    expect(doc.output()).not.toContain('Completar as composições');
+    expect(doc.output()).not.toContain('Revisar os dias/refeições');
     if (process.env.MENU_PDF_QA) writeFileSync('tmp/pdfs/cardapio-longo.pdf', Buffer.from(doc.output('arraybuffer')));
   });
 });

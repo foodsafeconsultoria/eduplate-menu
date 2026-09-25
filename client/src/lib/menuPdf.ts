@@ -225,17 +225,9 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   const totals = days.map(day => nutrientKeys.map(key => slots.filter(s => s.dayLabel === day)
     .flatMap(s => s.composicao).reduce((sum, ins) => sum + (ins.valoresNutricionaisBase?.[key] || 0)
       * (ins.pesoReferencia > 0 ? ins.pesoAtual / ins.pesoReferencia : 0), 0)));
-  const pending: string[] = [];
-  if (!school) pending.push('Cadastrar e selecionar a escola.');
-  if (meals.some(m => mealScheduleText(m, school, menu.attendanceMode).includes('Horário não informado'))) pending.push('Informar os horários das refeições no cadastro da escola.');
-  if (!settings?.nutritionistName?.trim() || !settings?.nutritionistCrn?.trim()) pending.push('Completar nome e CRN da RT em Perfil.');
-  if (!settings?.signatureDataUrl) pending.push('Assinatura da RT pendente; assinar antes de divulgar.');
-  if (slots.some(s => slotCompositionIssues(s, context.recipes).length)) pending.push('Completar as composições e fichas técnicas das preparações indicadas no editor.');
-  if (nursery && slots.some(s => (s.nomeFantasia.trim() || s.composicao.length) && !s.consistency?.trim())) pending.push('Informar a consistência de cada preparação para creche.');
-  if (days.some(day => meals.some(meal => !slots.some(s => s.dayLabel === day && s.mealLabel === meal && s.composicao.length)))) pending.push('Revisar os dias/refeições sem planejamento.');
   const dietNote = schoolDietNote(menu, school, context.specialDiets);
   const notes = ['Os itens ou o cardápio poderão sofrer alterações conforme a disponibilidade de alimentos.',
-    dietNote, pending.length ? `PENDÊNCIAS PARA REVISÃO: ${pending.join(' ')}` : '',
+    dietNote,
     menu.attendanceMode === 'partial' ? 'Atendimento parcial: manhã OU tarde. As refeições compartilhadas são contabilizadas uma única vez nos valores por aluno.' : '',
     'Valores calculados a partir das porções e composições cadastradas. A RT deve validar as necessidades por faixa etária, período de atendimento e os cardápios adaptados.',
     'Referência: Resolução CD/FNDE nº 4/2026, arts. 17 e 18.'].filter(Boolean);
