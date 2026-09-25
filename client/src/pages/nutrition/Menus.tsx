@@ -24,8 +24,8 @@ import { replicateMenuForCategory, suggestedFactor, type EtapaCategory } from '@
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
-import { renderSchoolMenus, menuMeals, numberMenuPages, slotCompositionIssues, type MenuPdfContext } from '@/lib/menuPdf';
-import { partialSlots, type AttendanceMode } from '@/lib/menuAttendance';
+import { renderSchoolMenus, numberMenuPages, slotCompositionIssues, type MenuPdfContext } from '@/lib/menuPdf';
+import { editorMeals, partialSlots, type AttendanceMode } from '@/lib/menuAttendance';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
 import { MenuDistributionDialog } from '@/components/MenuDistributionDialog';
 import { addRecipeToDoc } from '@/lib/recipePdf';
@@ -435,7 +435,7 @@ export default function Menus() {
   }, [targetCategories]);
 
   const selectedSchools = schools.filter(s => targetSchoolIds.length === 0 || targetSchoolIds.includes(s.id));
-  const meals = menuMeals([], [], [...(savedMealStructure ?? mealMap[effectiveCategory]), ...slots.map(slot => slot.mealLabel)], attendanceMode);
+  const meals = editorMeals(mealMap[effectiveCategory], [...(savedMealStructure ?? []), ...slots.map(slot => slot.mealLabel)], attendanceMode);
   useEffect(() => {
     if (!meals.includes(targetMeal)) setTargetMeal(meals[0]);
   }, [meals.join('|'), targetMeal]);

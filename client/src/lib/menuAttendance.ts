@@ -10,6 +10,15 @@ export function partialMeal(label: string): string {
   return label;
 }
 
+/** Offer empty planned meals too, so reopening a partially filled menu never locks them out. */
+export function editorMeals(defaults: string[], saved: string[], mode: AttendanceMode): string[] {
+  const planned = defaults.flatMap(label => {
+    if (mode === 'integral' && label === 'Almoço/Jantar' && saved.some(meal => meal === 'Almoço' || meal === 'Jantar')) return ['Almoço', 'Jantar'];
+    return [label];
+  });
+  return Array.from(new Set([...planned, ...saved].map(label => mode === 'partial' ? partialMeal(label) : label)));
+}
+
 /** Alternatives share one portion. Never combine different portions without a choice. */
 export function partialSlots(slots: MenuSlot[], choices: Record<string, string> = {}) {
   const groups = new Map<string, MenuSlot[]>();

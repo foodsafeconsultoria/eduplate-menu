@@ -5,7 +5,7 @@ import { menuMeals, numberMenuPages, renderSchoolMenus, schoolDietNote, slotIngr
 import type { MenuPdfContext } from './menuPdf';
 import type { Menu, Recipe, SpecialDiet } from '../types/nutrition';
 import type { School } from '../types';
-import { partialSlots, mealScheduleText } from './menuAttendance';
+import { editorMeals, partialSlots, mealScheduleText } from './menuAttendance';
 
 const now = new Date('2026-09-17T12:00:00');
 const school: School = { id: 'a', name: 'Escola Municipal de Educação Infantil - Unidade Jardim das Flores',
@@ -22,6 +22,20 @@ const diet = { id: 'd', schoolId: 'a', schoolName: school.name, studentName: 'NO
 const context: MenuPdfContext = { schools: [school], recipes: [recipe], specialDiets: [diet], settings: { nutritionistName: 'Nutricionista de exemplo', nutritionistCrn: 'EXEMPLO', municipio: 'Município de exemplo', uf: 'SP' } };
 
 describe('Cardápio por escola', () => {
+  it('permite adicionar almoço ao reabrir um cardápio salvo somente com café', () => {
+    expect(editorMeals(['Café da manhã', 'Almoço', 'Café da tarde', 'Jantar'], ['Café manhã/tarde'], 'partial'))
+      .toEqual(['Café manhã/tarde', 'Almoço/Jantar']);
+    expect(editorMeals(['Almoço/Jantar', 'Lanche'], ['Café manhã/tarde'], 'partial'))
+      .toEqual(['Almoço/Jantar', 'Lanche', 'Café manhã/tarde']);
+  });
+  it('mantém refeições vazias e personalizadas disponíveis durante a edição', () => {
+    expect(editorMeals(['Almoço', 'Lanche'], [], 'integral')).toEqual(['Almoço', 'Lanche']);
+    expect(editorMeals(['Almoço', 'Lanche'], ['Colação'], 'integral')).toEqual(['Almoço', 'Lanche', 'Colação']);
+  });
+  it('não reintroduz almoço combinado após separar as refeições integrais', () => {
+    expect(editorMeals(['Almoço/Jantar', 'Lanche'], ['Almoço', 'Jantar'], 'integral'))
+      .toEqual(['Almoço', 'Jantar', 'Lanche']);
+  });
   it('conta turnos alternativos uma vez e preserva horários e escolhas de porção', () => {
     const slots = ['Café da manhã', 'Café da tarde', 'Almoço', 'Jantar'].map((mealLabel, i) => ({ ...menu.slots[0], id: String(i), mealLabel }));
     const converted = partialSlots(slots);
