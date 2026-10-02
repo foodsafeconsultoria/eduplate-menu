@@ -12,6 +12,7 @@ export interface NutritionNutrientSet {
 }
 
 export interface Food {
+  archived?: boolean;
   id: string;
   name: string;
   unit: 'kg' | 'unit' | 'liter';
@@ -90,7 +91,7 @@ export interface MenuInsumo {
   nome: string;
   type: 'food' | 'recipe';
   referenceId: string;
-  /** Canonical reference weight in grams (100 for TACO foods, recipe.perCapita for recipes) */
+  /** Canonical reference weight in grams (100 for foods, recipe.perCapita * 1000 for recipes) */
   pesoReferencia: number;
   /** User-editable actual portion weight for this specific menu */
   pesoAtual: number;
@@ -100,6 +101,8 @@ export interface MenuInsumo {
   custoBase: number;
   familyFarm?: boolean;
   sourceUnit?: string; // 'g' | 'ml'
+  /** Version 1 stores both menu portion weights in grams. */
+  portionUnitVersion?: 1;
 }
 
 /**

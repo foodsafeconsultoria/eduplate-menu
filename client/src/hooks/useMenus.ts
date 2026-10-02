@@ -1,3 +1,4 @@
+import { repairLegacyMenuPortions } from '@/lib/recipeMenuPortion';
 import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import { toast } from 'sonner';
@@ -64,11 +65,12 @@ function normalizeInsumo(raw: any, idx: number): MenuInsumo {
     type:            raw?.type === 'food' ? 'food' : 'recipe',
     referenceId:     raw?.referenceId     || '',
     pesoReferencia:  Number(raw?.pesoReferencia)  || 100,
-    pesoAtual:       Number(raw?.pesoAtual)       || 100,
+    pesoAtual:       raw?.pesoAtual != null && Number.isFinite(Number(raw.pesoAtual)) ? Math.max(0, Number(raw.pesoAtual)) : 100,
     valoresNutricionaisBase: normalizeNutrients(raw?.valoresNutricionaisBase),
     custoBase:       Number(raw?.custoBase)       || 0,
     familyFarm:      Boolean(raw?.familyFarm),
     sourceUnit:      raw?.sourceUnit || 'g',
+    ...(raw?.portionUnitVersion === 1 ? { portionUnitVersion: 1 as const } : {}),
   };
 }
 
@@ -90,7 +92,7 @@ function normalizeMenus(raw: unknown): Menu[] {
 
   return raw.map((item, index) => {
     const menu = item as Partial<Menu>;
-    return {
+    return repairLegacyMenuPortions({
       id:             menu.id             || `menu-imported-${index}`,
       title:          menu.title          || 'Cardápio sem título',
       category:       menu.category       || 'Geral',
@@ -131,7 +133,7 @@ function normalizeMenus(raw: unknown): Menu[] {
         : [],
       createdAt: toDate(menu.createdAt),
       updatedAt: toDate(menu.updatedAt),
-    };
+    });
   });
 }
 

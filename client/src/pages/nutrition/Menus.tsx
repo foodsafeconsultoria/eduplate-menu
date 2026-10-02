@@ -1,3 +1,4 @@
+import { recipePortionGrams } from '@/lib/recipeMenuPortion';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -520,8 +521,9 @@ export default function Menus() {
       nome:          recipe.displayName || recipe.name,
       type:          'recipe',
       referenceId:   recipe.id,
-      pesoReferencia: recipe.perCapita || 100,
-      pesoAtual:      recipe.perCapita || 100,
+      portionUnitVersion: 1,
+      pesoReferencia: recipePortionGrams(recipe),
+      pesoAtual:      recipePortionGrams(recipe),
       valoresNutricionaisBase: recipe.nutrientsPerServing,
       custoBase:      recipe.costPerServing,
       familyFarm:     recipe.usesFamilyFarm,
@@ -1220,7 +1222,7 @@ export default function Menus() {
                               >
                                 <span className="font-medium">{r.displayName || r.name}</span>
                                 <span className="ml-2 text-[11px] text-gray-400">
-                                  {r.nutrientsPerServing.kcal.toFixed(0)} kcal · {r.perCapita}g · R$ {r.costPerServing.toFixed(2)}
+                                  {r.nutrientsPerServing.kcal.toFixed(0)} kcal · {recipePortionGrams(r)}g · R$ {r.costPerServing.toFixed(2)}
                                 </span>
                               </button>
                             ))

@@ -1,3 +1,6 @@
+import { AssessmentCalculationDetails, AssessmentReferences } from '@/components/AssessmentCalculationDetails';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ASSESSMENT_METHOD, ASSESSMENT_REFERENCES, BMI_FORMULA, bmiCalculation } from '@/lib/assessmentCalculation';
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,7 +15,7 @@ import {
   type CreateNutritionalAssessmentInput,
   useNutritionalAssessments,
 } from '@/hooks/useNutritionalAssessments';
-import type { NutritionalAssessmentStatus, NutritionalAssessmentSex } from '@/types';
+import type { NutritionalAssessment, NutritionalAssessmentStatus, NutritionalAssessmentSex } from '@/types';
 import { Download, Trash2, Upload } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -47,19 +50,8 @@ function splitLine(line: string) {
   return line.includes('\t') ? line.split('\t') : line.split(';');
 }
 
-function buildCsv(records: Array<{
-  studentName: string;
-  schoolName: string;
-  className?: string;
-  sex: string;
-  birthDate: Date;
-  assessmentDate: Date;
-  weightKg: number;
-  heightCm: number;
-  bmi: number;
-  status: string;
-}>) {
-  const header = ['Aluno', 'Escola', 'Turma', 'Sexo', 'Nascimento', 'Avaliacao', 'Peso(kg)', 'Altura(cm)', 'IMC', 'Classificacao'];
+function buildCsv(records: NutritionalAssessment[]) {
+  const header = ['Aluno', 'Escola', 'Turma', 'Sexo', 'Nascimento', 'Avaliacao', 'Peso(kg)', 'Altura(cm)', 'IMC', 'Classificacao estimada (metodo interno nao validado)', 'Idade (meses)', 'Escore-z aproximado salvo', 'Memoria de calculo do IMC', 'Metodo da classificacao', 'Referencias para conferencia'];
   const rows = records.map((record) => [
     record.studentName,
     record.schoolName,
@@ -71,6 +63,11 @@ function buildCsv(records: Array<{
     record.heightCm.toFixed(1),
     record.bmi.toFixed(2),
     record.status,
+    String(record.ageMonths),
+    record.zScoreApprox?.toFixed(2) ?? 'Não registrado',
+    bmiCalculation(record.weightKg, record.heightCm),
+    ASSESSMENT_METHOD,
+    ASSESSMENT_REFERENCES.map(source => source.label + ': ' + source.url).join(' | '),
   ]);
   return [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n');
 }
@@ -89,6 +86,7 @@ export default function NutritionalAssessmentPage() {
   const { schools } = useSchools();
   const { records, addBulkRecords, deleteRecord } = useNutritionalAssessments();
 
+  const [calculationRecord, setCalculationRecord] = useState<NutritionalAssessment | null>(null);
   const [schoolId, setSchoolId] = useState('all');
   const [search, setSearch] = useState('');
   const [batchText, setBatchText] = useState('');
@@ -217,19 +215,23 @@ export default function NutritionalAssessmentPage() {
       doc.setFontSize(10);
       doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, 25);
       doc.text(selectedSchool?.name || 'Todas as unidades', 14, 31);
+      doc.setFontSize(8);
+      const referenceLines = doc.splitTextToSize([BMI_FORMULA, ASSESSMENT_METHOD, ...ASSESSMENT_REFERENCES.map(source => source.label + ': ' + source.url)].join('\n'), 269);
+      doc.text(referenceLines, 14, 37);
 
       autoTable(doc, {
-        startY: 38,
-        head: [['Aluno', 'Escola', 'Turma', 'Sexo', 'Idade', 'Peso', 'Altura', 'IMC', 'Classificação']],
+        startY: 40 + referenceLines.length * 4,
+        head: [['Aluno', 'Escola', 'Turma', 'Sexo', 'Idade', 'Peso', 'Altura', 'IMC', 'z aprox.', 'Classificação estimada']],
         body: filteredRecords.map((record) => [
           record.studentName,
           record.schoolName,
           record.className || '—',
           record.sex,
-          `${getAgeYears(record.ageMonths)} anos`,
+          `${record.ageMonths} meses`,
           record.weightKg.toFixed(1),
           record.heightCm.toFixed(1),
           record.bmi.toFixed(2),
+          record.zScoreApprox?.toFixed(2) ?? 'Não registrado',
           record.status,
         ]),
         theme: 'grid',
@@ -247,11 +249,20 @@ export default function NutritionalAssessmentPage() {
 
   return (
     <div className="flex-1 min-h-screen bg-gray-50 p-4 md:p-8">
+      <Dialog open={Boolean(calculationRecord)} onOpenChange={value => { if (!value) setCalculationRecord(null); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Memória de cálculo — {calculationRecord?.studentName}</DialogTitle>
+            <DialogDescription>Medidas, fórmula, limites usados e referências para conferir esta avaliação.</DialogDescription>
+          </DialogHeader>
+          {calculationRecord && <AssessmentCalculationDetails record={calculationRecord} />}
+        </DialogContent>
+      </Dialog>
       <div className="mx-auto max-w-7xl space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Avaliação Nutricional</h1>
           <p className="mt-2 max-w-3xl text-gray-600">
-            Fluxo pensado para volume: cole a planilha da escola, calcule IMC automaticamente e visualize a curva operacional por idade em segundos.
+            Cole a planilha da escola, calcule IMC e visualize os pontos por idade. A classificação atual é aproximada.
           </p>
         </div>
 
@@ -317,12 +328,18 @@ export default function NutritionalAssessmentPage() {
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Curva operacional IMC/idade</CardTitle>
+              <CardTitle>IMC por idade — pontos dos alunos</CardTitle>
               <CardDescription>
-                Visualização rápida para triagem escolar em grande volume. Use como apoio operacional e valide casos limítrofes com o protocolo oficial da sua rede.
+                Cada ponto representa uma avaliação. Este gráfico não contém curvas de referência oficiais.
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 space-y-2">
+                <p><strong>IMC:</strong> peso (kg) ÷ altura (m)².</p>
+                <p><strong>Classificação atual:</strong> escore-z aproximado por interpolação linear de valores internos aos 5, 10, 15 e 19 anos, separados por sexo. A fonte desses valores não está documentada. Fora dessa faixa, o cálculo reutiliza os limites extremos.</p>
+                <p>Este método não implementa as tabelas mensais oficiais nem o método LMS da OMS. As classificações são estimativas e precisam de revisão com a referência apropriada antes de orientar condutas.</p>
+                <AssessmentReferences />
+              </div>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={340}>
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 10, left: 0 }}>
@@ -341,14 +358,14 @@ export default function NutritionalAssessmentPage() {
                   </ScatterChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-gray-500">Importe avaliações para visualizar a curva.</p>
+                <p className="text-sm text-gray-500">Importe avaliações para visualizar os pontos de IMC.</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição por classificação</CardTitle>
+              <CardTitle>Distribuição por classificação estimada</CardTitle>
               <CardDescription>Resumo automático da base filtrada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -413,7 +430,7 @@ export default function NutritionalAssessmentPage() {
                     <th className="px-3 py-2 text-right font-medium text-gray-700">Peso</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-700">Altura</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-700">IMC</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-700">Classificação</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Classificação estimada</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-700">Ações</th>
                   </tr>
                 </thead>
@@ -437,7 +454,8 @@ export default function NutritionalAssessmentPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => deleteRecord(record.id)}>
+                        <Button variant="outline" size="sm" onClick={() => setCalculationRecord(record)} aria-label={`Ver cálculo de ${record.studentName}`}>Ver cálculo</Button>
+                        <Button variant="ghost" size="sm" aria-label={`Excluir avaliação de ${record.studentName}`} onClick={() => deleteRecord(record.id)}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </td>

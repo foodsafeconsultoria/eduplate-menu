@@ -15,7 +15,8 @@ import { Copy, FileText, LayoutGrid, List, Pencil, Plus, Printer, PrinterCheck, 
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import type { Recipe } from '@/types/nutrition';
-import { getDefaultCorrectionFactor } from '@/data/correctionFactors';
+import { CORRECTION_FACTOR_SOURCE, getDefaultCorrectionFactor } from '@/data/correctionFactors';
+import { recipeYieldMetrics, validIngredientWeights } from '@/lib/recipeCalculation';
 import { detectAllergens } from '@/data/allergenMapping';
 import { DEFAULT_RECIPES } from '@/data/defaultRecipes';
 import { SEED_INGREDIENT_MAP } from '@/data/seedIngredientMap';
@@ -104,7 +105,7 @@ export default function Recipes() {
     } catch (_) {}
     return 'Nutricionista RT — PNAE';
   }, [orgId]);
-  const { foods, loading: foodsLoading } = useFoods();
+  const { allFoods: foods, foods: availableFoods, loading: foodsLoading } = useFoods();
   const { recipes, loading, addRecipe, updateRecipe, deleteRecipe, importRecipes } = useRecipes();
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('list');
@@ -264,6 +265,7 @@ export default function Recipes() {
   const [ingredientSearch, setIngredientSearch] = useState('');
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [perCapitaTarget, setPerCapitaTarget] = useState('');
+  const [preparedYield, setPreparedYield] = useState('');
 
   // ── Gallery filters ───────────────────────────────────────────────────────────
   const [gallerySearch,         setGallerySearch]         = useState('');
@@ -296,8 +298,8 @@ export default function Recipes() {
   const searchResults = useMemo(() => {
     const term = ingredientSearch.toLowerCase().trim();
     if (term.length < 2) return [];
-    return foods.filter((food) => food.name.toLowerCase().includes(term)).slice(0, 8);
-  }, [foods, ingredientSearch]);
+    return availableFoods.filter((food) => food.name.toLowerCase().includes(term)).slice(0, 8);
+  }, [availableFoods, ingredientSearch]);
 
   const addIngredient = (food: Food) => {
     const fc = getDefaultCorrectionFactor(food.id);
@@ -309,7 +311,7 @@ export default function Recipes() {
         foodName: food.name,
         grossWeight: 0,
         netWeight: 0,
-        // Pre-fill FC from TACO lookup so net weight auto-calculates on first gross entry
+        // Only pre-fill FC when a reviewed reference exists.
         correctionFactor: fc,
         estimatedCost: 0,
       },
@@ -339,17 +341,20 @@ export default function Recipes() {
             netWeight = Number((grossWeight / correctionFactor).toFixed(4));
           } else if (netWeight > 0) {
             // Net was already set → update FC
-            correctionFactor = Number((grossWeight / netWeight).toFixed(2));
+            correctionFactor = grossWeight / netWeight;
           }
         } else if (field === 'netWeight') {
           // Manual net edit → recalculate FC
           if (netWeight > 0 && grossWeight > 0) {
-            correctionFactor = Number((grossWeight / netWeight).toFixed(2));
+            correctionFactor = grossWeight / netWeight;
           }
         } else if (field === 'correctionFactor' && correctionFactor > 0 && grossWeight > 0) {
           // FC changed → auto-compute net weight
           netWeight = Number((grossWeight / correctionFactor).toFixed(4));
         }
+
+        if (field === 'grossWeight' && grossWeight === 0) netWeight = 0;
+        if (field === 'correctionFactor' && correctionFactor === 0) netWeight = 0;
 
         const food = foods.find((item) => item.id === ingredient.foodId)
           || foods.find((item) => item.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim());
@@ -383,7 +388,11 @@ export default function Recipes() {
         // Primary lookup by ID; fallback to name match for default/seeded recipes
         const food = foods.find((item) => item.id === ingredient.foodId)
           || foods.find((item) => item.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim());
-        if (!food) return acc;
+        if (!food) return { ...acc,
+          costTotal: acc.costTotal + ingredient.estimatedCost,
+          totalGrossWeight: acc.totalGrossWeight + ingredient.grossWeight,
+          totalNetWeight: acc.totalNetWeight + ingredient.netWeight,
+        };
 
         // netWeight is in kg; nutrients are per 100g (= 0.1 kg) → multiply by 10
         const factor = ingredient.netWeight > 0 ? ingredient.netWeight * 10 : 0;
@@ -421,9 +430,9 @@ export default function Recipes() {
     );
   }, [foods, ingredients]);
 
-  const servingsCount = Number(servings) || 1;
-  const perCapita = totals.totalNetWeight > 0 ? totals.totalNetWeight / servingsCount : 0;
-  const yieldPercentage = totals.totalGrossWeight > 0 ? (totals.totalNetWeight / totals.totalGrossWeight) * 100 : 0;
+  const servingsCount = Number(servings);
+  const yieldKg = Number(preparedYield);
+  const { perCapita, yieldPercentage, cookingIndex } = recipeYieldMetrics(yieldKg, servingsCount, totals.totalNetWeight, totals.totalGrossWeight);
   const usesFamilyFarm = totals.familyFarmCount > 0;
   const allergenSummary = Array.from(totals.allergens).sort();
 
@@ -434,6 +443,7 @@ export default function Recipes() {
     setRecommendedMeal('Almoco');
     setServings('');
     setPerCapitaTarget('');
+    setPreparedYield('');
     setPrepTime('');
     setOperationalNotes('');
     setPreparationMethod('');
@@ -475,15 +485,8 @@ export default function Recipes() {
     const pc = storedPc > 10 ? storedPc / 1000 : storedPc;
     setPerCapitaTarget(pc > 0 ? String(pc) : '');
 
-    // Servings: recalculate from net weight ÷ per capita to avoid corrupted stored values
-    // (totalNetWeight after migration, not before)
-    const netTotal = migratedIngs.reduce((s, i) => s + (i.netWeight ?? 0), 0);
-    const safePc = pc > 0 ? pc : storedPc > 0 ? storedPc : 0;
-    if (safePc > 0 && netTotal > 0) {
-      setServings(String(Math.round(netTotal / safePc)));
-    } else {
-      setServings(String(recipe.servings));
-    }
+    setPreparedYield(String(needsMigration ? recipe.yieldTotal / 1000 : recipe.yieldTotal));
+    setServings(String(recipe.servings));
 
     setOpen(true);
   };
@@ -499,14 +502,19 @@ export default function Recipes() {
       return;
     }
 
-    if (servingsCount <= 0) {
+    if (!Number.isFinite(servingsCount) || !Number.isInteger(servingsCount) || servingsCount <= 0) {
       toast.error('Informe o numero de porcoes.');
       return;
     }
 
-    // Warn but don't block if net weight is missing (may happen with older recipes)
-    if (totals.totalNetWeight <= 0) {
-      toast.warning('Atenção: peso líquido zerado. Preencha o peso bruto dos ingredientes.');
+    if (!Number.isFinite(yieldKg) || yieldKg <= 0) {
+      toast.error('Informe o rendimento da preparação pronta em kg.');
+      return;
+    }
+    const invalid = ingredients.find(ingredient => !validIngredientWeights(ingredient));
+    if (invalid) {
+      toast.error(`Revise ${invalid.foodName}: pesos positivos, líquido ≤ bruto e FC = bruto ÷ líquido (mínimo 1).`);
+      return;
     }
 
     if (!preparationMethod.trim() && !editingRecipeId) {
@@ -519,7 +527,7 @@ export default function Recipes() {
       displayName,
       classification,
       recommendedMeal,
-      yieldTotal: totals.totalNetWeight,
+      yieldTotal: yieldKg,
       servings: servingsCount,
       totalGrossWeight: totals.totalGrossWeight,
       totalNetWeight: totals.totalNetWeight,
@@ -667,15 +675,15 @@ export default function Recipes() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Per capita desejado (kg)</Label>
+                    <Label>Porção pronta desejada (kg/aluno)</Label>
                     <Input
                       type="number"
                       value={perCapitaTarget}
                       onChange={(e) => {
                         setPerCapitaTarget(e.target.value);
                         const pc = Number(e.target.value);
-                        if (pc > 0 && totals.totalNetWeight > 0) {
-                          setServings(String(Math.round(totals.totalNetWeight / pc)));
+                        if (pc > 0 && yieldKg > 0) {
+                          setServings(String(Math.max(1, Math.round(yieldKg / pc))));
                         }
                       }}
                       className="mt-2"
@@ -684,16 +692,26 @@ export default function Recipes() {
                     />
                   </div>
                   <div>
-                    <Label>Numero de porcoes</Label>
+                    <Label>Número de porções (alunos)</Label>
                     <Input
                       type="number"
                       value={servings}
-                      onChange={(e) => setServings(e.target.value)}
+                      onChange={(e) => { setServings(e.target.value); setPerCapitaTarget(''); }}
                       className="mt-2"
                     />
                   </div>
                 </div>
 
+                <div>
+                  <Label>Rendimento da preparação pronta (kg)</Label>
+                  <Input type="number" min="0.001" step="0.001" value={preparedYield} onChange={e => {
+                    setPreparedYield(e.target.value);
+                    const pc = Number(perCapitaTarget);
+                    if (pc > 0 && Number(e.target.value) > 0) setServings(String(Math.max(1, Math.round(Number(e.target.value) / pc))));
+                  }} placeholder="Peso total após cocção, pronto para servir" className="mt-2" />
+                  <p className="mt-2 text-xs text-gray-600">Porção pronta = rendimento pronto ÷ número de porções. Informe o peso medido; a soma dos ingredientes crus não representa o rendimento após cocção.</p>
+                  {editingRecipeId && <p className="mt-2 text-xs text-amber-800">Confira o rendimento desta ficha: versões antigas salvavam a soma dos pesos líquidos como rendimento pronto. O número de porções foi preservado.</p>}
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label>Tempo de preparo</Label>
@@ -756,8 +774,10 @@ export default function Recipes() {
                     <CardHeader>
                       <CardTitle>Ingredientes</CardTitle>
                       <CardDescription>
-                        Insira o peso bruto (kg). O fator de correção é pré-preenchido da TACO — ajuste se necessário. O peso líquido é calculado automaticamente.
+                        FC = peso bruto ÷ peso líquido antes da cocção (limpeza, cascas, ossos). Sugestões dependem da forma de aquisição e devem ser conferidas por pesagem. Sem referência verificada, informe o FC ou os dois pesos.
                       </CardDescription>
+                      <p className="text-xs text-gray-600">Arroz branco limpo: FC 1,00 pode ser correto. O ganho de peso ao cozinhar pertence ao índice de cocção.</p>
+                      <a href={CORRECTION_FACTOR_SOURCE.url} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">{CORRECTION_FACTOR_SOURCE.label}</a>
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
@@ -768,6 +788,8 @@ export default function Recipes() {
                             <TableHead className="text-right">Peso bruto (kg)</TableHead>
                             <TableHead className="text-right">FC</TableHead>
                             <TableHead className="text-right">Peso líquido (kg)</TableHead>
+                            <TableHead className="text-right">Bruto/aluno (g)</TableHead>
+                            <TableHead className="text-right">Líquido/aluno (g)</TableHead>
                             <TableHead className="text-right">Custo</TableHead>
                             <TableHead className="text-right">Ação</TableHead>
                           </TableRow>
@@ -775,7 +797,10 @@ export default function Recipes() {
                         <TableBody>
                           {ingredients.map((ingredient) => (
                             <TableRow key={ingredient.id}>
-                              <TableCell className="font-medium text-sm">{ingredient.foodName}</TableCell>
+                              <TableCell className="font-medium text-sm">{ingredient.foodName}
+                                <p className="mt-1 text-xs font-normal text-gray-500">{getDefaultCorrectionFactor(ingredient.foodId) > 0 ? 'FC de referência: ' + getDefaultCorrectionFactor(ingredient.foodId).toFixed(2) + '; confira a aquisição.' : 'FC sem referência verificada: informar por pesagem.'}</p>
+                                {getDefaultCorrectionFactor(ingredient.foodId) > 0 && <button type="button" className="mt-1 text-xs text-blue-700 underline" onClick={() => updateIngredient(ingredient.id, 'correctionFactor', getDefaultCorrectionFactor(ingredient.foodId))}>Aplicar FC de referência</button>}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <Input
                                   type="number"
@@ -795,8 +820,8 @@ export default function Recipes() {
                                   className="ml-auto w-20 text-right"
                                   step="0.01"
                                   min="1"
-                                  placeholder="1.00"
-                                  title="Fator de Correção — pré-preenchido da TACO. Edite se necessário."
+                                  placeholder="Informar"
+                                  title="FC = peso bruto ÷ peso líquido antes da cocção. Ajuste por pesagem local."
                                 />
                               </TableCell>
                               <TableCell className="text-right">
@@ -811,6 +836,8 @@ export default function Recipes() {
                                   title="Preenchido automaticamente (bruto ÷ FC). Edite para ajuste manual."
                                 />
                               </TableCell>
+                              <TableCell className="text-right">{servingsCount > 0 ? (ingredient.grossWeight * 1000 / servingsCount).toFixed(1) : '—'}</TableCell>
+                              <TableCell className="text-right">{servingsCount > 0 ? (ingredient.netWeight * 1000 / servingsCount).toFixed(1) : '—'}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
                                   <span className="text-xs text-gray-500">R$</span>
@@ -850,7 +877,7 @@ export default function Recipes() {
                         <p className="text-sm text-gray-600">Custo total</p>
                         <p className="text-2xl font-bold text-gray-900">R$ {totals.costTotal.toFixed(2)}</p>
                         <p className="text-sm text-gray-600">
-                          Custo por porcao: <span className="font-semibold">R$ {(totals.costTotal / servingsCount).toFixed(2)}</span>
+                          Custo por porcao: <span className="font-semibold">R$ {((servingsCount > 0 ? totals.costTotal / servingsCount : 0)).toFixed(2)}</span>
                         </p>
                       </CardContent>
                     </Card>
@@ -904,8 +931,10 @@ export default function Recipes() {
                         <CardTitle>Painel PNAE</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm text-gray-700">
-                        <p>Per capita estimado: <span className="font-semibold text-gray-900">{perCapita.toFixed(3)} kg</span></p>
-                        <p>Rendimento liquido: <span className="font-semibold text-gray-900">{yieldPercentage.toFixed(1)}%</span></p>
+                        <p>Porção pronta por aluno: <span className="font-semibold text-gray-900">{perCapita.toFixed(3)} kg</span></p>
+                        <p>Rendimento pronto / peso bruto: <span className="font-semibold text-gray-900">{yieldPercentage.toFixed(1)}%</span></p>
+                        <p>Índice de cocção da preparação (pronto ÷ líquido inicial): <strong>{cookingIndex.toFixed(2)}</strong></p>
+                        <p>Per capita bruto dos ingredientes: <strong>{servingsCount > 0 ? (totals.totalGrossWeight * 1000 / servingsCount).toFixed(1) : '0'} g/aluno</strong>. Líquido antes da cocção: <strong>{servingsCount > 0 ? (totals.totalNetWeight * 1000 / servingsCount).toFixed(1) : '0'} g/aluno</strong>.</p>
                         <p>
                           Agricultura familiar:{' '}
                           <span className={`font-semibold ${usesFamilyFarm ? 'text-green-700' : 'text-amber-700'}`}>

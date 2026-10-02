@@ -1,11 +1,16 @@
 /**
  * Fichas Técnicas de Preparo padrão PNAE
- * Fonte: Secretaria da Educação do Estado de São Paulo – DAESC/CENUT
- * Atualizado em 2024 – 50 receitas base para alimentação escolar
+ * Biblioteca interna de modelos. Conferir rendimento e forma de aquisição
+ * por pesagem local antes de utilizar na produção.
  */
 import type { CreateRecipeInput } from '@/hooks/useRecipes';
+import { getDefaultCorrectionFactor } from './correctionFactors';
+import { SEED_INGREDIENT_MAP } from './seedIngredientMap';
+import { recipeYieldMetrics } from '../lib/recipeCalculation';
 
-function ing(foodName: string, grossWeightG: number, fc = 1.0) {
+function ing(foodName: string, grossWeightG: number, fc?: number) {
+  // Explicit template factors are preserved; reviewed references fill missing factors.
+  fc = fc ?? (getDefaultCorrectionFactor(SEED_INGREDIENT_MAP[foodName]) || 1);
   const grossWeight = grossWeightG / 1000; // convert g → kg
   const netWeight = Number((grossWeight / fc).toFixed(4));
   return {
@@ -23,7 +28,7 @@ function nut(kcal: number, ptn: number, lip: number, cho: number, fib: number, c
   return { kcal, protein: ptn, lipids: lip, carbohydrates: cho, fiber: fib, calcium: ca, iron: fe, zinc: zn, vitaminA: vitA, vitaminC: vitC };
 }
 
-export const DEFAULT_RECIPES: CreateRecipeInput[] = [
+const RECIPE_TEMPLATES: CreateRecipeInput[] = [
 
   // ─── PRATOS BASES ──────────────────────────────────────────────────────────
 
@@ -1753,3 +1758,11 @@ export const DEFAULT_RECIPES: CreateRecipeInput[] = [
   },
 
 ];
+
+// Derive masses and the ready-to-serve portion rather than trusting copied totals.
+export const DEFAULT_RECIPES: CreateRecipeInput[] = RECIPE_TEMPLATES.map(recipe => {
+  const totalGrossWeight = recipe.ingredients.reduce((sum, ingredient) => sum + ingredient.grossWeight, 0);
+  const totalNetWeight = recipe.ingredients.reduce((sum, ingredient) => sum + ingredient.netWeight, 0);
+  const { perCapita, yieldPercentage } = recipeYieldMetrics(recipe.yieldTotal, recipe.servings, totalNetWeight, totalGrossWeight);
+  return { ...recipe, totalGrossWeight, totalNetWeight, perCapita, yieldPercentage };
+});

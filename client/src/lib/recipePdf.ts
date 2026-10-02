@@ -52,9 +52,10 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
   const metaRows = [
     ['Classificação', recipe.classification, 'Refeição', recipe.recommendedMeal || '—'],
     ['Nº de Porções', String(recipe.servings), 'Tempo de Preparo', recipe.prepTime || '—'],
-    ['Rendimento Total', `${recipe.yieldTotal?.toFixed(3) || '—'} kg`, 'Rendimento Líquido', `${recipe.yieldPercentage.toFixed(1)}%`],
+    ['Rendimento Pronto', `${recipe.yieldTotal?.toFixed(3) || '—'} kg`, 'Pronto / Bruto', `${recipe.yieldPercentage.toFixed(1)}%`],
     ['Peso Bruto Total', `${recipe.totalGrossWeight.toFixed(3)} kg`, 'Peso Líquido Total', `${recipe.totalNetWeight.toFixed(3)} kg`],
-    ['Per Capita', `${recipe.perCapita.toFixed(3)} kg`, 'Custo por Porção', `R$ ${recipe.costPerServing.toFixed(2)}`],
+    ['Porção Pronta', `${recipe.perCapita.toFixed(3)} kg`, 'Custo por Porção', `R$ ${recipe.costPerServing.toFixed(2)}`],
+    ['Índice de Cocção', recipe.totalNetWeight > 0 ? (recipe.yieldTotal / recipe.totalNetWeight).toFixed(2) : '—', 'Porção (g/aluno)', (recipe.perCapita * 1000).toFixed(1)],
     ['Medida Caseira', recipe.medidaCaseira || '—', 'Agricultura Familiar', recipe.usesFamilyFarm ? 'Sim' : 'Não'],
     ['Alérgenos', recipe.allergens.length > 0 ? recipe.allergens.join(', ') : 'Nenhum', '', ''],
   ];
@@ -91,7 +92,7 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
 
   autoTable(doc, {
     startY: y,
-    head: [['Ingrediente', 'P. Bruto', 'P. Líquido', 'F.C.', 'Custo']],
+    head: [['Ingrediente', 'Bruto (kg)', 'Líquido (kg)', 'F.C.', 'Custo']],
     body: ingRows,
     theme: 'striped',
     margin: { left: 15, right: 15 },

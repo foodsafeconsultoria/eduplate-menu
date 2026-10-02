@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { editFoodRecord, foodDate } from '@/lib/foodRecord';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { initialFoods } from '@/data/nutritionFoods';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { Food } from '@/types/nutrition';
@@ -29,6 +30,7 @@ function normalizeFoods(raw: unknown): Food[] {
       unit: food.unit || 'kg',
       price: Number(food.price) || 0,
       source: food.source || 'custom',
+      archived: Boolean(food.archived),
       familyFarm: Boolean(food.familyFarm),
       allergens: Array.isArray(food.allergens) ? food.allergens : [],
       nutrients: {
@@ -43,8 +45,8 @@ function normalizeFoods(raw: unknown): Food[] {
         vitaminA: Number(food.nutrients?.vitaminA) || 0,
         vitaminC: Number(food.nutrients?.vitaminC) || 0,
       },
-      createdAt: food.createdAt ? new Date(food.createdAt) : new Date(),
-      updatedAt: food.updatedAt ? new Date(food.updatedAt) : new Date(),
+      createdAt: foodDate(food.createdAt),
+      updatedAt: foodDate(food.updatedAt),
     };
   });
 }
@@ -54,6 +56,8 @@ export function useFoods() {
   const orgId = useOrgId();
 
   const [foods, setFoods] = useState<Food[]>([]);
+  const foodsRef = useRef(foods);
+  foodsRef.current = foods;
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -91,6 +95,7 @@ export function useFoods() {
   }, [orgId]);
 
   const persistFoods = (nextFoods: Food[]) => {
+    foodsRef.current = nextFoods;
     setFoods(nextFoods);
     persistHybridSnapshot(`${STORAGE_KEY}_${orgId}`, nextFoods);
   };
@@ -116,6 +121,20 @@ export function useFoods() {
         void syncHybridDocument(orgId, COLLECTION_NAME, newFood);
         return newFood;
       },
+      updateFood: async (id: string, input: CreateFoodInput) => {
+        if (!foods.some(food => food.id === id)) throw new Error('Alimento não encontrado.');
+        const next = foods.map(food => food.id === id ? editFoodRecord(food, input) : food);
+        persistFoods(next);
+        const updated = next.find(food => food.id === id);
+        return updated ? await syncHybridDocument(orgId, COLLECTION_NAME, updated) : false;
+      },
+      setFoodArchived: (id: string, archived: boolean) => {
+        // Keep the ID in storage so built-in entries are not re-added on reload.
+        const next = foodsRef.current.map(food => food.id === id ? { ...food, archived, updatedAt: new Date() } : food);
+        persistFoods(next);
+        const updated = next.find(food => food.id === id);
+        if (updated) void syncHybridDocument(orgId, COLLECTION_NAME, updated);
+      },
       updateFoodPrice: (id: string, price: number) => {
         const nextFoods = foods.map((food) =>
           food.id === id ? { ...food, price, updatedAt: new Date() } : food
@@ -137,7 +156,8 @@ export function useFoods() {
   );
 
   return {
-    foods,
+    allFoods: foods,
+    foods: foods.filter(food => !food.archived),
     loading,
     ...actions,
   };

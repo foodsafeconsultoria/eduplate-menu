@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useFoods } from '@/hooks/useFoods';
 import { getFoodSeasonality, seasonLabels } from '@/data/seasonality';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, Pencil, Plus, Search, X } from 'lucide-react';
+import { Check, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Food } from '@/types/nutrition';
 
@@ -48,9 +48,12 @@ const emptyForm: FoodFormState = {
 };
 
 export default function Foods() {
-  const { foods, loading, addFood, updateFoodPrice, toggleFamilyFarm } = useFoods();
+  const { foods, loading, addFood, updateFood, setFoodArchived, updateFoodPrice, toggleFamilyFarm } = useFoods();
+  const [foodToEdit, setFoodToEdit] = useState<Food | null>(null);
+  const [foodToDelete, setFoodToDelete] = useState<Food | null>(null);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FoodFormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState('');
@@ -76,13 +79,27 @@ export default function Foods() {
     toast.success('Preco atualizado com sucesso.');
   };
 
-  const handleSave = () => {
+  const editFood = (food: Food) => {
+    setFoodToEdit(food);
+    const values = { ...emptyForm, name: food.name, unit: food.unit, price: String(food.price), familyFarm: Boolean(food.familyFarm) };
+    for (const nutrient of Object.keys(food.nutrients) as Array<keyof Food['nutrients']>) values[nutrient] = String(food.nutrients[nutrient]);
+    setForm(values);
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (saving) return;
     if (!form.name.trim()) {
       toast.error('Informe o nome do alimento.');
       return;
     }
 
-    addFood({
+    const numericFields = Object.entries(form).filter(([key]) => !['name', 'unit', 'familyFarm'].includes(key));
+    if (numericFields.some(([, value]) => !Number.isFinite(Number(value)) || Number(value) < 0)) {
+      toast.error('Informe valores numéricos maiores ou iguais a zero.');
+      return;
+    }
+    const input = {
       name: form.name,
       unit: form.unit,
       price: Number(form.price) || 0,
@@ -99,15 +116,42 @@ export default function Foods() {
         vitaminA: Number(form.vitaminA) || 0,
         vitaminC: Number(form.vitaminC) || 0,
       },
-    });
-
-    setForm(emptyForm);
-    setOpen(false);
-    toast.success('Alimento cadastrado com sucesso.');
+    };
+    setSaving(true);
+    try {
+      const synced = foodToEdit ? await updateFood(foodToEdit.id, input) : (addFood(input), true);
+      setForm(emptyForm);
+      setOpen(false);
+      if (!synced) toast.warning('Alteração salva neste navegador. A sincronização com o banco não foi concluída; tente salvar novamente quando a conexão voltar.');
+      else toast.success(foodToEdit ? 'Alimento atualizado com sucesso.' : 'Alimento cadastrado com sucesso.');
+      setFoodToEdit(null);
+    } catch {
+      toast.error('Não foi possível salvar o alimento. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex-1 p-4 md:p-8">
+      <Dialog open={Boolean(foodToDelete)} onOpenChange={value => { if (!value) setFoodToDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir alimento?</DialogTitle>
+            <DialogDescription>“{foodToDelete?.name}” será retirado da lista. As preparações já salvas serão preservadas.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setFoodToDelete(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => {
+              if (!foodToDelete) return;
+              const id = foodToDelete.id;
+              setFoodArchived(id, true);
+              setFoodToDelete(null);
+              toast.success('Alimento excluído da lista.', { action: { label: 'Desfazer', onClick: () => setFoodArchived(id, false) } });
+            }}>Excluir</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="w-full space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -117,18 +161,18 @@ export default function Foods() {
             </p>
           </div>
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={() => { setFoodToEdit(null); setForm(emptyForm); }} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Alimento
               </Button>
             </DialogTrigger>
             <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Cadastrar Alimento</DialogTitle>
+                <DialogTitle>{foodToEdit ? 'Editar Alimento' : 'Cadastrar Alimento'}</DialogTitle>
                 <DialogDescription>
-                  Inclua alimentos adicionais alem da base inicial para ampliar a composicao do cardapio.
+                  Informe a composição nutricional por 100 g. Alterações na base inicial são salvas como cadastro próprio.
                 </DialogDescription>
               </DialogHeader>
 
@@ -143,7 +187,7 @@ export default function Foods() {
                     />
                   </div>
                   <div>
-                    <Label>Unidade</Label>
+                    <Label>Unidade do preço</Label>
                     <Select value={form.unit} onValueChange={(value) => setForm({ ...form, unit: value as Food['unit'] })}>
                       <SelectTrigger className="mt-2 w-full">
                         <SelectValue />
@@ -214,18 +258,18 @@ export default function Foods() {
                     <Input type="number" value={form.zinc} onChange={(e) => setForm({ ...form, zinc: e.target.value })} className="mt-2" />
                   </div>
                   <div>
-                    <Label>Vitamina A</Label>
+                    <Label>Vitamina A (µg)</Label>
                     <Input type="number" value={form.vitaminA} onChange={(e) => setForm({ ...form, vitaminA: e.target.value })} className="mt-2" />
                   </div>
                   <div>
-                    <Label>Vitamina C</Label>
+                    <Label>Vitamina C (mg)</Label>
                     <Input type="number" value={form.vitaminC} onChange={(e) => setForm({ ...form, vitaminC: e.target.value })} className="mt-2" />
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">Salvar Alimento</Button>
+                  <Button disabled={saving} variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button disabled={saving} onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">{saving ? 'Salvando...' : foodToEdit ? 'Salvar alterações' : 'Salvar alimento'}</Button>
                 </div>
               </div>
             </DialogContent>
@@ -287,7 +331,7 @@ export default function Foods() {
                   <TableHead className="text-right">Fibra (g)</TableHead>
                   <TableHead className="text-right">Preco</TableHead>
                   <TableHead className="text-right">Unidade</TableHead>
-                  <TableHead className="text-right">Acao</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -352,18 +396,17 @@ export default function Foods() {
                           </button>
                         </div>
                       ) : (
-                        `R$ ${food.price.toFixed(2)}`
+                        <button type="button" onClick={() => startEdit(food)} title="Editar preço" className="underline decoration-dotted underline-offset-4">R$ {food.price.toFixed(2)}</button>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
                       {food.unit === 'kg' ? 'kg' : food.unit === 'liter' ? 'litro' : 'unidade'}
                     </TableCell>
                     <TableCell className="text-right">
-                      {editingId !== food.id && (
-                        <button onClick={() => startEdit(food)} className="text-blue-600 hover:text-blue-700">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                      )}
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => editFood(food)} aria-label={`Editar ${food.name}`}><Pencil className="mr-1 h-4 w-4" />Editar</Button>
+                        <Button size="sm" variant="outline" onClick={() => setFoodToDelete(food)} aria-label={`Excluir ${food.name}`} className="text-red-600"><Trash2 className="mr-1 h-4 w-4" />Excluir</Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   );
