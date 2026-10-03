@@ -12,6 +12,7 @@ import { useSpecialDiets } from '@/hooks/useSpecialDiets';
 import type { SpecialDiet } from '@/types/nutrition';
 import { Pencil, Plus, Printer, Search, ShieldAlert, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SCHOOL_PERIODS, isSchoolPeriod } from '@/lib/schoolDetails';
 import { DIET_LABELS, DIET_LABEL_MAP } from '@/data/dietLabels';
 
 const labelMap = DIET_LABEL_MAP;
@@ -261,6 +262,7 @@ function printAllLabels(diets: SpecialDiet[]) {
 const emptyForm = {
   studentName: '',
   schoolId: '',
+  period: '' as NonNullable<SpecialDiet['period']> | '',
   category: '' as string,
   restrictionCode: '',
   diagnosis: '',
@@ -300,6 +302,7 @@ export default function SpecialDiets() {
     setForm({
       studentName: diet.studentName,
       schoolId: diet.schoolId,
+      period: diet.period || '',
       category: diet.category || '',
       restrictionCode: diet.restrictionCode || '',
       diagnosis: diet.diagnosis || '',
@@ -333,6 +336,7 @@ export default function SpecialDiets() {
       studentName: form.studentName.trim(),
       schoolId: form.schoolId,
       schoolName,
+      period: isSchoolPeriod(form.period) ? form.period : undefined,
       category: form.category,
       restrictionCode: form.restrictionCode,
       diagnosis: form.diagnosis,
@@ -476,6 +480,16 @@ export default function SpecialDiets() {
                 </div>
               </div>
 
+              <div>
+                <Label>Período do aluno</Label>
+                <Select value={form.period || '__none__'} onValueChange={value => setForm({ ...form, period: isSchoolPeriod(value) ? value : '' })}>
+                  <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Não informado</SelectItem>
+                    {SCHOOL_PERIODS.map(period => <SelectItem key={period.key} value={period.key}>{period.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid gap-4 md:grid-cols-3">
                 <div>
                   <Label>Etapa de Ensino</Label>

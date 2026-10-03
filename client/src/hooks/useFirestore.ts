@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { normalizeSchoolDetails } from '@/lib/schoolDetails';
+import { subscribeServerSchools, saveSchoolOnServer, deleteSchoolOnServer } from '@/lib/schoolServerStore';
 import { EPI, Inspection, Schedule, School } from '@/types';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -142,9 +144,7 @@ function normalizeSchools(raw: unknown): School[] {
     if (school.address) normalized.address = school.address;
     if (school.educationNetwork) normalized.educationNetwork = school.educationNetwork;
     normalized.educationStages = Array.isArray(school.educationStages) ? school.educationStages.filter(s => typeof s === 'string') : [];
-    normalized.mealSchedules = Array.isArray(school.mealSchedules)
-      ? school.mealSchedules.filter(row => typeof row?.mealLabel === 'string' && typeof row?.time === 'string')
-      : [];
+    Object.assign(normalized, normalizeSchoolDetails(school));
     return normalized;
   });
 }
@@ -251,46 +251,64 @@ function normalizeSchedules(raw: unknown): Schedule[] {
 }
 
 export const useSchools = () => {
-  const { user } = useAuth();
   const orgId = useOrgId();
-
   const [schools, setSchoolsState] = useState<School[]>([]);
+  const [schoolSyncStatus, setSchoolSyncStatus] = useState<Record<string, 'syncing' | 'synced' | 'error'>>({});
   const [loading, setLoading] = useState(true);
+  const [schoolsError, setSchoolsError] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const currentOrgRef = useRef(orgId);
+  currentOrgRef.current = orgId;
 
   useEffect(() => {
+    setSchoolsState([]);
+    setSchoolSyncStatus({});
+    setSchoolsError(null);
     if (!orgId) { setLoading(false); return; }
     let mounted = true;
+    setLoading(true);
+    const timeout = setTimeout(() => {
+      if (mounted) { setLoading(false); setSchoolsError('Não foi possível carregar as escolas do servidor. Verifique a conexão e tente novamente.'); }
+    }, 15000);
+    const unsubscribe = subscribeServerSchools(orgId, raw => {
+      if (!mounted) return;
+      clearTimeout(timeout);
+      setSchoolsState(normalizeSchools(raw));
+      setSchoolsError(null);
+      setLoading(false);
+    }, error => {
+      if (!mounted) return;
+      clearTimeout(timeout);
+      console.error('Erro ao carregar escolas do Firebase:', error);
+      setSchoolsError('Não foi possível carregar as escolas do servidor. Verifique a conexão e as permissões da sua conta.');
+      setLoading(false);
+    });
+    return () => { mounted = false; clearTimeout(timeout); unsubscribe(); };
+  }, [orgId, reloadVersion]);
 
-    loadHybridCollection({
-      orgId,
-      collectionName: 'schools',
-      storageKey: 'pnae_schools',
-      normalize: normalizeSchools,
-      fallbackData: [],
-    })
-      .then((items) => {
-        if (mounted) setSchoolsState(items);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [orgId]);
-
-  const setSchools = (next: School[], deleted?: School[]) => {
-    setSchoolsState(next);
-    persistHybridSnapshot(`pnae_schools_${orgId}`, next);
-    // Sync each school individually — more reliable than full snapshot
-    next.forEach((school) => void syncHybridDocument(orgId, 'schools', school));
-    // Delete removed schools from Firestore
-    if (deleted?.length) {
-      deleted.forEach((school) => void removeHybridDocument(orgId, 'schools', school.id));
+  const saveSchool = async (school: School): Promise<boolean> => {
+    if (!orgId) throw new Error('Organização indisponível. Aguarde o carregamento da sessão.');
+    setSchoolSyncStatus(status => ({ ...status, [school.id]: 'syncing' }));
+    try {
+      await saveSchoolOnServer(orgId, school);
+      if (currentOrgRef.current === orgId) {
+        // Update only after the server acknowledges the write; the listener keeps PCs aligned.
+        setSchoolsState(current => current.some(item => item.id === school.id)
+          ? current.map(item => item.id === school.id ? school : item) : [school, ...current]);
+        setSchoolSyncStatus(status => ({ ...status, [school.id]: 'synced' }));
+      }
+      return true;
+    } catch (error) {
+      if (currentOrgRef.current === orgId) setSchoolSyncStatus(status => ({ ...status, [school.id]: 'error' }));
+      throw error;
     }
   };
-
-  return { schools, loading, setSchools };
+  const deleteSchool = async (id: string) => {
+    if (!orgId) throw new Error('Organização indisponível.');
+    await deleteSchoolOnServer(orgId, id);
+    if (currentOrgRef.current === orgId) setSchoolsState(current => current.filter(school => school.id !== id));
+  };
+  return { schools, loading, saveSchool, deleteSchool, schoolSyncStatus, schoolsError, reloadSchools: () => setReloadVersion(version => version + 1) };
 };
 
 export const useInspections = () => {

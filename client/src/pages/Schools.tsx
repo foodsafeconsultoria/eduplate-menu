@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, AlertCircle, TrendingUp, TrendingDown, Minus, Mail, Pencil, MapPin } from 'lucide-react';
-import { School } from '@/types';
+import { School, SchoolDocumentation } from '@/types';
+import { SchoolDocumentationFields, SchoolStudentFields } from '@/components/SchoolManagementFields';
+import { emptySchoolDocumentation, SCHOOL_PERIODS, schoolRestrictionSummary, validStudentCounts } from '@/lib/schoolDetails';
+import { useSpecialDiets } from '@/hooks/useSpecialDiets';
 import { SchoolMealSchedules, validMealSchedules } from '@/components/SchoolMealSchedules';
 import { SchoolEducationFields } from '@/components/SchoolEducationFields';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
@@ -29,7 +32,8 @@ interface EvolutionPhoto {
 }
 
 export default function Schools() {
-  const { schools, loading, setSchools } = useSchools();
+  const { schools, loading, deleteSchool, saveSchool, schoolSyncStatus, schoolsError, reloadSchools } = useSchools();
+  const { specialDiets, loading: dietsLoading } = useSpecialDiets();
   const { inspections } = useInspections();
   const [newSchoolName, setNewSchoolName] = useState('');
   const [newSchoolEmail, setNewSchoolEmail] = useState('');
@@ -52,6 +56,22 @@ export default function Schools() {
   const [editNetwork, setEditNetwork] = useState<School['educationNetwork'] | ''>('');
   const [newStages, setNewStages] = useState<string[]>([]);
   const [editStages, setEditStages] = useState<string[]>([]);
+  const [newDocumentation, setNewDocumentation] = useState<SchoolDocumentation>({ ...emptySchoolDocumentation });
+  const [editDocumentation, setEditDocumentation] = useState<SchoolDocumentation>({ ...emptySchoolDocumentation });
+  const [newStudents, setNewStudents] = useState<NonNullable<School['studentCounts']>>({});
+  const [editStudents, setEditStudents] = useState<NonNullable<School['studentCounts']>>({});
+  const restrictionCounts = useMemo(() => new Map(schools.map(school => [school.id, schoolRestrictionSummary(school.id, specialDiets)])), [schools, specialDiets]);
+
+  const reportSchoolSave = (synced: boolean, message: string) => {
+    if (synced) toast.success(message);
+    else toast.error('Não foi possível confirmar o salvamento no servidor.');
+  };
+  const updateDocumentation = async (school: School, key: 'mbp' | 'pops' | 'technicalRecipes', checked: boolean) => {
+    try {
+      const synced = await saveSchool({ ...school, documentation: { ...emptySchoolDocumentation, ...school.documentation, [key]: checked }, updatedAt: new Date() });
+      reportSchoolSave(synced, 'Documentos da escola atualizados.');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível salvar a alteração.'); }
+  };
 
   // ── Per-school inspection evolution (real data from visits) ────────────────
   const schoolEvolution = useMemo(() => {
@@ -85,7 +105,8 @@ export default function Schools() {
     }
 
     try {
-      if (!validMealSchedules(newMeals)) { toast.error('Preencha horários válidos e nomes de refeições distintos.'); return; }
+      if (!validMealSchedules(newMeals)) { toast.error('Preencha o nome e o horário de cada refeição. Evite repetir o mesmo nome no mesmo horário.'); return; }
+      if (!validStudentCounts(newStudents)) { toast.error('Informe quantidades inteiras de alunos, maiores ou iguais a zero.'); return; }
       setSubmitting(true);
 
       const newSchool: School = {
@@ -96,12 +117,13 @@ export default function Schools() {
         mealSchedules: newMeals.map(r => ({ ...r, mealLabel: r.mealLabel.trim() })),
         educationNetwork: newNetwork || undefined,
         educationStages: newStages,
+        documentation: { ...newDocumentation, popList: newDocumentation.popList.trim() },
+        studentCounts: newStudents,
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
-      const updatedSchools = [newSchool, ...schools];
-      setSchools(updatedSchools);
+      const synced = await saveSchool(newSchool);
 
       setNewSchoolName('');
       setNewSchoolEmail('');
@@ -109,11 +131,13 @@ export default function Schools() {
       setNewMeals([]);
       setNewNetwork('');
       setNewStages([]);
+      setNewDocumentation({ ...emptySchoolDocumentation });
+      setNewStudents({});
       setDialogOpen(false);
-      toast.success('Escola adicionada com sucesso');
+      reportSchoolSave(synced, 'Escola adicionada com sucesso');
     } catch (error) {
       console.error('Erro ao adicionar escola:', error);
-      toast.error('Erro ao adicionar escola');
+      toast.error(error instanceof Error ? error.message : 'Erro ao adicionar escola');
     } finally {
       setSubmitting(false);
     }
@@ -125,9 +149,7 @@ export default function Schools() {
     }
 
     try {
-      const removed = schools.filter(s => s.id === schoolId);
-      const updatedSchools = schools.filter(s => s.id !== schoolId);
-      setSchools(updatedSchools, removed);
+      await deleteSchool(schoolId);
       toast.success('Escola removida com sucesso');
     } catch (error) {
       console.error('Erro ao deletar escola:', error);
@@ -143,6 +165,8 @@ export default function Schools() {
     setEditMeals(school.mealSchedules || []);
     setEditNetwork(school.educationNetwork || '');
     setEditStages(school.educationStages || []);
+    setEditDocumentation({ ...emptySchoolDocumentation, ...school.documentation });
+    setEditStudents({ ...school.studentCounts });
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -152,7 +176,8 @@ export default function Schools() {
       return;
     }
     try {
-      if (!validMealSchedules(editMeals)) { toast.error('Preencha horários válidos e nomes de refeições distintos.'); return; }
+      if (!validMealSchedules(editMeals)) { toast.error('Preencha o nome e o horário de cada refeição. Evite repetir o mesmo nome no mesmo horário.'); return; }
+      if (!validStudentCounts(editStudents)) { toast.error('Informe quantidades inteiras de alunos, maiores ou iguais a zero.'); return; }
       setEditSubmitting(true);
       const updated: School = {
         ...editSchool,
@@ -162,14 +187,15 @@ export default function Schools() {
         mealSchedules: editMeals.map(r => ({ ...r, mealLabel: r.mealLabel.trim() })),
         educationNetwork: editNetwork || undefined,
         educationStages: editStages,
+        documentation: { ...editDocumentation, popList: editDocumentation.popList.trim() },
+        studentCounts: editStudents,
         updatedAt: new Date(),
       };
-      const updatedSchools = schools.map(s => s.id === updated.id ? updated : s);
-      setSchools(updatedSchools);
+      const synced = await saveSchool(updated);
       setEditSchool(null);
-      toast.success('Escola atualizada com sucesso');
-    } catch {
-      toast.error('Erro ao atualizar escola');
+      reportSchoolSave(synced, 'Escola atualizada com sucesso');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar escola');
     } finally {
       setEditSubmitting(false);
     }
@@ -216,7 +242,7 @@ export default function Schools() {
 
           {/* Escolas */}
           <TabsContent value="schools" className="space-y-6">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={open => { if (!submitting) setDialogOpen(open); }}>
               <DialogTrigger asChild>
                 <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
                   <Plus className="w-4 h-4" />
@@ -232,6 +258,8 @@ export default function Schools() {
                 </DialogHeader>
 
                 <form onSubmit={handleAddSchool} className="space-y-4">
+                  <SchoolDocumentationFields value={newDocumentation} onChange={setNewDocumentation} />
+                  <SchoolStudentFields value={newStudents} onChange={setNewStudents} />
                   <SchoolMealSchedules value={newMeals} onChange={setNewMeals} />
                   <SchoolEducationFields network={newNetwork} stages={newStages} onNetwork={setNewNetwork} onStages={setNewStages} />
                   <div>
@@ -263,7 +291,7 @@ export default function Schools() {
                     />
                   </div>
                   <div className="flex gap-3 justify-end">
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    <Button variant="outline" type="button" disabled={submitting} onClick={() => setDialogOpen(false)}>
                       Cancelar
                     </Button>
                     <Button
@@ -279,13 +307,15 @@ export default function Schools() {
             </Dialog>
 
             {/* Edit School Dialog */}
-            <Dialog open={!!editSchool} onOpenChange={(open) => { if (!open) setEditSchool(null); }}>
+            <Dialog open={!!editSchool} onOpenChange={(open) => { if (!open && !editSubmitting) setEditSchool(null); }}>
               <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Editar Escola</DialogTitle>
                   <DialogDescription>Atualize os dados da escola</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSaveEdit} className="space-y-4">
+                  <SchoolDocumentationFields value={editDocumentation} onChange={setEditDocumentation} />
+                  <SchoolStudentFields value={editStudents} onChange={setEditStudents} />
                   <SchoolMealSchedules value={editMeals} onChange={setEditMeals} />
                   <SchoolEducationFields network={editNetwork} stages={editStages} onNetwork={setEditNetwork} onStages={setEditStages} />
                   <div>
@@ -317,7 +347,7 @@ export default function Schools() {
                     />
                   </div>
                   <div className="flex gap-3 justify-end">
-                    <Button variant="outline" type="button" onClick={() => setEditSchool(null)}>
+                    <Button variant="outline" type="button" disabled={editSubmitting} onClick={() => setEditSchool(null)}>
                       Cancelar
                     </Button>
                     <Button
@@ -332,7 +362,11 @@ export default function Schools() {
               </DialogContent>
             </Dialog>
 
-            {schools.length === 0 ? (
+            {schoolsError && <Card className="border-red-200"><CardContent className="space-y-3 pt-6">
+              <p role="alert" className="text-sm text-red-700">{schoolsError}</p>
+              <Button type="button" variant="outline" onClick={reloadSchools}>Tentar novamente</Button>
+            </CardContent></Card>}
+            {schools.length === 0 && !schoolsError ? (
               <Card>
                 <CardContent className="pt-6 text-center">
                   <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -363,6 +397,37 @@ export default function Schools() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <fieldset disabled={schoolSyncStatus[school.id] === 'syncing'} className="rounded-lg border p-3">
+                        <legend className="px-1 text-xs font-medium">Documentos disponíveis</legend>
+                        <div className="flex flex-wrap gap-3">
+                          {([{ key: 'mbp', label: 'MBP' }, { key: 'pops', label: "POP's" }, { key: 'technicalRecipes', label: 'Fichas técnicas' }] as const).map(item =>
+                            <label key={item.key} className="flex items-center gap-1.5 text-xs">
+                              <input type="checkbox" checked={school.documentation?.[item.key] ?? false} onChange={e => void updateDocumentation(school, item.key, e.target.checked)} />{item.label}
+                            </label>)}
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-xs text-gray-600"><strong>POPs criados:</strong> {school.documentation?.popList || 'Não informados. Use Editar escola para listar.'}</p>
+                      </fieldset>
+                      <div className="rounded-lg bg-blue-50 p-3 text-xs">
+                        <table className="w-full">
+                          <caption className="mb-2 text-left font-semibold">Alunos e restrições por período</caption>
+                          <thead><tr><th className="text-left">Período</th><th className="text-right">Alunos</th><th className="text-right">Restrições ativas</th></tr></thead>
+                          <tbody>{SCHOOL_PERIODS.map(period => <tr key={period.key}>
+                            <td className="py-1">{period.label}</td><td className="text-right">{school.studentCounts?.[period.key] ?? '—'}</td>
+                            <td className="text-right">{dietsLoading ? '…' : restrictionCounts.get(school.id)?.byPeriod[period.key] ?? 0}</td>
+                          </tr>)}</tbody>
+                        </table>
+                        <p className="mt-2">Total de alunos informado: <strong>{Object.keys(school.studentCounts || {}).length ? Object.values(school.studentCounts || {}).reduce((total, count) => total + (count ?? 0), 0) : 'Não informado'}</strong></p>
+                        <p>Restrições ativas na escola: <strong>{dietsLoading ? 'Carregando…' : restrictionCounts.get(school.id)?.total ?? 0}</strong></p>
+                        {!dietsLoading && Boolean(restrictionCounts.get(school.id)?.unassigned) && <p>Sem período informado: <strong>{restrictionCounts.get(school.id)?.unassigned}</strong></p>}
+                        <p className="mt-1 text-gray-500">Contagem automática de registros ativos em Dietas e restrições; cada cadastro conta uma vez, mesmo com várias restrições.</p>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        <p className="font-medium">Horários das refeições</p>
+                        {school.mealSchedules?.length ? school.mealSchedules.map((meal, index) => <p key={index}>{meal.mealLabel}: <strong>{meal.time}</strong></p>) : <p>Não informados</p>}
+                      </div>
+                      {schoolSyncStatus[school.id] === 'syncing' && <p role="status" className="text-xs text-blue-700">Salvando no servidor…</p>}
+                      {schoolSyncStatus[school.id] === 'synced' && <p role="status" className="text-xs text-green-700">Salvo no servidor</p>}
+                      {schoolSyncStatus[school.id] === 'error' && <p role="alert" className="text-xs text-red-700">Salvamento no servidor não confirmado. Confira a conexão e tente salvar novamente.</p>}
                       <div className="text-sm text-gray-600">
                         {(() => {
                           const evo = schoolEvolution.find(s => s.id === school.id);
@@ -393,6 +458,7 @@ export default function Schools() {
                           size="sm"
                           onClick={() => openEditDialog(school)}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          disabled={schoolSyncStatus[school.id] === 'syncing'}
                           title="Editar escola"
                         >
                           <Pencil className="w-4 h-4" />
@@ -402,6 +468,7 @@ export default function Schools() {
                           size="sm"
                           onClick={() => handleDeleteSchool(school.id, school.name)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={schoolSyncStatus[school.id] === 'syncing'}
                           title="Excluir escola"
                         >
                           <Trash2 className="w-4 h-4" />

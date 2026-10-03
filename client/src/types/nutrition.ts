@@ -1,3 +1,4 @@
+import type { SchoolPeriod } from './index';
 export interface NutritionNutrientSet {
   kcal: number;
   protein: number;
@@ -165,6 +166,7 @@ export interface Menu {
 }
 
 export interface SpecialDiet {
+  period?: SchoolPeriod;
   id: string;
   studentName: string;
   schoolId: string;

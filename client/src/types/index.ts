@@ -18,11 +18,21 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
+export type SchoolPeriod = 'morning' | 'afternoon' | 'evening' | 'fullTime';
+export interface SchoolDocumentation {
+  mbp: boolean;
+  pops: boolean;
+  technicalRecipes: boolean;
+  popList: string;
+}
+
 export interface School {
   id: string;
   name: string;
   email?: string;
   address?: string;
+  documentation?: SchoolDocumentation;
+  studentCounts?: Partial<Record<SchoolPeriod, number>>;
   mealSchedules?: { mealLabel: string; time: string }[];
   educationNetwork?: 'municipal' | 'estadual' | 'federal' | 'outra';
   educationStages?: string[];

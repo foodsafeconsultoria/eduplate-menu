@@ -1,3 +1,4 @@
+import { isSchoolPeriod } from '@/lib/schoolDetails';
 import { useEffect, useMemo, useState } from 'react';
 import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridDocument } from '@/lib/hybridStore';
 import type { SpecialDiet } from '@/types/nutrition';
@@ -12,6 +13,7 @@ export interface CreateSpecialDietInput {
   studentName: string;
   schoolId: string;
   schoolName: string;
+  period?: SpecialDiet['period'];
   category?: string;
   restrictionCode?: string;
   diagnosis?: string;
@@ -39,6 +41,7 @@ function normalizeSpecialDiets(raw: unknown): SpecialDiet[] {
       studentName: diet.studentName || 'Aluno sem nome',
       schoolId: diet.schoolId || '',
       schoolName: diet.schoolName || '',
+      period: isSchoolPeriod(diet.period) ? diet.period : undefined,
       category: diet.category || '',
       restrictionCode: diet.restrictionCode || '',
       diagnosis: diet.diagnosis || '',
@@ -100,6 +103,7 @@ export function useSpecialDiets() {
           studentName: input.studentName.trim(),
           schoolId: input.schoolId,
           schoolName: input.schoolName,
+          period: input.period,
           category: input.category || '',
           restrictionCode: input.restrictionCode || '',
           diagnosis: input.diagnosis || '',

@@ -8,7 +8,7 @@ export function SchoolMealSchedules({ value, onChange }: {
 }) {
   return <fieldset className="space-y-2 rounded-lg border p-3">
     <legend className="px-1 text-sm font-medium">Refeições e horários</legend>
-    <p className="text-xs text-muted-foreground">Cadastre os horários de Café da manhã, Café da tarde, Almoço e Jantar separadamente. No cardápio parcial, os cafés e Almoço/Jantar compartilham a preparação e exibem os respectivos horários.</p>
+    <p className="text-xs text-muted-foreground">Cadastre os horários de Café da manhã, Café da tarde, Almoço e Jantar separadamente. A mesma refeição pode ter horários diferentes. No cardápio parcial, os cafés e Almoço/Jantar compartilham a preparação e exibem os respectivos horários.</p>
     {value.map((row, index) => <div key={index} className="flex gap-2">
       <Input aria-label={`Nome da refeição ${index + 1}`} placeholder="Ex.: Almoço" required maxLength={60}
         value={row.mealLabel} onChange={e => onChange(value.map((r, i) => i === index ? { ...r, mealLabel: e.target.value } : r))} />
@@ -20,7 +20,4 @@ export function SchoolMealSchedules({ value, onChange }: {
   </fieldset>;
 }
 
-export function validMealSchedules(rows: NonNullable<School['mealSchedules']>): boolean {
-  return rows.every(r => r.mealLabel.trim() && /^([01]\d|2[0-3]):[0-5]\d$/.test(r.time))
-    && new Set(rows.map(r => r.mealLabel.trim().toLocaleLowerCase('pt-BR'))).size === rows.length;
-}
+export { validMealSchedules } from '@/lib/schoolDetails';
