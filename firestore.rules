@@ -79,10 +79,25 @@ service cloud.firestore {
       // ── Org sub-collections ────────────────────────────────────────────────
       // Any org member (admin, nutricionista, viewer) can READ all sub-collections.
       // Only admin and nutritionist roles can CREATE, UPDATE, DELETE.
+      // Daily technical records are append-only; corrections use a new document.
+      match /daily_meal_records/{recordId} {
+        allow read: if belongsToOrg(orgId);
+        allow create: if canWrite(orgId)
+          && request.resource.data.id == recordId
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.actorRole == myRole()
+          && request.resource.data.createdAt is string
+          && ((request.resource.data.keys().hasAny(['menuSnapshot']) && request.resource.data.menuSnapshot is map && request.resource.data.menuSnapshot.menuId is string)
+            || (request.resource.data.keys().hasAny(['schoolId']) && request.resource.data.schoolId is string))
+          && request.resource.data.date is string;
+        // Permit an identical retry after a lost acknowledgement, but no edits.
+        allow update: if canWrite(orgId) && request.resource.data == resource.data;
+        allow delete: if false;
+      }
       match /{collection}/{docId} {
         allow read:   if belongsToOrg(orgId);
         // Only the API records email delivery outcomes and idempotency claims.
-        allow write:  if collection != 'menu_email_deliveries' && canWrite(orgId);
+        allow write:  if collection != 'menu_email_deliveries' && collection != 'daily_meal_records' && canWrite(orgId);
       }
     }
 

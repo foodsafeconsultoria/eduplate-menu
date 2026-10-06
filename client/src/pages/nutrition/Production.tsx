@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useMenus } from '@/hooks/useMenus';
+import { productionAmount, slotMealCount, validMealCount } from '@/lib/menuProduction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -261,6 +263,15 @@ export default function Production() {
   const { productionLogs, loading, addProductionLog, updateProductionLog, deleteProductionLog } = useProductionLogs();
   const { settings: orgSettings } = useOrgSettings();
 
+  const { menus } = useMenus();
+  const [planningMenuId, setPlanningMenuId] = useState('');
+  const [planningSlotId, setPlanningSlotId] = useState('');
+  const [planningCount, setPlanningCount] = useState<number | ''>('');
+  const planningMenu = menus.find(menu => menu.id === planningMenuId);
+  const planningSlot = planningMenu?.slots.find(slot => slot.id === planningSlotId);
+  const savedPlanningCount = planningMenu ? slotMealCount(planningMenu, planningSlot) : undefined;
+  const effectivePlanningCount = planningCount === '' ? savedPlanningCount : validMealCount(planningCount) ? planningCount : undefined;
+
   const [open, setOpen]           = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm]           = useState<LogForm>(emptyForm);
@@ -350,6 +361,46 @@ export default function Production() {
             </Button>
           </div>
         </div>
+
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <h2 className="font-semibold">Cálculo automático de produção</h2>
+            <p className="text-sm text-gray-500">Selecione uma refeição do cardápio. A previsão usa o per capita salvo; ajuste as porções em Cardápios.</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label>Cardápio</Label>
+                <Select value={planningMenuId} onValueChange={id => { setPlanningMenuId(id); setPlanningSlotId(''); setPlanningCount(''); }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cardápio" /></SelectTrigger>
+                  <SelectContent>{menus.map(menu => <SelectItem key={menu.id} value={menu.id}>{menu.title}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Dia / Refeição</Label>
+                <Select value={planningSlotId} onValueChange={id => { setPlanningSlotId(id); setPlanningCount(''); }} disabled={!planningMenu}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a refeição" /></SelectTrigger>
+                  <SelectContent>{planningMenu?.slots.filter(slot => slot.composicao.length).map(slot => <SelectItem key={slot.id} value={slot.id}>{slot.dayLabel} / {slot.mealLabel}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="production-meal-count">Nº de refeições</Label>
+                <Input id="production-meal-count" type="number" min="0" step="1" value={planningCount}
+                  placeholder={savedPlanningCount === undefined ? 'Informe a quantidade' : String(savedPlanningCount)}
+                  onChange={e => setPlanningCount(e.target.value === '' ? '' : Number(e.target.value))} />
+              </div>
+            </div>
+            {planningSlot && (effectivePlanningCount === undefined
+              ? <p className="text-sm text-amber-700">Informe um número inteiro e não negativo de refeições.</p>
+              : <div className="space-y-2" aria-live="polite">
+                  <p className="text-sm text-gray-600">Previsão para {effectivePlanningCount} refeições. O ajuste aqui serve para simulação.</p>
+                  {planningSlot.composicao.map(item => <div key={item.id} className="flex justify-between gap-3 border-b py-2 text-sm">
+                    <span>{item.nome} · {item.pesoAtual} {item.sourceUnit === 'ml' ? 'ml' : 'g'}/refeição</span>
+                    <strong>{productionAmount(item.pesoAtual, effectivePlanningCount).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} {item.sourceUnit === 'ml' ? 'L' : 'kg'}</strong>
+                  </div>)}
+                  <p className="text-xs text-gray-500">Nos registros de sobras abaixo, informe a quantidade efetivamente produzida.</p>
+                </div>)}
+            {planningMenu && !planningMenu.slots.length && <p className="text-sm text-amber-700">Abra e salve este cardápio em Cardápios para atualizar suas refeições.</p>}
+          </CardContent>
+        </Card>
 
         {/* Aviso RDC 216 */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 flex gap-2 items-start">

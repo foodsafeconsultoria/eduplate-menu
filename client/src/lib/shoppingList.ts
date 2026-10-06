@@ -1,4 +1,5 @@
 import type { Menu } from '../types/nutrition';
+import { slotMealCount } from './menuProduction';
 
 export interface ShoppingItem {
   nome: string;
@@ -9,21 +10,24 @@ export interface ShoppingItem {
 }
 
 export function hasStudentCount(menu: Menu): boolean {
-  return Number.isFinite(menu.studentCount) && Number(menu.studentCount) > 0;
+  return menu.slots?.length
+    ? menu.slots.filter(slot => slot.composicao.length > 0).every(slot => slotMealCount(menu, slot) !== undefined)
+    : slotMealCount(menu) !== undefined;
 }
 
 export function buildShoppingList(menus: Menu[]): ShoppingItem[] {
   const map = new Map<string, ShoppingItem>();
   for (const menu of menus) {
-    if (!hasStudentCount(menu)) throw new Error(`Informe o número de alunos de "${menu.title}".`);
+    if (!hasStudentCount(menu)) throw new Error(`Informe o número de alunos ou refeições de "${menu.title}".`);
     // Each slot already represents a single day and meal. Count it once.
     const portions = menu.slots?.length
-      ? menu.slots.flatMap(slot => slot.composicao)
-      : (menu.items || []).map(item => ({ nome: item.displayName || item.name, pesoAtual: item.perCapita, sourceUnit: item.sourceUnit, familyFarm: false }));
-    for (const insumo of portions) {
+      ? menu.slots.flatMap(slot => slot.composicao.map(insumo => ({ insumo, count: slotMealCount(menu, slot)! })))
+      : (menu.items || []).map(item => ({ insumo: { nome: item.displayName || item.name, pesoAtual: item.perCapita, sourceUnit: item.sourceUnit, familyFarm: false }, count: slotMealCount(menu)! }));
+    for (const { insumo, count } of portions) {
+      if (count === 0) continue;
       const unit = insumo.sourceUnit === 'ml' ? 'ml' : 'g';
       const key = `${insumo.nome.trim().toLocaleLowerCase('pt-BR')}|${unit}`;
-      const amount = insumo.pesoAtual * Number(menu.studentCount);
+      const amount = insumo.pesoAtual * count;
       const existing = map.get(key);
       if (existing) {
         existing.totalGrams += amount;

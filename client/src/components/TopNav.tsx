@@ -217,6 +217,7 @@ export default function TopNav() {
   const maisBadge = maintenanceAlertCount;
 
   const alimentacaoItems: DropdownItem[] = [
+    { label: 'Registro diário', href: '/nutrition/daily-records', icon: <ClipboardCheck className="h-4 w-4" /> },
     { label: 'Alimentos',        href: '/nutrition/foods',         icon: <Apple className="h-4 w-4" /> },
     { label: 'Cardápios',        href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" />, badge: workflowAlertCount },
     { label: 'Fichas Técnicas',  href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },

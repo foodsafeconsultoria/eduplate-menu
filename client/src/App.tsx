@@ -40,6 +40,7 @@ const Register           = lazy(() => import('@/pages/Register'));
 const ForgotPassword     = lazy(() => import('@/pages/ForgotPassword'));
 
 // ── Módulos de nutrição (lazy — os mais pesados) ──────────────────────────────
+const DailyRecords = lazy(() => import('@/pages/nutrition/DailyRecords'));
 const Foods        = lazy(() => import('@/pages/nutrition/Foods'));
 const GeneralReport = lazy(() => import('@/pages/nutrition/GeneralReport'));
 const Menus        = lazy(() => import('@/pages/nutrition/Menus'));
@@ -68,6 +69,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/nutrition/recipes': 'Fichas técnicas | EduPlate Menu',
   '/nutrition/menus': 'Cardápios | EduPlate Menu',
   '/nutrition/special-diets': 'Dietas especiais | EduPlate Menu',
+  '/nutrition/daily-records': 'Registro diário | EduPlate Menu',
   '/nutrition/production': 'Produção | EduPlate Menu',
   '/nutrition/reports': 'Relatório gerencial | EduPlate Menu',
   '/nutrition/sigpc': 'Relatório gerencial | EduPlate Menu',
@@ -173,6 +175,7 @@ function Router() {
                   <Route path="/nutrition/recipes" component={Recipes} />
                   <Route path="/nutrition/menus" component={Menus} />
                   <Route path="/nutrition/special-diets" component={SpecialDiets} />
+                  <Route path="/nutrition/daily-records" component={DailyRecords} />
                   <Route path="/nutrition/production" component={Production} />
                   <Route path="/nutrition/reports" component={GeneralReport} />
                   <Route path="/nutrition/sigpc" component={GeneralReport} />

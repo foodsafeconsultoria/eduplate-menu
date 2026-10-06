@@ -64,7 +64,7 @@ async function generateShoppingPDF(
   doc.setTextColor(60, 60, 60);
   selectedMenus.forEach(m => {
     const students = m.studentCount;
-    doc.text(`- ${m.title} (${m.referenceMonth || 'sem referencia'}, ${students} alunos)`, 16, y);
+    doc.text(`- ${m.title} (${m.referenceMonth || 'sem referencia'}, ${students ?? "—"} alunos, ${m.mealCount ?? students ?? "por refeição"} refeições padrão)`, 16, y);
     y += 4.5;
   });
   y += 4;
@@ -197,7 +197,7 @@ export default function ShoppingList() {
 
   async function handlePrint() {
     if (selectedMenus.length === 0) { toast.error('Selecione pelo menos um cardapio.'); return; }
-    if (missingStudents.length) { toast.error('Informe o número de alunos dos cardápios selecionados.'); return; }
+    if (missingStudents.length) { toast.error('Informe o número de refeições dos cardápios selecionados.'); return; }
     if (shoppingItems.length === 0) { toast.error('Nenhum insumo encontrado nos cardapios selecionados.'); return; }
     setGenerating(true);
     try {
@@ -277,7 +277,7 @@ export default function ShoppingList() {
                       >
                         <p className="font-medium truncate">{menu.title}</p>
                         <p className="text-gray-400 truncate">
-                          {menu.referenceMonth || 'sem referência'} · {menu.studentCount || '?'} alunos · {menu.category}
+                          {menu.referenceMonth || 'sem referência'} · {menu.studentCount || '?'} alunos · {menu.mealCount ?? menu.studentCount ?? '?'} refeições padrão · {menu.category}
                         </p>
                       </button>
                     );
@@ -309,14 +309,14 @@ export default function ShoppingList() {
                 <ShoppingCart className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 text-sm font-medium">Selecione cardápios para ver os insumos</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  As quantidades são calculadas automaticamente com base no número de alunos e dias do cardápio.
+                  As quantidades usam o per capita e o número de refeições de cada dia do cardápio.
                 </p>
               </CardContent>
             </Card>
           ) : missingStudents.length > 0 ? (
             <Card className="border-amber-300 bg-amber-50">
               <CardContent className="pt-6" role="status">
-                <p className="font-medium">Informe o número de alunos para calcular as quantidades.</p>
+                <p className="font-medium">Informe o número de refeições para calcular as quantidades.</p>
                 <p className="mt-2 text-sm">Edite os cardápios: {missingStudents.map(menu => menu.title).join(', ')}.</p>
               </CardContent>
             </Card>

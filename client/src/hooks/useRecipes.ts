@@ -24,6 +24,7 @@ export interface CreateRecipeInput {
   prepTime?: string;
   preparationMethod?: string;
   operationalNotes?: string;
+  presentationStandard?: string;
   medidaCaseira?: string;
   costTotal: number;
   costPerServing: number;
@@ -63,6 +64,7 @@ function normalizeRecipes(raw: unknown): Recipe[] {
       prepTime: recipe.prepTime || '',
       preparationMethod: recipe.preparationMethod || '',
       operationalNotes: recipe.operationalNotes || '',
+      presentationStandard: recipe.presentationStandard || '',
       medidaCaseira: recipe.medidaCaseira || '',
       costTotal: Number(recipe.costTotal) || 0,
       costPerServing: Number(recipe.costPerServing) || 0,
@@ -145,6 +147,7 @@ export function useRecipes() {
           prepTime: input.prepTime || '',
           preparationMethod: input.preparationMethod || '',
           operationalNotes: input.operationalNotes?.trim() || '',
+          presentationStandard: input.presentationStandard?.trim() || '',
           medidaCaseira: input.medidaCaseira?.trim() || '',
           costTotal: input.costTotal,
           costPerServing: input.costPerServing,
@@ -179,6 +182,7 @@ export function useRecipes() {
           ...(input.prepTime !== undefined && { prepTime: input.prepTime }),
           ...(input.preparationMethod !== undefined && { preparationMethod: input.preparationMethod }),
           ...(input.operationalNotes !== undefined && { operationalNotes: input.operationalNotes }),
+          ...(input.presentationStandard !== undefined && { presentationStandard: input.presentationStandard }),
           ...(input.medidaCaseira !== undefined && { medidaCaseira: input.medidaCaseira }),
           ...(input.costTotal !== undefined && { costTotal: input.costTotal }),
           ...(input.costPerServing !== undefined && { costPerServing: input.costPerServing }),
@@ -189,6 +193,21 @@ export function useRecipes() {
         persistRecipes(recipes.map((r) => (r.id === id ? updated : r)));
         void syncHybridDocument(orgId, COLLECTION_NAME, updated);
         return true;
+      },
+
+      updateRecipes: (updates: { id: string; input: Partial<CreateRecipeInput> }[]) => {
+        const byId = new Map(updates.map(update => [update.id, update.input]));
+        const changed: Recipe[] = [];
+        const next = recipes.map(recipe => {
+          const input = byId.get(recipe.id);
+          if (!input) return recipe;
+          const updated = { ...recipe, ...input, updatedAt: new Date() };
+          changed.push(updated);
+          return updated;
+        });
+        persistRecipes(next);
+        changed.forEach(recipe => void syncHybridDocument(orgId, COLLECTION_NAME, recipe));
+        return changed.length;
       },
 
       deleteRecipe: (id: string) => {
@@ -218,6 +237,7 @@ export function useRecipes() {
           prepTime: input.prepTime || '',
           preparationMethod: input.preparationMethod || '',
           operationalNotes: input.operationalNotes?.trim() || '',
+          presentationStandard: input.presentationStandard?.trim() || '',
           medidaCaseira: input.medidaCaseira?.trim() || '',
           costTotal: input.costTotal,
           costPerServing: input.costPerServing,

@@ -21,7 +21,7 @@ import { detectAllergens } from '@/data/allergenMapping';
 import { DEFAULT_RECIPES } from '@/data/defaultRecipes';
 import { SEED_INGREDIENT_MAP } from '@/data/seedIngredientMap';
 import { SUGGESTED_FACTORS } from '@/lib/replicateMenu';
-import { FNDE_MEAL_REFERENCE, FNDE_REFERENCE_NOTE, adequacyPercent } from '@/data/fndeReference';
+import { recipeReviewIssues } from '@/lib/recipeReview';
 import { addRecipeToDoc, addFooterAllPages } from '@/lib/recipePdf';
 
 const emptyNutrients = {
@@ -106,7 +106,7 @@ export default function Recipes() {
     return 'Nutricionista RT — PNAE';
   }, [orgId]);
   const { allFoods: foods, foods: availableFoods, loading: foodsLoading } = useFoods();
-  const { recipes, loading, addRecipe, updateRecipe, deleteRecipe, importRecipes } = useRecipes();
+  const { recipes, loading, addRecipe, updateRecipe, updateRecipes, deleteRecipe, importRecipes } = useRecipes();
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('list');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export default function Recipes() {
           const fid = SEED_INGREDIENT_MAP[ing.foodName];
           const food = fid ? foods.find((f) => f.id === fid) : undefined;
           const estimatedCost = food && food.price > 0
-            ? (food.unit === 'unit' ? food.price * (ing.grossWeight / 0.1) : food.price * ing.grossWeight)
+            ? (food.unit === 'kg' ? food.price * ing.grossWeight : 0)
             : 0;
           return { ...ing, foodId: fid || ing.foodId, estimatedCost };
         });
@@ -139,7 +139,7 @@ export default function Recipes() {
             const factor = ing.netWeight > 0 ? ing.netWeight * 10 : 0;
             acc.cost += ing.estimatedCost;
             acc.ff = acc.ff || !!food.familyFarm;
-            for (const al of detectAllergens(ing.foodName)) acc.allergens.add(al);
+            for (const al of [...detectAllergens(ing.foodName), ...(food.allergens || [])]) acc.allergens.add(al);
             acc.n.kcal += food.nutrients.kcal * factor;
             acc.n.protein += food.nutrients.protein * factor;
             acc.n.lipids += food.nutrients.lipids * factor;
@@ -193,62 +193,32 @@ export default function Recipes() {
     [recipes],
   );
 
-  const recalcAllRecipes = async () => {
+  const recalcAllRecipes = () => {
     if (!foods.length || !recipesWithZeroNutrients.length) return;
     setRecalculating(true);
-    let updated = 0;
+    const updates: { id: string; input: Partial<Recipe> }[] = [];
+    let skipped = 0;
     for (const recipe of recipesWithZeroNutrients) {
-      const t = recipe.ingredients.reduce(
-        (acc, ing) => {
-          const food =
-            foods.find((f) => f.id === ing.foodId) ||
-            foods.find((f) => f.name.toLowerCase().trim() === ing.foodName.toLowerCase().trim()) ||
-            foods.find((f) => f.name.toLowerCase().includes(ing.foodName.toLowerCase().split(',')[0].trim()));
-          if (!food) return acc;
-          const factor = ing.netWeight > 0 ? ing.netWeight * 10 : ing.grossWeight * 10;
-          const cost =
-            food.price > 0
-              ? food.unit === 'unit'
-                ? food.price * (ing.grossWeight / 0.1)
-                : food.price * ing.grossWeight
-              : ing.estimatedCost;
-          return {
-            costTotal: acc.costTotal + cost,
-            kcal: acc.kcal + food.nutrients.kcal * factor,
-            protein: acc.protein + food.nutrients.protein * factor,
-            lipids: acc.lipids + food.nutrients.lipids * factor,
-            carbohydrates: acc.carbohydrates + food.nutrients.carbohydrates * factor,
-            fiber: acc.fiber + food.nutrients.fiber * factor,
-            calcium: acc.calcium + food.nutrients.calcium * factor,
-            iron: acc.iron + food.nutrients.iron * factor,
-            zinc: acc.zinc + food.nutrients.zinc * factor,
-            vitaminA: acc.vitaminA + food.nutrients.vitaminA * factor,
-            vitaminC: acc.vitaminC + food.nutrients.vitaminC * factor,
-          };
-        },
-        { costTotal: 0, kcal: 0, protein: 0, lipids: 0, carbohydrates: 0, fiber: 0, calcium: 0, iron: 0, zinc: 0, vitaminA: 0, vitaminC: 0 },
-      );
-      const s = recipe.servings || 1;
-      updateRecipe(recipe.id, {
-        costTotal: t.costTotal,
-        costPerServing: t.costTotal / s,
-        nutrientsPerServing: {
-          kcal: t.kcal / s,
-          protein: t.protein / s,
-          lipids: t.lipids / s,
-          carbohydrates: t.carbohydrates / s,
-          fiber: t.fiber / s,
-          calcium: t.calcium / s,
-          iron: t.iron / s,
-          zinc: t.zinc / s,
-          vitaminA: t.vitaminA / s,
-          vitaminC: t.vitaminC / s,
-        },
+      const linked = recipe.ingredients.map(ingredient => ({ ingredient, food:
+        foods.find(food => food.id === ingredient.foodId) || foods.find(food => food.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim()),
+      }));
+      if (linked.some(({ingredient, food}) => !food || !validIngredientWeights(ingredient)) || !Number.isSafeInteger(recipe.servings) || recipe.servings <= 0) { skipped++; continue; }
+      const nutrients = { ...emptyNutrients };
+      const allergens = new Set<string>();
+      const ingredients = linked.map(({ingredient, food}) => {
+        const factor = ingredient.netWeight * 10;
+        for (const key of Object.keys(nutrients) as (keyof typeof nutrients)[]) nutrients[key] += food!.nutrients[key] * factor;
+        for (const allergen of [...detectAllergens(ingredient.foodName), ...(food!.allergens || [])]) allergens.add(allergen);
+        const cost = food!.unit === 'kg' && food!.price > 0 ? food!.price * ingredient.grossWeight : ingredient.estimatedCost;
+        return {...ingredient, foodId: food!.id, estimatedCost: cost};
       });
-      updated++;
-      await new Promise((res) => setTimeout(res, 30));
+      const costTotal = ingredients.reduce((sum, ingredient) => sum + ingredient.estimatedCost, 0);
+      const perServing = Object.fromEntries(Object.entries(nutrients).map(([key,value]) => [key,value / recipe.servings])) as typeof nutrients;
+      updates.push({id:recipe.id, input:{ingredients, costTotal, costPerServing: costTotal/recipe.servings, nutrientsPerServing:perServing, allergens:Array.from(allergens).sort()}});
     }
-    toast.success(`${updated} ficha${updated !== 1 ? 's' : ''} atualizada${updated !== 1 ? 's' : ''} com dados nutricionais!`);
+    const updated = updateRecipes(updates);
+    if (updated) toast.success(updated + ' fichas recalculadas.');
+    if (skipped) toast.warning(skipped + ' fichas preservadas: revisar vínculo dos ingredientes, pesos e porções antes de recalcular.');
     setRecalculating(false);
   };
 
@@ -260,6 +230,7 @@ export default function Recipes() {
   const [servings, setServings] = useState('');
   const [prepTime, setPrepTime] = useState('');
   const [operationalNotes, setOperationalNotes] = useState('');
+  const [presentationStandard, setPresentationStandard] = useState('');
   const [preparationMethod, setPreparationMethod] = useState('');
   const [medidaCaseira, setMedidaCaseira] = useState('');
   const [ingredientSearch, setIngredientSearch] = useState('');
@@ -362,9 +333,7 @@ export default function Recipes() {
         let estimatedCost = ingredient.estimatedCost;
         if (food && food.price > 0) {
           estimatedCost =
-            food.unit === 'unit'
-              ? food.price * (grossWeight / 0.1)
-              : food.price * grossWeight;
+            food.unit === 'kg' ? food.price * grossWeight : ingredient.estimatedCost;
         }
 
         return { ...updated, grossWeight, netWeight, correctionFactor, estimatedCost };
@@ -404,7 +373,7 @@ export default function Recipes() {
           totalGrossWeight: acc.totalGrossWeight + ingredient.grossWeight,
           totalNetWeight: acc.totalNetWeight + ingredient.netWeight,
           familyFarmCount: acc.familyFarmCount + (food.familyFarm ? 1 : 0),
-          allergens: new Set([...Array.from(acc.allergens), ...allergens]),
+          allergens: new Set([...Array.from(acc.allergens), ...allergens, ...(food.allergens || [])]),
           nutrients: {
             kcal: acc.nutrients.kcal + food.nutrients.kcal * factor,
             protein: acc.nutrients.protein + food.nutrients.protein * factor,
@@ -446,6 +415,7 @@ export default function Recipes() {
     setPreparedYield('');
     setPrepTime('');
     setOperationalNotes('');
+    setPresentationStandard('');
     setPreparationMethod('');
     setMedidaCaseira('');
     setIngredientSearch('');
@@ -461,6 +431,7 @@ export default function Recipes() {
     setRecommendedMeal(recipe.recommendedMeal || 'Almoco');
     setPrepTime(recipe.prepTime || '');
     setOperationalNotes(recipe.operationalNotes || '');
+    setPresentationStandard(recipe.presentationStandard || '');
     setPreparationMethod(recipe.preparationMethod || '');
     setMedidaCaseira(recipe.medidaCaseira || '');
     setIngredientSearch('');
@@ -517,11 +488,13 @@ export default function Recipes() {
       return;
     }
 
-    if (!preparationMethod.trim() && !editingRecipeId) {
+    if (!preparationMethod.trim()) {
       toast.error('Descreva o modo de preparo.');
       return;
     }
 
+    const unresolved = ingredients.filter(ingredient => !foods.some(food => food.id === ingredient.foodId || food.name.toLowerCase().trim() === ingredient.foodName.toLowerCase().trim()));
+    if (unresolved.length) { toast.error('Vincule os ingredientes ao banco de alimentos antes de recalcular a nutrição: ' + unresolved.map(i => i.foodName).join(', ')); return; }
     const payload = {
       name,
       displayName,
@@ -538,6 +511,7 @@ export default function Recipes() {
       prepTime,
       preparationMethod,
       operationalNotes,
+      presentationStandard,
       medidaCaseira,
       costTotal: totals.costTotal,
       costPerServing: totals.costTotal / servingsCount,
@@ -591,7 +565,7 @@ export default function Recipes() {
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
-            {/* View mode toggle */}
+        {/* View mode toggle */}
             <div className="flex rounded-md border border-gray-200 overflow-hidden">
               <button
                 type="button"
@@ -741,6 +715,11 @@ export default function Recipes() {
                 </div>
 
                 <div>
+                  <Label htmlFor="presentation-standard">Padrão de apresentação e serviço</Label>
+                  <Textarea id="presentation-standard" value={presentationStandard} onChange={e => setPresentationStandard(e.target.value)} placeholder="Ex.: arroz solto, servido quente, uma escumadeira por porção; descrever consistência e montagem." className="mt-2" />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs text-gray-500">Para alimentos vendidos por unidade ou litro, informe o custo do ingrediente manualmente após conferir peso, volume e preço. O sistema não presume peso por unidade ou densidade.</p>
                   <Label>Buscar ingrediente</Label>
                   <div className="relative mt-2 max-w-xl">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -954,32 +933,14 @@ export default function Recipes() {
 
                 {ingredients.length > 0 ? (
                   <div className="grid gap-4 md:grid-cols-2">
-                    {/* Adequação à referência PNAE */}
-                    <Card className="border-green-200">
-                      <CardHeader>
-                        <CardTitle>Adequação nutricional (por porção)</CardTitle>
-                        <CardDescription>{FNDE_REFERENCE_NOTE}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-1.5">
-                          {FNDE_MEAL_REFERENCE.map(({ key, label, unit, ref, dec }) => {
-                            const perServ = servingsCount > 0 ? totals.nutrients[key as keyof typeof totals.nutrients] / servingsCount : 0;
-                            const pct = adequacyPercent(perServ, ref);
-                            const color = pct >= 100 ? 'text-green-700' : pct >= 70 ? 'text-amber-600' : 'text-red-600';
-                            const barColor = pct >= 100 ? 'bg-green-500' : pct >= 70 ? 'bg-amber-400' : 'bg-red-400';
-                            return (
-                              <div key={key} className="text-xs">
-                                <div className="flex justify-between mb-0.5">
-                                  <span className="text-gray-600">{label} <span className="text-gray-400">({perServ.toFixed(dec)} {unit} / ref. {ref} {unit})</span></span>
-                                  <span className={`font-semibold ${color}`}>{pct}%</span>
-                                </div>
-                                <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                                  <div className={`h-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                    <Card className="border-blue-200">
+                      <CardHeader><CardTitle>Revisão da ficha técnica</CardTitle><CardDescription>A ficha descreve uma preparação. A adequação ao Anexo IV é avaliada no conjunto do cardápio por faixa etária e jornada.</CardDescription></CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {!presentationStandard.trim() && <p className="text-amber-700">Informe o padrão de apresentação e serviço.</p>}
+                        {!preparationMethod.trim() && <p className="text-amber-700">Informe o modo de preparo.</p>}
+                        {totals.costTotal <= 0 && <p className="text-amber-700">Custo zerado: confira os preços dos ingredientes.</p>}
+                        {ingredients.filter(i => !foods.some(f => f.id === i.foodId || f.name.toLowerCase().trim() === i.foodName.toLowerCase().trim())).map(i => <p key={i.id} className="text-amber-700">Sem vínculo nutricional: {i.foodName}.</p>)}
+                        <p className="text-xs text-gray-500">Rendimento, medida caseira, alérgenos e comportamento após cocção devem ser conferidos pela RT com os produtos e a produção locais.</p>
                       </CardContent>
                     </Card>
 
@@ -1027,6 +988,13 @@ export default function Recipes() {
           </div>
         </div>
 
+            {recipes.length > 0 && <Card className="border-amber-200"><CardContent className="pt-4 text-sm">
+          <p className="font-semibold">Conferência das fichas cadastradas</p>
+          <p>{recipes.filter(recipe => recipeReviewIssues(recipe, foods).length > 0).length} de {recipes.length} fichas possuem campos ou cálculos para revisar. Isso não substitui a validação da RT.</p>
+          <details className="mt-2"><summary className="cursor-pointer">Ver pendências por preparação</summary>
+            {recipes.map(recipe => { const issues = recipeReviewIssues(recipe, foods); return issues.length ? <div key={recipe.id} className="mt-2"><strong>{recipe.displayName || recipe.name}</strong><p className="text-xs text-amber-800">{issues.join(' ')}</p></div> : null; })}
+          </details>
+        </CardContent></Card>}
         {/* ── Banner: fichas com nutrientes zerados ────────────────────────── */}
         {!loading && recipesWithZeroNutrients.length > 0 && !foodsLoading && foods.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">

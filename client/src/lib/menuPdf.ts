@@ -4,6 +4,7 @@ import type { School } from '../types';
 import type { Menu, MenuSlot, Recipe, SpecialDiet } from '../types/nutrition';
 import type { OrgSettings } from '../hooks/useOrgSettings';
 import { DIET_LABEL_MAP } from '../data/dietLabels';
+import { assessMenuNutrition, AGE_GROUPS } from './fndeNutrition';
 import { partialMeal, partialSlots, mealScheduleText, type AttendanceMode } from './menuAttendance';
 
 export interface MenuPdfContext {
@@ -222,19 +223,29 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   ]), headerHeight + 8);
 
   const nutrientKeys = ['kcal', 'carbohydrates', 'protein', 'lipids', 'calcium', 'iron', 'zinc', 'vitaminA', 'vitaminC'] as const;
-  const totals = days.map(day => nutrientKeys.map(key => slots.filter(s => s.dayLabel === day)
+  const totals = days.map(day => nutrientKeys.map(key => slots.filter(s => s.dayLabel === day && s.mealCount !== 0)
     .flatMap(s => s.composicao).reduce((sum, ins) => sum + (ins.valoresNutricionaisBase?.[key] || 0)
       * (ins.pesoReferencia > 0 ? ins.pesoAtual / ins.pesoReferencia : 0), 0)));
   const dietNote = schoolDietNote(menu, school, context.specialDiets);
-  const notes = ['Os itens ou o cardápio poderão sofrer alterações conforme a disponibilidade de alimentos.',
+  const nutritionAssessment = assessMenuNutrition({ ...menu, slots });
+  const profileText = `Perfil: ${(menu.nutritionAgeGroups || []).map(id => AGE_GROUPS.find(g => g.id === id)?.label || id).join('; ') || 'faixa etária não informada'} | ${menu.attendanceMode === 'integral' ? 'Integral' : menu.attendanceMode === 'partial' ? 'Parcial' : 'Jornada não informada'} | ${menu.mealsPerStudentDay ?? 'não informado'} refeições por aluno/dia.`;
+  const notes = [profileText,'Os itens ou o cardápio poderão sofrer alterações conforme a disponibilidade de alimentos.',
     dietNote,
     menu.attendanceMode === 'partial' ? 'Atendimento parcial: manhã OU tarde. As refeições compartilhadas são contabilizadas uma única vez nos valores por aluno.' : '',
     'Valores calculados a partir das porções e composições cadastradas. A RT deve validar as necessidades por faixa etária, período de atendimento e os cardápios adaptados.',
-    'Referência: Resolução CD/FNDE nº 4/2026, arts. 17 e 18.'].filter(Boolean);
+    'Referência: Resolução CD/FNDE nº 4/2026, arts. 17 e 18.', ...nutritionAssessment.alerts].filter(Boolean);
   y = table(['Observações e revisão técnica'], notes.map(n => [n]), y);
   const signatureSpace = settings?.signatureDataUrl ? 17 : 9;
   y = table(['Nutrientes por aluno / dia', 'Energia (kcal)', 'CHO (g)', 'PTN (g)', 'LIP (g)', 'Ca (mg)', 'Fe (mg)', 'Zn (mg)', 'Vit. A (µg)', 'Vit. C (mg)'],
     days.map((day, i) => [dateLabels[i], ...totals[i].map(n => slots.some(s => s.dayLabel === day && s.composicao.length) ? n.toFixed(1) : '-')]), y, 34 + signatureSpace);
+  for (const group of nutritionAssessment.groups) {
+    y = table([group.label + ' — média por aluno/dia', 'Planejado', 'Referência', '% do mínimo', 'Revisão'], group.rows.map(row => [
+      row.label, row.actual.toFixed(1) + ' ' + row.unit,
+      row.min + (row.max == null ? '' : ' a ' + row.max) + ' ' + row.unit,
+      row.review ? 'Conferir tabela' : row.percent.toFixed(1) + '%',
+      row.status === 'review' ? 'RT/FNDE' : row.status === 'below' ? 'Abaixo' : row.status === 'above' ? 'Acima da faixa' : 'Dentro da referência',
+    ]), y, 34 + signatureSpace);
+  }
   const name = settings?.nutritionistName?.trim() || 'Nome da RT não cadastrado';
   const crn = settings?.nutritionistCrn?.trim() || 'não cadastrado';
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9);

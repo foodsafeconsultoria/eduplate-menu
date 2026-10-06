@@ -365,7 +365,7 @@ async function generateSigpcPDF(params: {
   const rec    = Number(totalReceived.replace(',', '.')) || 0;
   const spent  = Number(totalSpent.replace(',', '.'))    || 0;
   const af     = Number(totalFamilyFarm.replace(',', '.')) || 0;
-  const afPct  = spent > 0 ? (af / spent) * 100 : 0;
+  const afPct  = rec > 0 ? (af / rec) * 100 : 0;
   const saldo  = rec - spent;
   const minAf  = Number(params.year) >= 2026 ? 45 : 30;
 
@@ -377,7 +377,7 @@ async function generateSigpcPDF(params: {
       ['Saldo do período',                    `R$ ${fmt2(saldo)}`],
       ['Valor destinado à Agricultura Familiar', `R$ ${fmt2(af)}`],
       ['% Agricultura Familiar (calculado)',  fmtPct(afPct)],
-      ['% Agricultura Familiar (média cardápios)', fmtPct(avgFamilyFarmPct)],
+      ['% de insumos AF nos cardápios (não financeiro)', fmtPct(avgFamilyFarmPct)],
     ],
     theme: 'grid',
     styles: { fontSize: 8.5, cellPadding: 3 },
@@ -400,12 +400,11 @@ async function generateSigpcPDF(params: {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(...green);
-  doc.text('6. INDICADORES DE CONFORMIDADE PNAE', 15, y);
+  doc.text('6. INDICADORES DE APOIO (DADOS DECLARADOS)', 15, y);
   y += 4;
 
   const checks: [string, boolean, string][] = [
-    [`Percentual de Agricultura Familiar >= ${minAf}%`, afPct >= minAf || avgFamilyFarmPct >= minAf, afPct > 0 ? fmtPct(afPct) : fmtPct(avgFamilyFarmPct)],
-    ['Cardápios elaborados por nutricionista RT', true, entity.crn || '—'],
+    [`Percentual de Agricultura Familiar >= ${minAf}%`, rec > 0 && afPct >= minAf, rec > 0 ? fmtPct(afPct) + ' (valores declarados)' : 'Recursos recebidos não informados'],
     ['Cardápios registrados no período', menusByPeriod.length > 0, `${menusByPeriod.length} cardápio(s)`],
     ['Escolas atendidas registradas', schools.length > 0, `${schools.length} escola(s)`],
     ['Nutricionista RT identificada', !!entity.nutricionista && !!entity.crn, `${entity.nutricionista} — ${entity.crn}`],
@@ -533,12 +532,12 @@ export default function SigpcReport() {
   const rec   = Number(totalReceived.replace(',', '.'))   || 0;
   const spent = Number(totalSpent.replace(',', '.'))      || 0;
   const af    = Number(totalFamilyFarm.replace(',', '.')) || 0;
-  const afPct = spent > 0 ? (af / spent) * 100 : 0;
+  const afPct = rec > 0 ? (af / rec) * 100 : 0;
 
   // Exigência mínima de AF: 45% (Resolução CD/FNDE nº 4/2026); 30% na 06/2020 (revogada)
   const minAfPct = Number(year) >= 2026 ? 45 : 30;
 
-  const afOk = afPct >= minAfPct || avgFamilyFarmPct >= minAfPct;
+  const afOk = rec > 0 && afPct >= minAfPct;
 
   // ── segment helpers ────────────────────────────────────────────────────────
 
@@ -614,7 +613,7 @@ export default function SigpcReport() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Relatório SIGPC</h1>
             <p className="text-gray-600 mt-1">
-              Prestação de contas ao FNDE — dados preenchidos automaticamente do sistema.
+              Relatório de apoio à contabilidade. Valores declarados não comprovam a prestação de contas no BB Gestão Ágil e o parecer no Sigecon.
             </p>
           </div>
           <Button
@@ -723,7 +722,7 @@ export default function SigpcReport() {
               <div className="space-y-2">
                 {/* Summary pills */}
                 <div className="flex flex-wrap gap-3 text-sm pb-2">
-                  <Pill color="green">% AF médio: {fmtPct(avgFamilyFarmPct)}</Pill>
+                  <Pill color="green">Insumos AF nos cardápios: {fmtPct(avgFamilyFarmPct)} (não financeiro)</Pill>
                   <Pill color="blue">Kcal médio/porção: {avgKcal.toFixed(0)}</Pill>
                   <Pill color="gray">Cardápios: {menusByPeriod.length}</Pill>
                 </div>
@@ -934,15 +933,15 @@ export default function SigpcReport() {
         {/* ── Indicadores ── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Indicadores de Conformidade PNAE</CardTitle>
+            <CardTitle className="text-base">Indicadores de apoio — dados declarados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <Indicator
                 ok={afOk}
                 label={`Percentual de Agricultura Familiar >= ${minAfPct}%`}
-                value={af > 0 ? fmtPct(afPct) : `(média cardápios) ${fmtPct(avgFamilyFarmPct)}`}
-                warn={!afOk && (af > 0 || avgFamilyFarmPct > 0)}
+                value={rec > 0 ? fmtPct(afPct) + ' (declarado)' : 'Aguardando dados da contabilidade'}
+                warn={!afOk && rec > 0}
               />
               <Indicator
                 ok={menusByPeriod.length > 0}

@@ -28,7 +28,7 @@ export function partialSlots(slots: MenuSlot[], choices: Record<string, string> 
   }
   const conflicts: { key: string; options: MenuSlot[] }[] = [];
   const result: MenuSlot[] = [];
-  const signature = (s: MenuSlot) => JSON.stringify([s.nomeFantasia.trim(), s.consistency || '', s.composicao.map(({ id, ...i }) => JSON.stringify(i)).sort()]);
+  const signature = (s: MenuSlot) => JSON.stringify([s.nomeFantasia.trim(), s.consistency || '', s.mealCount ?? null, s.composicao.map(({ id, ...i }) => JSON.stringify(i)).sort()]);
   for (const [group, entries] of Array.from(groups.entries())) {
     const filled = entries.filter(s => s.composicao.length || s.nomeFantasia.trim());
     const options = filled.length ? filled : entries;

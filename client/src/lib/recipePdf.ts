@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Recipe } from '@/types/nutrition';
-import { addPdfHeader } from '@/lib/pdfBranding';
-import { FNDE_MEAL_REFERENCE, FNDE_REFERENCE_NOTE, adequacyPercent } from '@/data/fndeReference';
+import { addPdfHeader } from './pdfBranding';
+import { recipeReviewIssues } from './recipeReview';
 
 /**
  * Geração de PDF de Ficha Técnica de Preparo — compartilhado entre o módulo
@@ -142,45 +142,21 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
   });
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  // Adequação à referência PNAE (por porção)
+  // Review the preparation without treating it as a complete daily menu.
   if (y > ph - 50) { doc.addPage(); y = 15; }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(22, 101, 52);
-  doc.text('ADEQUAÇÃO NUTRICIONAL (% da referência por refeição)', 15, y);
-  y += 3;
-  const adqRows = FNDE_MEAL_REFERENCE.map((it) => {
-    const perServ = (n as any)[it.key] as number;
-    const pct = adequacyPercent(perServ ?? 0, it.ref);
-    return [
-      it.label,
-      `${(perServ ?? 0).toFixed(it.dec)} ${it.unit}`,
-      `${it.ref} ${it.unit}`,
-      `${pct}%`,
-    ];
-  });
+  const issues = recipeReviewIssues(recipe);
   autoTable(doc, {
     startY: y,
-    head: [['Nutriente', 'Por porção', 'Referência', 'Adequação']],
-    body: adqRows,
-    theme: 'striped',
-    margin: { left: 15, right: 15 },
-    headStyles: { fillColor: [22, 101, 52], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 44, halign: 'right' },
-      2: { cellWidth: 40, halign: 'right' },
-      3: { cellWidth: 36, fontStyle: 'bold', halign: 'right' },
-    },
+    head: [['REVISÃO DA FICHA TÉCNICA']],
+    body: [
+      ['Uma preparação isolada não representa a adequação do cardápio ao Anexo IV. Avaliar o conjunto por faixa etária, jornada e refeições por aluno/dia.'],
+      ...issues.map(issue => [issue]),
+      ['Rendimento, porção, alérgenos e custos devem ser validados pela RT com os produtos e a produção locais.'],
+    ],
+    margin: { left: 15, right: 15 }, styles: { fontSize: 8 },
+    headStyles: { fillColor: [22, 101, 52] },
   });
-  y = (doc as any).lastAutoTable.finalY + 4;
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.5);
-  doc.setTextColor(120, 120, 120);
-  const refNote = doc.splitTextToSize(FNDE_REFERENCE_NOTE, pw - 30);
-  doc.text(refNote, 15, y);
-  y += refNote.length * 3 + 5;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
   // Helper: renders wrapped text line-by-line, adding new pages as needed.
   // Returns the final Y after the last line.
@@ -197,6 +173,10 @@ export async function addRecipeToDoc(doc: jsPDF, recipe: Recipe): Promise<void> 
     }
   };
 
+  if (recipe.presentationStandard?.trim()) {
+    autoTable(doc, {startY:y, head:[['PADRÃO DE APRESENTAÇÃO E SERVIÇO']], body:[[recipe.presentationStandard]], margin:{left:15,right:15}, styles:{fontSize:8}, headStyles:{fillColor:[22,101,52]}});
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
   // Preparation method
   if (recipe.preparationMethod) {
     if (y > ph - marginB) { doc.addPage(); y = 15; }

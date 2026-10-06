@@ -1,3 +1,5 @@
+import { AGE_GROUPS, assessMenuNutrition, FNDE_SOURCE, type NutritionAgeGroup } from '@/lib/fndeNutrition';
+import { menuProductionCost, productionAmount, slotMealCount, validMealCount } from '@/lib/menuProduction';
 import { recipePortionGrams } from '@/lib/recipeMenuPortion';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -45,16 +47,6 @@ const mealMap: Record<(typeof categories)[number], string[]> = {
   Médio:             ['Almoço/Jantar', 'Lanche'],
   EJA:               ['Almoço/Jantar', 'Lanche'],
 };
-
-const fndeTargets = [
-  { key: 'kcal'     as const, label: 'Kcal',     min: 300  },
-  { key: 'protein'  as const, label: 'Proteína',  min: 9.4  },
-  { key: 'calcium'  as const, label: 'Cálcio',    min: 210  },
-  { key: 'iron'     as const, label: 'Ferro',     min: 1.8  },
-  { key: 'zinc'     as const, label: 'Zinco',     min: 1.4  },
-  { key: 'vitaminA' as const, label: 'Vit A',     min: 100  },
-  { key: 'vitaminC' as const, label: 'Vit C',     min: 7    },
-] as const;
 
 type SourceType = 'recipe' | 'food';
 
@@ -336,6 +328,10 @@ export default function Menus() {
   const [referenceMonth, setReferenceMonth] = useState('');
   const [weekStartDate, setWeekStartDate] = useState('');  // "YYYY-MM-DD" of the Monday
   const [studentCount, setStudentCount] = useState<number | ''>('');
+  const [mealCount, setMealCount] = useState<number | ''>('');
+  const [nutritionAgeGroups, setNutritionAgeGroups] = useState<NutritionAgeGroup[]>([]);
+  const [mealsPerStudentDay, setMealsPerStudentDay] = useState<number | ''>('');
+  const [traditionalCommunity, setTraditionalCommunity] = useState(false);
   const [targetSchoolIds, setTargetSchoolIds] = useState<string[]>([]);
 
   // ── Slot state (replaces items + customTitles) ───────────────────────────────
@@ -345,6 +341,10 @@ export default function Menus() {
   const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>('partial');
   const [partialChoices, setPartialChoices] = useState<Record<string, string>>({});
   const [convertingPartial, setConvertingPartial] = useState(false);
+  const nutritionProfile = { nutritionAgeGroups, mealsPerStudentDay: mealsPerStudentDay === '' ? undefined : mealsPerStudentDay, traditionalCommunity, attendanceMode };
+  const nutritionAssessment = assessMenuNutrition({ slots, ...nutritionProfile });
+  const productionContext = { slots, mealCount: mealCount === '' ? undefined : mealCount, studentCount: studentCount === '' ? undefined : studentCount };
+  const plannedCost = menuProductionCost(productionContext);
   const conversion = partialSlots(slots, partialChoices);
   const setSlots = (next: MenuSlot[] | ((previous: MenuSlot[]) => MenuSlot[])) => {
     setRawSlots(previous => {
@@ -684,7 +684,7 @@ export default function Menus() {
 
   // ── Summary (computed real-time from slots) ───────────────────────────────────
   const summary = useMemo(() => {
-    const allInsumos = slots.flatMap((s) => s.composicao);
+    const allInsumos = slots.filter(s => s.mealCount !== 0).flatMap((s) => s.composicao);
     if (allInsumos.length === 0) return null;
 
     let totalCost   = 0;
@@ -701,15 +701,13 @@ export default function Menus() {
       }
     }
 
-    const daysCount = new Set(
-      slots.filter((s) => s.composicao.length > 0).map((s) => s.dayLabel),
-    ).size || 1;
+    const daysCount = weekdays.length; // Missing planned weekdays must not inflate the average.
 
     const avg = Object.fromEntries(
       Object.entries(totalNutr).map(([k, v]) => [k, v / daysCount]),
     ) as typeof totalNutr;
 
-    const missingTargets = fndeTargets.filter((t) => avg[t.key] < t.min).map((t) => t.label);
+    const missingTargets = nutritionAssessment.groups.flatMap(group => group.rows.filter(row => row.status === 'below' || row.status === 'above').map(row => `${group.label}: ${row.label}`));
     const familyFarmShare = allInsumos.length > 0 ? (afCount / allInsumos.length) * 100 : 0;
 
     const nameCount = new Map<string, number>();
@@ -726,8 +724,7 @@ export default function Menus() {
       }).map((meal) => `${day} - ${meal}`),
     );
 
-    const complianceAlerts: string[] = [];
-    if (missingTargets.length > 0)       complianceAlerts.push(`Referências gerais abaixo (validar por faixa etária e jornada): ${missingTargets.join(', ')}`);
+    const complianceAlerts: string[] = [...nutritionAssessment.alerts];
     if (repeatedPreparations.length > 0) complianceAlerts.push(`Repetições: ${repeatedPreparations.join(', ')}`);
     // Ingredient counts do not establish legal compliance with procurement spending requirements.
 
@@ -741,7 +738,7 @@ export default function Menus() {
       emptySlots,
       complianceAlerts,
     };
-  }, [slots, meals]);
+  }, [slots, meals, nutritionAgeGroups, mealsPerStudentDay, attendanceMode, traditionalCommunity]);
 
   // ── Form open / reset ─────────────────────────────────────────────────────────
 
@@ -750,7 +747,7 @@ export default function Menus() {
     setSavedMealStructure(null);
     setAttendanceMode('partial'); setConvertingPartial(false); setPartialChoices({});
     setTitle(''); setTargetCategories(['Fundamental 1']); setReferenceMonth('');
-    setTargetSchoolIds([]); setWeekStartDate(''); setStudentCount(''); setTargetDay('Segunda');
+    setTargetSchoolIds([]); setWeekStartDate(''); setStudentCount(''); setMealCount(''); setNutritionAgeGroups([]); setMealsPerStudentDay(''); setTraditionalCommunity(false); setTargetDay('Segunda');
     setTargetMeal(mealMap['Fundamental 1'][0]); setSourceType('recipe');
     setSearch(''); setSlots([]); setPendingFood(null);
     setClipboard(null); setEditingMenuId(null);
@@ -771,6 +768,10 @@ export default function Menus() {
     setReferenceMonth(menu.referenceMonth || '');
     setWeekStartDate(menu.weekStartDate || '');
     setStudentCount(menu.studentCount ?? '');
+    setMealCount(menu.mealCount ?? '');
+    setNutritionAgeGroups(menu.nutritionAgeGroups || []);
+    setMealsPerStudentDay(menu.mealsPerStudentDay ?? '');
+    setTraditionalCommunity(Boolean(menu.traditionalCommunity));
     setTargetSchoolIds(menu.schoolIds || []);
 
     // Load slots — migrate from legacy items if necessary
@@ -797,10 +798,15 @@ export default function Menus() {
   const handleSave = () => {
     if (convertingPartial) { toast.error('Conclua ou cancele a conversão para período parcial.'); return; }
     if (!title.trim()) { toast.error('Informe o título do cardápio.'); return; }
+    if ((mealCount !== '' && !validMealCount(mealCount)) || (studentCount !== '' && !validMealCount(studentCount)) || slots.some(s => s.mealCount != null && !validMealCount(s.mealCount))) {
+      toast.error('Informe quantidades inteiras e não negativas de alunos e refeições.'); return;
+    }
+    if (mealsPerStudentDay !== '' && (!Number.isSafeInteger(mealsPerStudentDay) || mealsPerStudentDay < 1)) { toast.error('Informe refeições por aluno/dia como número inteiro positivo.'); return; }
     const hasContent = slots.some((s) => s.composicao.length > 0);
     if (!hasContent) { toast.error('Adicione pelo menos um ingrediente ao cardápio.'); return; }
 
     const payload = {
+      ...nutritionProfile,
       attendanceMode,
       title,
       category:             effectiveCategory,
@@ -808,6 +814,7 @@ export default function Menus() {
       referenceMonth,
       weekStartDate:        weekStartDate || undefined,
       studentCount:         studentCount !== '' ? Number(studentCount) : undefined,
+      mealCount: mealCount !== '' ? Number(mealCount) : undefined,
       schoolIds:            targetSchoolIds,
       slots,
       items:                [],
@@ -1144,6 +1151,13 @@ export default function Menus() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="menu-meal-count">Nº de refeições por dia/refeição</Label>
+                    <Input id="menu-meal-count" type="number" min="0" step="1" value={mealCount}
+                      onChange={e => setMealCount(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder={studentCount !== '' ? String(studentCount) : 'Ex.: 120'} className="mt-1" />
+                    <p className="mt-1 text-xs text-muted-foreground">Em branco, usa o nº de alunos. Pode ajustar cada refeição abaixo.</p>
+                  </div>
+                  <div>
                     <Label>Escolas</Label>
                     <div className="mt-1">
                       <MultiSchoolSelector
@@ -1361,6 +1375,27 @@ export default function Menus() {
                   </CardContent>
                 </Card>
 
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Perfil para adequação nutricional</CardTitle>
+                    <CardDescription>Defina o público atendido. Refeições por aluno/dia determinam a referência nutricional; refeições a produzir determinam kg/litros.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {AGE_GROUPS.map(group => <label key={group.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={nutritionAgeGroups.includes(group.id)} onCheckedChange={checked => setNutritionAgeGroups(previous => checked === true ? [...previous, group.id] : previous.filter(id => id !== group.id))} />
+                        {group.label}
+                      </label>)}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div><Label htmlFor="meals-per-student">Refeições por aluno por dia</Label>
+                        <Input id="meals-per-student" type="number" min="1" step="1" value={mealsPerStudentDay} onChange={e => setMealsPerStudentDay(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Ex.: 2" />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm"><Checkbox checked={traditionalCommunity} onCheckedChange={value => setTraditionalCommunity(value === true)} />Escola indígena, quilombola ou de outros povos e comunidades tradicionais</label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Jornada selecionada: {attendanceMode === 'integral' ? 'integral' : 'parcial'}. Até 6 meses e idades fora das faixas do Anexo IV requerem avaliação individual da RT.</p>
+                  </CardContent>
+                </Card>
+
                 {/* ── Weekly grid ─────────────────────────────────────────────── */}
                 <div className="flex flex-wrap items-center gap-2" aria-label="Visualização do cardápio">
                   <Button type="button" variant={editorView === 'day' ? 'default' : 'outline'} aria-pressed={editorView === 'day'} onClick={() => setEditorView('day')}>Editar por dia</Button>
@@ -1394,6 +1429,7 @@ export default function Menus() {
                         {meals.map((meal) => {
                           const slot        = slots.find((s) => s.dayLabel === day && s.mealLabel === meal);
                           const composicao  = slot?.composicao ?? [];
+                          const plannedMeals = slotMealCount(productionContext, slot);
                           const totalKcal   = composicao.reduce((sum, ins) => sum + insumoKcal(ins), 0);
 
                           return (
@@ -1416,6 +1452,14 @@ export default function Menus() {
                                 </div>
                               </div>
 
+                              <div className="mt-2">
+                                <Label htmlFor={'meal-count-' + day + '-' + meal} className="text-xs">Nº de refeições</Label>
+                                <Input id={'meal-count-' + day + '-' + meal} type="number" min="0" step="1"
+                                  value={slot?.mealCount ?? ''} placeholder={String(mealCount !== '' ? mealCount : studentCount !== '' ? studentCount : 'Usar padrão')}
+                                  onChange={e => mutateSlot(day, meal, s => ({ ...s, mealCount: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                                  className="mt-1 h-8" />
+                                <p className="text-[10px] text-gray-500">Em branco, usa o padrão. Zero = sem produção.</p>
+                              </div>
                               {/* Nome da preparação impresso no PDF */}
                               <Input
                                 aria-label={`Nome do prato - ${day} - ${meal}`}
@@ -1459,14 +1503,16 @@ export default function Menus() {
                                         </button>
                                       </div>
 
+                                      <p className="text-[10px] text-gray-500 mt-1">Per capita por refeição</p>
                                       {/* Peso atual (editável) + kcal calculado */}
                                       <div className="flex items-center gap-1.5">
                                         <Input
                                           type="number"
-                                          min="1"
+                                          min="0" step="0.1"
+                                          aria-label={`Per capita de ${ins.nome} - ${day} - ${meal}`}
                                           value={ins.pesoAtual}
                                           onChange={(e) =>
-                                            updateInsumoPeso(day, meal, ins.id, Math.max(1, parseFloat(e.target.value) || 1))
+                                            updateInsumoPeso(day, meal, ins.id, Math.max(0, parseFloat(e.target.value) || 0))
                                           }
                                           className="h-6 w-16 text-[10px] text-center px-1 py-0 border-green-300"
                                         />
@@ -1475,6 +1521,9 @@ export default function Menus() {
                                           {kcal.toFixed(0)} kcal
                                         </span>
                                       </div>
+                                      <p className="mt-1 text-xs font-medium text-blue-700" aria-live="polite">
+                                        {plannedMeals === undefined ? 'Informe o nº de refeições para calcular a produção.' : `Produção prevista: ${productionAmount(ins.pesoAtual, plannedMeals).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${ins.sourceUnit === 'ml' ? 'L' : 'kg'} (${plannedMeals} refeições)`}
+                                      </p>
                                     </div>
                                   );
                                 })}
@@ -1517,8 +1566,8 @@ export default function Menus() {
                           { label: 'Kcal média',      value: summary.averageNutrients.kcal.toFixed(0) },
                           { label: studentCount ? `Custo/aluno (${studentCount} alunos)` : 'Proteína média',
                             value: studentCount ? `R$ ${summary.averageCost.toFixed(2)}` : `${summary.averageNutrients.protein.toFixed(1)} g` },
-                          { label: studentCount ? 'Custo total semana' : 'Insumos da ag. familiar',
-                            value: studentCount ? `R$ ${(summary.averageCost * 5 * Number(studentCount)).toFixed(2)}` : `${summary.familyFarmShare.toFixed(0)}%`,
+                          { label: 'Custo previsto de produção',
+                            value: plannedCost === undefined ? 'Informe refeições' : `R$ ${plannedCost.toFixed(2)}`,
                             ok: undefined },
                         ].map(({ label, value, ok }) => (
                           <div key={label} className="rounded-lg border bg-white p-3">
@@ -1530,22 +1579,20 @@ export default function Menus() {
                         ))}
                       </div>
 
-                      <p className="text-xs text-muted-foreground">Referências gerais de triagem. A adequação ao Anexo IV depende da faixa etária, jornada e número de refeições e deve ser validada pela RT. A proporção de insumos da agricultura familiar não mede o percentual legal de recursos utilizados nas compras.</p>
-                      <div className="grid gap-2 md:grid-cols-7">
-                        {fndeTargets.map((t) => {
-                          const val = summary.averageNutrients[t.key];
-                          const ok  = val >= t.min;
-                          return (
-                            <div key={t.key} className="rounded-lg border bg-white p-2 text-center">
-                              <p className="text-[10px] uppercase text-gray-400">{t.label}</p>
-                              <p className={`text-base font-bold ${ok ? 'text-green-600' : 'text-red-500'}`}>
-                                {val.toFixed(1)}
-                              </p>
-                              <p className="text-[10px] text-gray-300">≥{t.min}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <p className="text-xs text-muted-foreground">Comparação da média de segunda a sexta por aluno com o Anexo IV. Dias vazios entram como zero. As faixas de macronutrientes são comparadas pelos limites inferior e superior. A RT revisa o resultado.</p>
+                      <a href={FNDE_SOURCE} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Fonte: Resolução CD/FNDE nº 4/2026 — Anexo IV</a>
+                      {nutritionAssessment.groups.map(group => <div key={group.age} className="space-y-2">
+                        <h3 className="text-sm font-semibold">{group.label} · {group.coverage}% {group.perMeal ? 'por refeição (PCT)' : 'das necessidades diárias'}</h3>
+                        <div className="overflow-x-auto"><table className="w-full text-xs">
+                          <thead><tr><th className="text-left">Nutriente</th><th>Planejado/dia</th><th>Referência/dia</th><th>% do mínimo</th><th>Resultado</th></tr></thead>
+                          <tbody>{group.rows.map(row => <tr key={row.key} className="border-t">
+                            <td className="py-2">{row.label}</td><td className="text-center">{row.actual.toFixed(1)} {row.unit}</td>
+                            <td className="text-center">{row.min}{row.max == null ? '' : ' a ' + row.max} {row.unit}</td>
+                            <td className="text-center">{row.review ? 'Conferir tabela' : row.percent.toFixed(1) + '%'}</td>
+                            <td className={row.status === 'within' ? 'text-center text-green-700' : 'text-center text-amber-700'}>{row.status === 'review' ? 'Conferência RT/FNDE' : row.status === 'below' ? 'Abaixo' : row.status === 'above' ? 'Acima da faixa' : 'Dentro da referência'}</td>
+                          </tr>)}</tbody>
+                        </table></div>
+                      </div>)}
 
                       {summary.complianceAlerts.length > 0 && (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -1742,7 +1789,6 @@ export default function Menus() {
                   const schoolNames = (menu.schoolIds ?? []).map((id) => schoolMap.get(id) ?? id);
                   const cat = menu.category as (typeof categories)[number];
                   const ml  = mealMap[cat] ?? ['Refeição'];
-                  const afOk = menu.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30);
                   return (
                     <tr key={menu.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
@@ -1768,7 +1814,7 @@ export default function Menus() {
                       </td>
                       <td className="px-3 py-3 text-right font-semibold">{menu.averageKcal.toFixed(0)}</td>
                       <td className="px-3 py-3 text-right hidden sm:table-cell">R$ {menu.averageCost.toFixed(2)}</td>
-                      <td className={`px-3 py-3 text-right font-semibold hidden lg:table-cell ${afOk ? 'text-green-700' : 'text-amber-600'}`}>
+                      <td className="px-3 py-3 text-right font-semibold hidden lg:table-cell text-gray-600">
                         {menu.familyFarmShare.toFixed(0)}%
                       </td>
                       <td className="px-3 py-3 text-right text-gray-600 hidden lg:table-cell">
@@ -1862,9 +1908,9 @@ export default function Menus() {
                         <p className="text-xs text-gray-400">Proteína média</p>
                         <p className="font-bold">{menu.averageProtein.toFixed(1)} g</p>
                       </div>
-                      <div className={`rounded-lg p-2 ${menu.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30) ? 'bg-green-50' : 'bg-amber-50'}`}>
-                        <p className="text-xs text-gray-400">Ag. Familiar</p>
-                        <p className={`font-bold ${menu.familyFarmShare >= (new Date().getFullYear() >= 2026 ? 45 : 30) ? 'text-green-700' : 'text-amber-600'}`}>
+                      <div className="rounded-lg p-2 bg-gray-50">
+                        <p className="text-xs text-gray-400">Insumos da ag. familiar</p>
+                        <p className="font-bold text-gray-600">
                           {menu.familyFarmShare.toFixed(0)}%
                         </p>
                       </div>
@@ -1893,7 +1939,7 @@ export default function Menus() {
                           <span>📅 {format(new Date(menu.weekStartDate + 'T12:00:00'), 'dd/MM')} – {format(new Date(new Date(menu.weekStartDate + 'T12:00:00').setDate(new Date(menu.weekStartDate + 'T12:00:00').getDate() + 4)), 'dd/MM/yyyy')}</span>
                         )}
                         {menu.studentCount && (
-                          <span>👨‍🎓 {menu.studentCount} alunos · R$ {(menu.averageCost).toFixed(2)}/aluno/dia · semana: R$ {(menu.averageCost * 5 * menu.studentCount).toFixed(2)}</span>
+                          <span>👨‍🎓 {menu.studentCount} alunos · R$ {(menu.averageCost).toFixed(2)}/aluno/dia · produção prevista: {menuProductionCost(menu) === undefined ? 'informe refeições' : `R$ ${menuProductionCost(menu)!.toFixed(2)}`}</span>
                         )}
                       </div>
                     )}

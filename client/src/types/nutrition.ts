@@ -1,3 +1,4 @@
+import type { NutritionAgeGroup } from '../lib/fndeNutrition';
 import type { SchoolPeriod } from './index';
 export interface NutritionNutrientSet {
   kcal: number;
@@ -55,6 +56,8 @@ export interface Recipe {
   prepTime?: string;
   preparationMethod?: string;
   operationalNotes?: string;
+  /** Presentation/serving standard under art. 17 §9. */
+  presentationStandard?: string;
   /** Medida caseira da porção (ex.: "1 concha média", "2 colheres de servir") */
   medidaCaseira?: string;
   costTotal: number;
@@ -112,6 +115,8 @@ export interface MenuInsumo {
  * composicao drives all nutritional calculations.
  */
 export interface MenuSlot {
+  /** Portions for this meal; absent uses menu default. Zero cancels production. */
+  mealCount?: number;
   id: string;
   dayLabel: string;
   mealLabel: string;
@@ -132,6 +137,9 @@ export interface MenuWorkflowEntry {
 }
 
 export interface Menu {
+  nutritionAgeGroups?: NutritionAgeGroup[];
+  mealsPerStudentDay?: number;
+  traditionalCommunity?: boolean;
   id: string;
   title: string;
   /** Primary category — determines meal grid structure (e.g. 'Creche' vs 'Fundamental 1') */
@@ -141,6 +149,7 @@ export interface Menu {
   attendanceMode?: 'partial' | 'integral';
   referenceMonth: string;
   weekStartDate?: string;   // ISO date (YYYY-MM-DD) of the Monday of the reference week
+  mealCount?: number;
   studentCount?: number;    // number of students served by this menu
   schoolIds?: string[];
   /** Legacy flat list — kept for backward-compat; new menus use slots instead */

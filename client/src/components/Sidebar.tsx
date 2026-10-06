@@ -62,6 +62,7 @@ const alimentacaoChildren: NavItem[] = [
   { label: 'Cardápios',       href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" /> },
   { label: 'Fichas Técnicas', href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
   { label: 'Dietas Especiais',href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
+  { label: 'Registro diário', href: '/nutrition/daily-records', icon: <Factory className="h-4 w-4" /> },
   { label: 'Produção',        href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
   { label: 'Relatório Gerencial', href: '/nutrition/reports',   icon: <FileBarChart2 className="h-4 w-4" /> },
   { label: 'Avaliação Nutricional', href: '/nutrition/assessment', icon: <HeartPulse className="h-4 w-4" /> },

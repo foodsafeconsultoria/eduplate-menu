@@ -1,8 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'wouter';
-import { Apple, BookOpen, ClipboardMinus, Factory, FileBarChart2, HeartPulse, ShieldAlert, ShoppingCart } from 'lucide-react';
+import { Apple, ClipboardCheck, BookOpen, ClipboardMinus, Factory, FileBarChart2, HeartPulse, ShieldAlert, ShoppingCart } from 'lucide-react';
 
 const moduleCards = [
+  { title: 'Registro diário', description: 'Cumprimento do cardápio, verificações técnicas, ocorrências e providências por cardápio e dia.', icon: ClipboardCheck, href: '/nutrition/daily-records' },
   {
     title: 'Alimentos',
     description: 'Base padronizada de alimentos, composição nutricional, preços e origem.',

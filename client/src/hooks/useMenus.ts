@@ -11,6 +11,9 @@ const COLLECTION_NAME = 'nutrition_menus';
 const LEGACY_ORG_ID = 'pnae-default-org';
 
 export interface CreateMenuInput {
+  nutritionAgeGroups?: Menu['nutritionAgeGroups'];
+  mealsPerStudentDay?: number;
+  traditionalCommunity?: boolean;
   title: string;
   category: string;
   targetCategories: string[];
@@ -18,6 +21,7 @@ export interface CreateMenuInput {
   referenceMonth: string;
   weekStartDate?: string;
   studentCount?: number;
+  mealCount?: number;
   schoolIds?: string[];
   /** New composition-based slots */
   slots: MenuSlot[];
@@ -76,6 +80,7 @@ function normalizeInsumo(raw: any, idx: number): MenuInsumo {
 
 function normalizeSlot(raw: any, idx: number): MenuSlot {
   return {
+    mealCount: raw?.mealCount != null ? Number(raw.mealCount) : undefined,
     id:           raw?.id           || `slot-${idx}`,
     dayLabel:     raw?.dayLabel     || '',
     mealLabel:    raw?.mealLabel    || '',
@@ -96,6 +101,9 @@ function normalizeMenus(raw: unknown): Menu[] {
       id:             menu.id             || `menu-imported-${index}`,
       title:          menu.title          || 'Cardápio sem título',
       category:       menu.category       || 'Geral',
+      nutritionAgeGroups: Array.isArray(menu.nutritionAgeGroups) ? menu.nutritionAgeGroups : [],
+      mealsPerStudentDay: menu.mealsPerStudentDay != null ? Number(menu.mealsPerStudentDay) : undefined,
+      traditionalCommunity: Boolean(menu.traditionalCommunity),
       attendanceMode: menu.attendanceMode === 'partial' ? 'partial' : 'integral',
       // targetCategories: backward-compat — default to [category] if missing
       targetCategories: Array.isArray(menu.targetCategories) && menu.targetCategories.length > 0
@@ -104,6 +112,7 @@ function normalizeMenus(raw: unknown): Menu[] {
       referenceMonth: menu.referenceMonth || '',
       weekStartDate: menu.weekStartDate || undefined,
       studentCount:  menu.studentCount != null ? Number(menu.studentCount) : undefined,
+      mealCount: menu.mealCount != null ? Number(menu.mealCount) : undefined,
       schoolIds: Array.isArray(menu.schoolIds) ? menu.schoolIds : [],
       items:  Array.isArray(menu.items)  ? menu.items  : [],
       slots:  Array.isArray(menu.slots)
@@ -185,11 +194,15 @@ export function useMenus() {
           id: `menu-${crypto.randomUUID()}`,
           title: input.title.trim(),
           category: input.category,
+          nutritionAgeGroups: input.nutritionAgeGroups || [],
+          mealsPerStudentDay: input.mealsPerStudentDay,
+          traditionalCommunity: Boolean(input.traditionalCommunity),
           targetCategories: input.targetCategories,
           attendanceMode: input.attendanceMode || 'integral',
           referenceMonth: input.referenceMonth,
           weekStartDate: input.weekStartDate,
           studentCount: input.studentCount,
+          mealCount: input.mealCount,
           schoolIds: input.schoolIds || [],
           items: input.items || [],
           slots: input.slots,
@@ -235,11 +248,15 @@ export function useMenus() {
           ...targetMenu,
           ...(input.title              !== undefined && { title:              input.title.trim() }),
           ...(input.category           !== undefined && { category:           input.category }),
+          ...('nutritionAgeGroups' in input && { nutritionAgeGroups: input.nutritionAgeGroups }),
+          ...('mealsPerStudentDay' in input && { mealsPerStudentDay: input.mealsPerStudentDay }),
+          ...('traditionalCommunity' in input && { traditionalCommunity: input.traditionalCommunity }),
           ...(input.targetCategories   !== undefined && { targetCategories:   input.targetCategories }),
           ...(input.attendanceMode !== undefined && { attendanceMode: input.attendanceMode }),
           ...(input.referenceMonth     !== undefined && { referenceMonth:     input.referenceMonth }),
           ...(input.weekStartDate      !== undefined && { weekStartDate:      input.weekStartDate }),
           ...(input.studentCount       !== undefined && { studentCount:       input.studentCount }),
+          ...('mealCount' in input && { mealCount: input.mealCount }),
           ...(input.schoolIds          !== undefined && { schoolIds:          input.schoolIds }),
           ...(input.slots              !== undefined && { slots:              input.slots }),
           ...(input.items              !== undefined && { items:              input.items }),
