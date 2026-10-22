@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMenus } from '@/hooks/useMenus';
 import { useNotificationState } from '@/hooks/useNotificationState';
 import { useSchedules } from '@/hooks/useFirestore';
-import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useDocuments } from '@/hooks/useDocuments';
 import EduPlateLogo from '@/components/EduPlateLogo';
 import {
@@ -12,8 +11,8 @@ import {
   Apple, Bell, BookOpen, Calendar, CheckCircle,
   ClipboardCheck, ClipboardList, ClipboardMinus, Factory,
   FileBarChart2, FileText, GraduationCap, HeartPulse, LayoutDashboard,
-  LogOut, Menu, School, Shield, ShieldAlert, Trophy,
-  User, Users, Utensils, Wrench, X, ChevronDown,
+  LogOut, Menu, School, ShieldAlert, ShoppingCart,
+  User, Users, Utensils, X, ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +45,7 @@ function Dropdown({
   return (
     <div ref={ref} className="relative">
       <button
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all',
@@ -69,7 +69,7 @@ function Dropdown({
           {items.map((item) => {
             const active = location === item.href;
             return (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => { setOpen(false); onNavigate(); }}
@@ -87,7 +87,7 @@ function Dropdown({
                     {item.badge}
                   </span>
                 ) : null}
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -125,30 +125,30 @@ function UserMenu({ name, onLogout }: { name: string; onLogout: () => void }) {
 
       {open && (
         <div className="absolute top-full right-0 mt-1 w-48 rounded-2xl border border-white/10 bg-[#1b2a4a] shadow-2xl z-50 py-1.5 overflow-hidden">
-          <a
+          <Link
             href="/profile"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/8 hover:text-white transition-colors"
           >
             <User className="h-4 w-4 text-[#4caf50]" />
             Meu Perfil
-          </a>
-          <a
+          </Link>
+          <Link
             href="/team"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/8 hover:text-white transition-colors"
           >
             <Users className="h-4 w-4 text-[#4caf50]" />
             Equipe / Convites
-          </a>
-          <a
+          </Link>
+          <Link
             href="/billing"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:bg-white/8 hover:text-white transition-colors"
           >
             <FileText className="h-4 w-4 text-[#4caf50]" />
             Assinatura
-          </a>
+          </Link>
           <div className="my-1 border-t border-white/10" />
           <button
             onClick={() => { setOpen(false); onLogout(); }}
@@ -171,13 +171,12 @@ export default function TopNav() {
   const { user, logout } = useAuth();
   const { menus } = useMenus();
   const { schedules } = useSchedules();
-  const { tickets } = useMaintenanceTickets();
   const { getExpiringDocuments } = useDocuments();
   const { isSeen } = useNotificationState(user?.uid);
 
   const currentUserName = user?.displayName?.trim() || '';
   const isAdmin = user?.role === 'admin';
-  const canManageMenus = user?.role === 'admin' || user?.role === 'nutritionist';
+  const canManageMenus = user?.role === 'admin' || user?.role === 'nutritionist' || user?.role === 'nutricionista';
 
   const workflowAlertCount = menus.filter((menu) => {
     let alertId = '';
@@ -206,23 +205,22 @@ export default function TopNav() {
       new Date(s.scheduledDate) >= startOfToday &&
       !isSeen(`schedule:${s.id}`),
   ).length;
-  const maintenanceAlertCount = tickets.filter(
-    (t) => t.status === 'open' && t.priority === 'high' && !isSeen(`ticket:${t.id}`),
-  ).length;
   const expiringDocCount = getExpiringDocuments(30).filter(
     (d) => !isSeen(`doc:${d.id}:expiry`),
   ).length;
-  const notificationsCount = workflowAlertCount + upcomingVisitsCount + maintenanceAlertCount + expiringDocCount;
+  const notificationsCount = workflowAlertCount + upcomingVisitsCount + expiringDocCount;
   const fiscalizacaoBadge = upcomingVisitsCount;
-  const maisBadge = maintenanceAlertCount;
 
   const alimentacaoItems: DropdownItem[] = [
+    { label: 'Visão da alimentação', href: '/nutrition', icon: <Apple className="h-4 w-4" /> },
     { label: 'Registro diário', href: '/nutrition/daily-records', icon: <ClipboardCheck className="h-4 w-4" /> },
     { label: 'Alimentos',        href: '/nutrition/foods',         icon: <Apple className="h-4 w-4" /> },
     { label: 'Cardápios',        href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" />, badge: workflowAlertCount },
     { label: 'Fichas Técnicas',  href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
     { label: 'Dietas Especiais', href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
-    { label: 'Manejo de Sobras', href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
+    { label: 'Publicações', href: '/nutrition/publications', icon: <BookOpen className="h-4 w-4" /> },
+    { label: 'Lista de compras', href: '/nutrition/shopping-list', icon: <ShoppingCart className="h-4 w-4" /> },
+    { label: 'Produção e sobras', href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
     { label: 'Relatório Gerencial', href: '/nutrition/reports',    icon: <FileBarChart2 className="h-4 w-4" /> },
     { label: 'Avaliação Nutricional', href: '/nutrition/assessment', icon: <HeartPulse className="h-4 w-4" /> },
   ];
@@ -236,16 +234,10 @@ export default function TopNav() {
     { label: 'Aceitabilidade', href: '/acceptability', icon: <CheckCircle className="h-4 w-4" /> },
   ];
 
-  // Gestão predial / itens de apoio — fora do caminho principal da nutricionista.
-  const maisItems: DropdownItem[] = [
-    { label: 'Gestão de EPIs', href: '/ppes',         icon: <Shield className="h-4 w-4" /> },
-    { label: 'Manutenção',     href: '/maintenance',  icon: <Wrench className="h-4 w-4" />, badge: maintenanceAlertCount || undefined },
-  ];
-
   const isTopActive = (href: string) => location === href;
 
   const topItem = (label: string, href: string, icon: React.ReactNode, badge?: number) => (
-    <a
+    <Link
       key={href}
       href={href}
       onClick={() => setMobileOpen(false)}
@@ -261,7 +253,7 @@ export default function TopNav() {
       {badge ? (
         <span className="rounded-full bg-[#ff9800]/25 px-1.5 py-0.5 text-xs font-bold text-[#ffd08a]">{badge}</span>
       ) : null}
-    </a>
+    </Link>
   );
 
   return (
@@ -272,9 +264,9 @@ export default function TopNav() {
         style={{ background: '#1B2A4A' }}
       >
         {/* Logo */}
-        <a href="/" className="mr-4 shrink-0">
+        <Link href="/" className="mr-4 shrink-0">
           <EduPlateLogo className="h-8 w-auto" markOnly />
-        </a>
+        </Link>
 
         {/* Nav items */}
         <div className="flex items-center gap-0.5 flex-1">
@@ -298,19 +290,11 @@ export default function TopNav() {
 
           {topItem('Documentos',   '/documents',   <FileText className="h-4 w-4" />, expiringDocCount || undefined)}
           {topItem('Treinamentos', '/training',     <GraduationCap className="h-4 w-4" />)}
-
-          <Dropdown
-            label="Mais"
-            icon={<Wrench className="h-4 w-4" />}
-            items={maisItems}
-            badge={maisBadge || undefined}
-            onNavigate={() => setMobileOpen(false)}
-          />
         </div>
 
         {/* Right actions */}
         <div className="flex items-center gap-1 shrink-0 ml-2">
-          <a
+          <Link
             href="/notifications"
             className={cn(
               'relative flex items-center justify-center w-9 h-9 rounded-xl transition-all',
@@ -323,7 +307,7 @@ export default function TopNav() {
                 {notificationsCount}
               </span>
             )}
-          </a>
+          </Link>
 
           <UserMenu
             name={currentUserName || 'Usuário'}
@@ -337,19 +321,21 @@ export default function TopNav() {
         className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 border-b border-white/10"
         style={{ background: '#1B2A4A' }}
       >
-        <a href="/">
+        <Link href="/">
           <EduPlateLogo className="h-7 w-auto" markOnly />
-        </a>
+        </Link>
         <div className="flex items-center gap-2">
           {notificationsCount > 0 && (
-            <a href="/notifications" className="relative w-9 h-9 flex items-center justify-center text-white/70">
+            <Link href="/notifications" className="relative w-9 h-9 flex items-center justify-center text-white/70">
               <Bell className="h-5 w-5" />
               <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[#ff9800] text-white text-[10px] font-bold flex items-center justify-center">
                 {notificationsCount}
               </span>
-            </a>
+            </Link>
           )}
           <button
+            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(!mobileOpen)}
             className="rounded-xl bg-white/8 p-2 text-white"
           >
@@ -374,8 +360,9 @@ export default function TopNav() {
             <div className="py-1 px-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Outros</div>
             {topItem('Documentos',   '/documents',   <FileText className="h-5 w-5" />, expiringDocCount || undefined)}
             {topItem('Treinamentos', '/training',     <GraduationCap className="h-5 w-5" />)}
-            {maisItems.map(i => topItem(i.label, i.href, i.icon, i.badge))}
             {topItem('Notificações', '/notifications',<Bell className="h-5 w-5" />, notificationsCount || undefined)}
+            {topItem('Equipe / Convites', '/team', <Users className="h-5 w-5" />)}
+            {topItem('Assinatura', '/billing', <FileText className="h-5 w-5" />)}
             {topItem('Meu Perfil',   '/profile',      <User className="h-5 w-5" />)}
             <div className="border-t border-white/10 pt-2 mt-2">
               <button

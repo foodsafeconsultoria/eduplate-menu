@@ -19,9 +19,7 @@ import NotFound from "./pages/NotFound";
 const Acceptability      = lazy(() => import('@/pages/Acceptability'));
 const Dashboard          = lazy(() => import('@/pages/Dashboard'));
 const Inspection         = lazy(() => import('@/pages/Inspection'));
-const Maintenance        = lazy(() => import('@/pages/Maintenance'));
 const Notifications      = lazy(() => import('@/pages/Notifications'));
-const PPEs               = lazy(() => import('@/pages/PPEs'));
 const Profile            = lazy(() => import('@/pages/Profile'));
 const RestoIngesta       = lazy(() => import('@/pages/RestoIngesta'));
 const Schedule           = lazy(() => import('@/pages/Schedule'));
@@ -77,12 +75,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/nutrition/publications': 'Publicações de cardápio | EduPlate Menu',
   '/nutrition/shopping-list': 'Lista de compras | EduPlate Menu',
   '/inspection': 'Fiscalização | EduPlate Menu',
-  '/ppes': 'Controle de EPIs | EduPlate Menu',
   '/schedule': 'Agenda | EduPlate Menu',
   '/schools': 'Escolas | EduPlate Menu',
   '/resto-ingesta': 'Resto-ingestão | EduPlate Menu',
   '/acceptability': 'Testes de aceitabilidade | EduPlate Menu',
-  '/maintenance': 'Manutenção | EduPlate Menu',
   '/training': 'Treinamentos | EduPlate Menu',
   '/notifications': 'Notificações | EduPlate Menu',
   '/profile': 'Perfil | EduPlate Menu',
@@ -183,12 +179,10 @@ function Router() {
                   <Route path="/nutrition/publications" component={MenuPublications} />
                   <Route path="/nutrition/shopping-list" component={ShoppingList} />
                   <Route path="/inspection" component={Inspection} />
-                  <Route path="/ppes" component={PPEs} />
                   <Route path="/schedule" component={Schedule} />
                   <Route path="/schools" component={Schools} />
                   <Route path="/resto-ingesta" component={RestoIngesta} />
                   <Route path="/acceptability" component={Acceptability} />
-                  <Route path="/maintenance" component={Maintenance} />
                   <Route path="/training" component={Training} />
                   <Route path="/notifications" component={Notifications} />
                   <Route path="/profile" component={Profile} />

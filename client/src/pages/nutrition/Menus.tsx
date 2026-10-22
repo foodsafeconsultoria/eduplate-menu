@@ -1,10 +1,11 @@
 import { AGE_GROUPS, assessMenuNutrition, FNDE_SOURCE, type NutritionAgeGroup } from '@/lib/fndeNutrition';
 import { menuProductionCost, productionAmount, slotMealCount, validMealCount } from '@/lib/menuProduction';
 import { recipePortionGrams } from '@/lib/recipeMenuPortion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { useMenuEditorRecovery } from '@/hooks/useMenuEditorRecovery';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -310,7 +311,7 @@ export default function Menus() {
   const { schools, loading: schoolsLoading } = useSchools();
   const { foods } = useFoods();
   const { recipes, loading: recipesLoading } = useRecipes();
-  const { menus, loading, addMenu, updateMenu, deleteMenu } = useMenus();
+  const { menus, loading, addMenu, updateMenu, deleteMenu, syncStates, retryPending } = useMenus();
   const { specialDiets, loading: dietsLoading } = useSpecialDiets();
   const { settings: orgSettings, loading: settingsLoading } = useOrgSettings();
   const pdfContext: MenuPdfContext = { schools, recipes, specialDiets, settings: orgSettings, loading: dietsLoading || schoolsLoading || recipesLoading || settingsLoading };
@@ -754,6 +755,8 @@ export default function Menus() {
   };
 
   const openEditMenu = (menu: Menu) => {
+    if (recovery.draft) { toast.info('Recupere ou descarte seu rascunho antes de editar outro cardápio.'); return; }
+    setSavedMenuId(menu.id);
     setEditorView('day');
     const savedMeals = Array.from(new Set((menu.slots?.length ? menu.slots : menu.items || []).map(slot => slot.mealLabel)));
     setSavedMealStructure(savedMeals.length ? savedMeals : null);
@@ -793,15 +796,71 @@ export default function Menus() {
     setOpen(true);
   };
 
+  const [editorStep, setEditorStep] = useState<'setup' | 'compose' | 'review'>('setup');
+  const [closeRequested, setCloseRequested] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<Menu | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
+  const [savedMenuId, setSavedMenuId] = useState<string | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const editorSnapshot = { editingMenuId, title, targetCategories, referenceMonth, weekStartDate, studentCount, mealCount, nutritionAgeGroups, mealsPerStudentDay, traditionalCommunity, targetSchoolIds, slots, attendanceMode, savedMealStructure };
+  const restoreSnapshot = (value: typeof editorSnapshot) => {
+    setEditingMenuId(previous => previous || value.editingMenuId);
+    setTitle(value.title); setTargetCategories(value.targetCategories); setReferenceMonth(value.referenceMonth);
+    setWeekStartDate(value.weekStartDate); setStudentCount(value.studentCount); setMealCount(value.mealCount);
+    setNutritionAgeGroups(value.nutritionAgeGroups); setMealsPerStudentDay(value.mealsPerStudentDay);
+    setTraditionalCommunity(value.traditionalCommunity); setTargetSchoolIds(value.targetSchoolIds);
+    setRawSlots(value.slots); setAttendanceMode(value.attendanceMode); setSavedMealStructure(value.savedMealStructure);
+    setConvertingPartial(false); setPartialChoices({});
+  };
+  const recovery = useMenuEditorRecovery(editorSnapshot, open, user?.organizationId, user?.uid, restoreSnapshot);
+  const editorIdentity = `${user?.organizationId || ''}:${user?.uid || ''}`;
+  const identityRef = useRef(editorIdentity);
+  useEffect(() => {
+    if (identityRef.current !== editorIdentity) {
+      identityRef.current = editorIdentity; setOpen(false); resetForm(); setSavedMenuId(null);
+    }
+  }, [editorIdentity]);
+  const saveStatus = (savedMenuId || editingMenuId) ? syncStates[(savedMenuId || editingMenuId)!] : undefined;
+  const closeEditor = () => { if (recovery.dirty) setCloseRequested(true); else { setOpen(false); resetForm(); } };
+  const confirmDelete = async () => {
+    if (!deleteCandidate || deleting) return;
+    setDeleting(true);
+    try { if (await deleteMenu(deleteCandidate.id)) { toast.success('Cardápio excluído da nuvem.'); setDeleteCandidate(null); } }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível excluir. Tente novamente.'); }
+    finally { setDeleting(false); }
+  };
+  useEffect(() => {
+    if (open) { window.scrollTo({ top: 0, behavior: 'instant' }); setEditorStep('setup'); }
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    document.body.dataset.menuEditorActive = 'true';
+    return () => { delete document.body.dataset.menuEditorActive; };
+  }, [open]);
+  useEffect(() => { if (open) window.scrollTo({ top: 0, behavior: 'instant' }); }, [open, editorStep]);
+  useEffect(() => {
+    if (!open) return;
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z') return;
+      if ((event.target as HTMLElement).matches('input, textarea, [contenteditable="true"]')) return;
+      event.preventDefault(); if (event.shiftKey) recovery.redo(); else recovery.undo();
+    };
+    window.addEventListener('keydown', keyboard); return () => window.removeEventListener('keydown', keyboard);
+  }, [open, recovery]);
+
   // ── Save ──────────────────────────────────────────────────────────────────────
 
   const handleSave = () => {
+    if (saveLock.current) return;
     if (convertingPartial) { toast.error('Conclua ou cancele a conversão para período parcial.'); return; }
     if (!title.trim()) { toast.error('Informe o título do cardápio.'); return; }
     if ((mealCount !== '' && !validMealCount(mealCount)) || (studentCount !== '' && !validMealCount(studentCount)) || slots.some(s => s.mealCount != null && !validMealCount(s.mealCount))) {
       toast.error('Informe quantidades inteiras e não negativas de alunos e refeições.'); return;
     }
     if (mealsPerStudentDay !== '' && (!Number.isSafeInteger(mealsPerStudentDay) || mealsPerStudentDay < 1)) { toast.error('Informe refeições por aluno/dia como número inteiro positivo.'); return; }
+    if (weekStartDate && (isNaN(new Date(weekStartDate + 'T12:00:00').getTime()) || new Date(weekStartDate + 'T12:00:00').getDay() !== 1)) { toast.error('Escolha uma segunda-feira para iniciar a semana.'); setEditorStep('setup'); return; }
     const hasContent = slots.some((s) => s.composicao.length > 0);
     if (!hasContent) { toast.error('Adicione pelo menos um ingrediente ao cardápio.'); return; }
 
@@ -834,16 +893,17 @@ export default function Menus() {
       responsibleName:      currentUserName,
     };
 
-    if (editingMenuId) {
-      updateMenu(editingMenuId, payload);
-      toast.success('Cardápio atualizado com sucesso!');
-    } else {
-      addMenu(payload);
-      toast.success('Cardápio salvo com sucesso!');
-    }
-
-    resetForm();
-    setOpen(false);
+    saveLock.current = true; setSaving(true);
+    try {
+      let id = editingMenuId;
+      if (id) { if (!updateMenu(id, payload)) return; }
+      else { id = addMenu(payload).id; setEditingMenuId(id); }
+      setSavedMenuId(id);
+      recovery.markSaved({ ...editorSnapshot, editingMenuId: id });
+      toast.success('Cardápio salvo neste dispositivo. Acompanhe a sincronização no topo.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar. Seu preenchimento foi mantido.');
+    } finally { saveLock.current = false; setSaving(false); }
   };
 
   // ── Diet alerts — por dia do almoço ─────────────────────────────────────────
@@ -979,38 +1039,35 @@ export default function Menus() {
     return list;
   }, [menus, gallerySearch, galleryCategory, galleryMonth, gallerySort, schoolMap]);
 
-  // ── JSX ───────────────────────────────────────────────────────────────────────
-
-  return (
-    <>
-    <div className="min-h-screen flex-1 p-4 md:p-8">
-      <div className="w-full space-y-6">
-
-        {/* Page header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Cardápios</h1>
-            <p className="mt-1 text-gray-500">Planejamento semanal por categoria e escola.</p>
-          </div>
-
-          <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
-            <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Novo Cardápio
-              </Button>
-            </DialogTrigger>
-
-            {/* ── Dialog ──────────────────────────────────────────────────────── */}
-            <DialogContent className="max-h-[95vh] overflow-y-auto sm:max-w-[96vw]">
-              <DialogHeader>
-                <DialogTitle>{editingMenuId ? 'Editar Cardápio' : 'Montar Cardápio'}</DialogTitle>
-                <DialogDescription className="sr-only">
-                  Formulário de montagem de cardápio semanal por categoria e escola.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-5">
+  const confirmations = (<><AlertDialog open={closeRequested} onOpenChange={setCloseRequested}>
+  <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Guardar seu preenchimento?</AlertDialogTitle><AlertDialogDescription>Há alterações que ainda não foram salvas no cardápio. O rascunho fica neste navegador e nesta conta.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter>
+    <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+    <Button variant="destructive" onClick={() => { if (recovery.discard()) { setCloseRequested(false); setOpen(false); resetForm(); } }}>Descartar alterações</Button>
+    <Button disabled={recovery.storageError} onClick={() => { setCloseRequested(false); setOpen(false); resetForm(); }}>Guardar e sair</Button>
+  </AlertDialogFooter></AlertDialogContent>
+</AlertDialog>
+<AlertDialog open={!!deleteCandidate} onOpenChange={value => { if (!value && !deleting) setDeleteCandidate(null); }}>
+  <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir este cardápio?</AlertDialogTitle><AlertDialogDescription>O cardápio “{deleteCandidate?.title}” será removido. Esta ação não pode ser desfeita. Você pode cancelar e fazer uma cópia antes.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter>
+    <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel><Button variant="destructive" disabled={deleting} onClick={confirmDelete}>{deleting ? 'Confirmando exclusão…' : 'Excluir cardápio'}</Button>
+  </AlertDialogFooter></AlertDialogContent>
+</AlertDialog></>);
+  if (open) return (<div className="min-h-screen bg-gray-50 pb-28">
+    <header className="border-b bg-white px-4 py-3 shadow-sm md:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <div><Button variant="ghost" size="sm" onClick={closeEditor}>← Voltar aos cardápios</Button><h1 className="text-xl font-bold">{editingMenuId ? 'Editar cardápio' : 'Montar cardápio'}</h1></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" disabled={!recovery.canUndo} onClick={recovery.undo}>Desfazer</Button><Button variant="outline" disabled={!recovery.canRedo} onClick={recovery.redo}>Refazer</Button>
+          <Button disabled={saving} onClick={handleSave}>{saving ? 'Salvando…' : 'Salvar cardápio'}</Button>
+        </div>
+      </div>
+      <p className="mx-auto mt-2 max-w-7xl text-sm" role="status" aria-live="polite">{recovery.storageError ? 'Não foi possível proteger o rascunho neste navegador. Mantenha esta página aberta e salve o cardápio.' : recovery.dirty ? 'Alterações não salvas no cardápio · rascunho protegido neste navegador.' : saveStatus === 'syncing' ? 'Salvo neste dispositivo · sincronizando com a nuvem…' : saveStatus === 'synced' ? 'Salvo na nuvem.' : saveStatus === 'local' ? 'Salvo neste dispositivo · aguardando sincronização.' : 'Preencha os dados e salve para registrar este cardápio.'}
+      {saveStatus === 'local' && <Button size="sm" variant="link" onClick={retryPending}>Tentar sincronizar</Button>}</p>
+    </header>
+    <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 md:px-8">
+      <nav aria-label="Etapas do editor" className="grid grid-cols-3 gap-2">{([{ id: 'setup', label: '1. Atendimento' }, { id: 'compose', label: '2. Montar semana' }, { id: 'review', label: '3. Revisar e exportar' }] as const).map(step => <Button key={step.id} variant={editorStep === step.id ? 'default' : 'outline'} aria-current={editorStep === step.id ? 'step' : undefined} onClick={() => setEditorStep(step.id)} className="h-auto whitespace-normal py-3">{step.label}</Button>)}</nav>
+      <div className="flex flex-wrap justify-between gap-3 rounded-xl border bg-white p-4 text-sm"><span><strong>{slots.filter(slot => slot.composicao.length).length}</strong> refeições preenchidas · {targetSchoolIds.length ? targetSchoolIds.length + ' escola(s)' : 'Todas as escolas'}</span><span>{summary ? summary.averageNutrients.kcal.toFixed(0) + ' kcal/aluno/dia (média semanal)' : 'Semana sem composição'}</span><span>{plannedCost === undefined ? 'Informe as porções para calcular a produção' : 'Produção estimada: R$ ' + plannedCost.toFixed(2)}</span></div>
+                    <div className="space-y-5">
+                <section hidden={editorStep !== 'setup'} className="space-y-5">
                 <div className="space-y-2 rounded-md border p-3">
                   <Label>Período de atendimento</Label>
                   <Select value={attendanceMode} onValueChange={(value: AttendanceMode) => {
@@ -1051,11 +1108,11 @@ export default function Menus() {
                 </div>}
 
                 {/* Meta fields */}
-                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <div>
-                    <Label>Título *</Label>
+                    <Label htmlFor="menu-title">Título *</Label>
                     <Input
-                      value={title}
+                      id="menu-title" value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Ex: Semana 1 – Creche"
                       className="mt-1"
@@ -1104,19 +1161,19 @@ export default function Menus() {
                     </p>
                   </div>
                   <div>
-                    <Label>Mês de referência</Label>
+                    <Label htmlFor="menu-month">Mês de referência</Label>
                     <Input
-                      value={referenceMonth}
+                      id="menu-month" value={referenceMonth}
                       onChange={(e) => setReferenceMonth(e.target.value)}
                       placeholder="Ex: Maio 2026"
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label>Semana (segunda-feira)</Label>
+                    <Label htmlFor="menu-week">Semana (segunda-feira)</Label>
                     <Input
                       type="date"
-                      value={weekStartDate}
+                      id="menu-week" value={weekStartDate}
                       onChange={(e) => {
                         const v = e.target.value;
                         setWeekStartDate(v);
@@ -1140,22 +1197,22 @@ export default function Menus() {
                     )}
                   </div>
                   <div>
-                    <Label>Nº de alunos</Label>
+                    <Label htmlFor="menu-students">Alunos atendidos por este cardápio</Label>
                     <Input
                       type="number"
                       min="0"
-                      value={studentCount}
+                      id="menu-students" value={studentCount}
                       onChange={(e) => setStudentCount(e.target.value === '' ? '' : Number(e.target.value))}
                       placeholder="Ex: 120"
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="menu-meal-count">Nº de refeições por dia/refeição</Label>
+                    <Label htmlFor="menu-meal-count">Porções a preparar em cada refeição</Label>
                     <Input id="menu-meal-count" type="number" min="0" step="1" value={mealCount}
                       onChange={e => setMealCount(e.target.value === '' ? '' : Number(e.target.value))}
                       placeholder={studentCount !== '' ? String(studentCount) : 'Ex.: 120'} className="mt-1" />
-                    <p className="mt-1 text-xs text-muted-foreground">Em branco, usa o nº de alunos. Pode ajustar cada refeição abaixo.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Ex.: 120 alunos → 120 porções no almoço e 120 no lanche. Em branco, usa o nº de alunos; cada refeição pode ter uma quantidade própria. Não some almoço e lanche neste campo.</p>
                   </div>
                   <div>
                     <Label>Escolas</Label>
@@ -1174,11 +1231,34 @@ export default function Menus() {
                   {selectedSchools.map(s => <p key={s.id}><strong>{s.name}:</strong> {s.mealSchedules?.length ? s.mealSchedules.map(r => `${r.mealLabel} às ${r.time}`).join(' · ') : 'Horários não cadastrados. Edite a escola para informar.'}</p>)}
                   <p className="text-xs text-muted-foreground">O PDF usa os horários atuais do cadastro de cada escola. Nome, CRN e assinatura são obtidos em Perfil.</p>
                 </div>
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Perfil para adequação nutricional</CardTitle>
+                    <CardDescription>Defina o público atendido. Refeições por aluno/dia determinam a referência nutricional; refeições a produzir determinam kg/litros.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {AGE_GROUPS.map(group => <label key={group.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={nutritionAgeGroups.includes(group.id)} onCheckedChange={checked => setNutritionAgeGroups(previous => checked === true ? [...previous, group.id] : previous.filter(id => id !== group.id))} />
+                        {group.label}
+                      </label>)}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div><Label htmlFor="meals-per-student">Refeições por aluno por dia</Label>
+                        <Input id="meals-per-student" type="number" min="1" step="1" value={mealsPerStudentDay} onChange={e => setMealsPerStudentDay(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Ex.: 2" /><p className="mt-1 text-xs text-muted-foreground">Ex.: almoço + lanche = 2 refeições por aluno. Este número define a referência nutricional; não multiplica as porções de produção.</p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm"><Checkbox checked={traditionalCommunity} onCheckedChange={value => setTraditionalCommunity(value === true)} />Escola indígena, quilombola ou de outros povos e comunidades tradicionais</label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Jornada selecionada: {attendanceMode === 'integral' ? 'integral' : 'parcial'}. Até 6 meses e idades fora das faixas do Anexo IV requerem avaliação individual da RT.</p>
+                  </CardContent>
+                </Card>
+
+                </section>
+                <section hidden={editorStep !== 'compose'} className="space-y-5">
                 {/* ── Ingredient / recipe picker ──────────────────────────────── */}
-                <Card className="border-green-200 bg-green-50/30">
+                <div ref={pickerRef} className="scroll-mt-40"><Card className="border-green-200 bg-green-50/30">
                   <CardContent className="p-4 space-y-3">
                     <p className="text-xs font-semibold text-green-800 uppercase tracking-wide">
-                      Adicionar ingrediente ou ficha técnica
+                      Adicionar em {targetDay} · {targetMeal}
                     </p>
                     <div className="grid gap-3 md:grid-cols-4">
                       <div>
@@ -1375,27 +1455,7 @@ export default function Menus() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Perfil para adequação nutricional</CardTitle>
-                    <CardDescription>Defina o público atendido. Refeições por aluno/dia determinam a referência nutricional; refeições a produzir determinam kg/litros.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                      {AGE_GROUPS.map(group => <label key={group.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox checked={nutritionAgeGroups.includes(group.id)} onCheckedChange={checked => setNutritionAgeGroups(previous => checked === true ? [...previous, group.id] : previous.filter(id => id !== group.id))} />
-                        {group.label}
-                      </label>)}
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div><Label htmlFor="meals-per-student">Refeições por aluno por dia</Label>
-                        <Input id="meals-per-student" type="number" min="1" step="1" value={mealsPerStudentDay} onChange={e => setMealsPerStudentDay(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Ex.: 2" />
-                      </div>
-                      <label className="flex items-center gap-2 text-sm"><Checkbox checked={traditionalCommunity} onCheckedChange={value => setTraditionalCommunity(value === true)} />Escola indígena, quilombola ou de outros povos e comunidades tradicionais</label>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Jornada selecionada: {attendanceMode === 'integral' ? 'integral' : 'parcial'}. Até 6 meses e idades fora das faixas do Anexo IV requerem avaliação individual da RT.</p>
-                  </CardContent>
-                </Card>
-
+                </div>
                 {/* ── Weekly grid ─────────────────────────────────────────────── */}
                 <div className="flex flex-wrap items-center gap-2" aria-label="Visualização do cardápio">
                   <Button type="button" variant={editorView === 'day' ? 'default' : 'outline'} aria-pressed={editorView === 'day'} onClick={() => setEditorView('day')}>Editar por dia</Button>
@@ -1433,11 +1493,11 @@ export default function Menus() {
                           const totalKcal   = composicao.reduce((sum, ins) => sum + insumoKcal(ins), 0);
 
                           return (
-                            <div key={`${day}-${meal}`} className="rounded-lg border bg-white p-2">
+                            <div key={`${day}-${meal}`} className={`rounded-xl border-2 bg-white p-4 ${targetDay === day && targetMeal === meal ? 'border-green-600 shadow-sm' : 'border-gray-100'}`}>
 
                               {/* Meal label + clipboard */}
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                <span className="text-sm font-semibold text-gray-700">
                                   {meal}
                                 </span>
                                 <div className="flex gap-1">
@@ -1453,7 +1513,7 @@ export default function Menus() {
                               </div>
 
                               <div className="mt-2">
-                                <Label htmlFor={'meal-count-' + day + '-' + meal} className="text-xs">Nº de refeições</Label>
+                                <Label htmlFor={'meal-count-' + day + '-' + meal} className="text-xs">Porções a preparar nesta refeição</Label>
                                 <Input id={'meal-count-' + day + '-' + meal} type="number" min="0" step="1"
                                   value={slot?.mealCount ?? ''} placeholder={String(mealCount !== '' ? mealCount : studentCount !== '' ? studentCount : 'Usar padrão')}
                                   onChange={e => mutateSlot(day, meal, s => ({ ...s, mealCount: e.target.value === '' ? undefined : Number(e.target.value) }))}
@@ -1529,12 +1589,12 @@ export default function Menus() {
                                 })}
 
                                 {/* Add trigger — clicking sets picker to this slot */}
-                                <div
+                                <button type="button"
                                   className="cursor-pointer rounded border-2 border-dashed border-gray-200 py-1.5 text-center text-[10px] text-gray-400 hover:border-green-300 hover:text-green-600"
-                                  onClick={() => { setTargetDay(day); setTargetMeal(meal); }}
+                                  onClick={() => { setTargetDay(day); setTargetMeal(meal); pickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
                                 >
                                   + adicionar ingrediente / ficha técnica
-                                </div>
+                                </button>
 
                                 {/* Slot total kcal */}
                                 {composicao.length > 0 && (
@@ -1553,6 +1613,8 @@ export default function Menus() {
                   ))}
                 </div>
 
+                </section>
+                <section hidden={editorStep !== 'review'} className="space-y-5">
                 {/* ── Weekly summary ───────────────────────────────────────────── */}
                 {summary && (
                   <Card className="border-green-200 bg-green-50">
@@ -1646,17 +1708,35 @@ export default function Menus() {
                   </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-                    Salvar Cardápio
-                  </Button>
-                </div>
+                </section>
               </div>
-            </DialogContent>
-          </Dialog>
+
+      {editorStep === 'review' && <Card><CardHeader><CardTitle>Conferir o PDF antes de distribuir</CardTitle><CardDescription>Salve as alterações para manter o PDF igual ao cardápio registrado. Revise escolas, horários, porções e pendências técnicas.</CardDescription></CardHeader><CardContent><Button disabled={recovery.dirty || !editingMenuId || pdfContext.loading} onClick={() => { const menu = menus.find(menu => menu.id === editingMenuId); if (menu) generateMenuPDF(menu, selectedSchools.map(school => school.name), meals, false, pdfContext).catch(() => toast.error('Não foi possível gerar o PDF. Confira as pendências do cardápio.')); }}>Gerar PDF para conferência</Button></CardContent></Card>}
+    </main>
+    <footer className="fixed bottom-0 left-0 right-0 z-20 border-t bg-white px-3 py-3 md:px-8"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2"><Button size="sm" variant="outline" aria-label="Sair do editor" onClick={closeEditor}>Sair</Button><div className="flex flex-wrap gap-2">{editorStep !== 'setup' && <Button size="sm" variant="outline" onClick={() => setEditorStep(editorStep === 'review' ? 'compose' : 'setup')}>Anterior</Button>}{editorStep !== 'review' && <Button size="sm" variant="outline" onClick={() => setEditorStep(editorStep === 'setup' ? 'compose' : 'review')}>Continuar</Button>}<Button size="sm" aria-label="Salvar cardápio" disabled={saving} onClick={handleSave}>{saving ? 'Salvando…' : 'Salvar'}</Button></div></div></footer>
+    {confirmations}
+  </div>);
+
+  // ── JSX ───────────────────────────────────────────────────────────────────────
+
+  return (
+    <>
+    <div className="min-h-screen flex-1 p-4 md:p-8">
+      <div className="w-full space-y-6">
+
+        {/* Page header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Cardápios</h1>
+            <p className="mt-1 text-gray-500">Planejamento semanal por categoria e escola.</p>
+          </div>
+
+          <Button onClick={() => { if (recovery.draft) { toast.info('Recupere ou descarte o rascunho existente antes de iniciar outro.'); return; } resetForm(); setSavedMenuId(null); setOpen(true); }} className="bg-green-600 hover:bg-green-700"><BookOpen className="mr-2 h-4 w-4" />Novo cardápio</Button>
         </div>
 
+        {recovery.draft && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><div><strong>Você tem um rascunho para continuar.</strong><p className="text-sm">{recovery.draft.snapshot.title || 'Cardápio sem título'} · guardado neste navegador em {new Date(recovery.draft.savedAt).toLocaleString('pt-BR')}</p></div><div className="flex gap-2"><Button onClick={() => { recovery.recover(); setSavedMenuId(recovery.draft?.snapshot.editingMenuId || null); setOpen(true); }}>Recuperar rascunho</Button><Button variant="outline" onClick={() => { if (window.confirm('Descartar o rascunho guardado neste navegador?')) recovery.discard(); }}>Descartar</Button></div></div>}
+        {Object.values(syncStates).some(status => status !== 'synced') && <div role="status" className="rounded-xl border bg-blue-50 p-3 text-sm">Há cardápios salvos neste dispositivo que ainda aguardam confirmação da nuvem. <Button variant="link" onClick={retryPending}>Tentar sincronizar</Button></div>}
+        {confirmations}
         {/* ── Gallery filter bar ───────────────────────────────────────────────── */}
         {!loading && menus.length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -1855,7 +1935,7 @@ export default function Menus() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:bg-red-50"
-                            title="Excluir" onClick={() => { deleteMenu(menu.id); toast.success('Cardápio excluído.'); }}>
+                            title="Excluir" onClick={() => setDeleteCandidate(menu)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -2020,7 +2100,7 @@ export default function Menus() {
                       <Button
                         variant="outline" size="sm"
                         className="h-8 w-8 p-0 border-red-200 text-red-600 hover:bg-red-50"
-                        onClick={() => { deleteMenu(menu.id); toast.success('Cardápio excluído.'); }}
+                        onClick={() => setDeleteCandidate(menu)}
                         title="Excluir cardápio"
                       >
                         <Trash2 className="h-4 w-4" />

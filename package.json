@@ -10,7 +10,9 @@
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "vitest run --config vitest.menu.config.ts",
+    "test:editor": "node scripts/qa-menu-editor.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

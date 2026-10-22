@@ -55,6 +55,7 @@ describe('Cardápio por escola', () => {
     expect(doc.output()).toContain('17:00');
     expect(doc.output()).toContain('(900.0)');
     expect(doc.output()).not.toContain('(1800.0)');
+    expect(doc.getNumberOfPages()).toBe(1); // No page containing only the signature.
     expect(() => renderSchoolMenus(new jsPDF(), { ...menu, attendanceMode: 'partial', slots: changed }, [], context)).toThrow('Revise');
     if (process.env.MENU_PDF_QA) writeFileSync('tmp/pdfs/cardapio-parcial.pdf', Buffer.from(doc.output('arraybuffer')));
   });
@@ -62,6 +63,20 @@ describe('Cardápio por escola', () => {
     expect(menuMeals(menu.slots, [school], ['Jantar'])).toEqual(['Almoço', 'Lanche']);
     expect(menuMeals([...menu.slots, { ...menu.slots[0], mealLabel: 'Jantar' }], [school], [])).toContain('Jantar');
     expect(menuMeals([], [], ['Lanche'])).toEqual(['Lanche']);
+  });
+  it('identifica rascunhos e refeições sem produção no PDF', () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    renderSchoolMenus(doc, { ...menu, status: 'draft', slots: [{ ...menu.slots[0], mealCount: 0 }] }, [], context);
+    expect(doc.output()).toContain('Rascunho');
+    expect(doc.output()).toContain('Sem produção prevista');
+  });
+  it('mantém a assinatura junto ao conteúdo quando há avaliação por faixa etária', () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    renderSchoolMenus(doc, { ...menu, nutritionAgeGroups: ['6-10y'], attendanceMode: 'integral', mealsPerStudentDay: 2 }, [], context);
+    const pages = (doc.internal as unknown as { pages: string[][] }).pages;
+    const last = pages[doc.getNumberOfPages()].join('\n');
+    expect(last).toContain('CRN EXEMPLO');
+    expect(last).toContain('Planejado');
   });
   it('não cria refeições a partir dos horários de várias escolas', () => {
     const other = { ...school, id: 'b', mealSchedules: ['Desjejum', 'Jantar', 'Lanche da Manhã', 'Lanche da manhã', 'Almoço da tarde'].map(mealLabel => ({ mealLabel, time: '10:00' })) };

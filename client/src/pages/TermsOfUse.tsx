@@ -46,7 +46,7 @@ export default function TermsOfUse() {
             'Fiscalização e auditorias de unidades escolares',
             'Gestão de treinamentos com emissão de certificados (QR Code)',
             'Geração de relatórios e exportação para o SIGPC/FNDE',
-            'Controle de EPIs e documentação operacional',
+            'Documentação operacional da alimentação escolar',
           ]} />
         </Section>
 

@@ -1,134 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeSchoolDetails } from '@/lib/schoolDetails';
 import { subscribeServerSchools, saveSchoolOnServer, deleteSchoolOnServer } from '@/lib/schoolServerStore';
-import { EPI, Inspection, Schedule, School } from '@/types';
-import { loadHybridCollection, persistHybridSnapshot, removeHybridDocument, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
-import { useAuth } from '@/contexts/AuthContext';
+import { Inspection, Schedule, School } from '@/types';
+import { loadHybridCollection, persistHybridSnapshot, syncHybridCollectionSnapshot, syncHybridDocument } from '@/lib/hybridStore';
 import { useOrgId } from '@/hooks/useOrgId';
-
-const LEGACY_ORG_ID = 'pnae-default-org';
-
-const DEMO_SCHOOLS: School[] = [
-  { id: '1', name: 'EMEI Profa. Angelina Maria de Almeida Tannus', createdAt: new Date(), updatedAt: new Date() },
-  { id: '2', name: 'EMEF Prof. Antonio de Freitas Filho', createdAt: new Date(), updatedAt: new Date() },
-  { id: '3', name: 'CEI Prof. Carmen Silvia Beltrame Martineli', createdAt: new Date(), updatedAt: new Date() },
-  { id: '4', name: 'CEI Prof. Jose Goncalves de Sousa', createdAt: new Date(), updatedAt: new Date() },
-  { id: '5', name: 'Creche Escola Pro Infancia Elisa Yoshie Takeda Toyonaga', createdAt: new Date(), updatedAt: new Date() },
-  { id: '6', name: 'EMEF Profa. Elza Apparecida Cagliari Rolim', createdAt: new Date(), updatedAt: new Date() },
-  { id: '7', name: 'Escola Creche Professora Elza Maria de Melo', createdAt: new Date(), updatedAt: new Date() },
-  { id: '8', name: 'EMEF Profa. Lucia de Morais Camargo Rocha', createdAt: new Date(), updatedAt: new Date() },
-  { id: '9', name: 'EMEI Profa. Maria Araujo Pinheiro', createdAt: new Date(), updatedAt: new Date() },
-  { id: '10', name: 'CEI Monteiro Lobato', createdAt: new Date(), updatedAt: new Date() },
-  { id: '11', name: 'EE Profa. Sandra Aparecida de Araujo', createdAt: new Date(), updatedAt: new Date() },
-  { id: '12', name: 'EE Abilio Raposo Ferraz Junior', createdAt: new Date(), updatedAt: new Date() },
-  { id: '13', name: 'EE Joao Michelin', createdAt: new Date(), updatedAt: new Date() },
-];
-
-const DEMO_INSPECTIONS: Inspection[] = [
-  {
-    id: '1',
-    schoolId: '1',
-    schoolName: 'EMEI Profa. Angelina Maria de Almeida Tannus',
-    director: 'Maria Silva',
-    regularStudents: 150,
-    integralStudents: 50,
-    inspectionDate: new Date('2026-02-10'),
-    inspectionTime: '09:30',
-    nutritionist: 'Ana Costa',
-    employees: [],
-    manipulationProcedures: Array(6).fill({ question: '', answer: 'yes', observation: '' }),
-    uniformization: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    visitors: Array(2).fill({ question: '', answer: 'yes', observation: '' }),
-    stockManagement: Array(15).fill({ question: '', answer: 'yes', observation: '' }),
-    refrigerator: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    freezer: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    kitchen: Array(9).fill({ question: '', answer: 'yes', observation: '' }),
-    menu: Array(2).fill({ question: '', answer: 'yes', observation: '' }),
-    distribution: Array(9).fill({ question: '', answer: 'yes', observation: '' }),
-    pestControl: Array(6).fill({ question: '', answer: 'yes', observation: '' }),
-    waterPotability: Array(3).fill({ question: '', answer: 'yes', observation: '' }),
-    physicalStructure: Array(4).fill({ question: '', answer: 'yes', observation: '' }),
-    executors: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    meals: [],
-    visitObjective: 'Verificacao de conformidade com boas praticas',
-    guidelines: 'Implementar melhorias na organizacao do estoque',
-    overallScore: 85,
-    createdAt: new Date(),
-    createdBy: 'Ana Costa',
-  },
-  {
-    id: '2',
-    schoolId: '2',
-    schoolName: 'EMEF Prof. Antonio de Freitas Filho',
-    director: 'Joao Santos',
-    regularStudents: 200,
-    integralStudents: 80,
-    inspectionDate: new Date('2026-02-08'),
-    inspectionTime: '14:00',
-    nutritionist: 'Carlos Oliveira',
-    employees: [],
-    manipulationProcedures: Array(6).fill({ question: '', answer: 'yes', observation: '' }),
-    uniformization: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    visitors: Array(2).fill({ question: '', answer: 'yes', observation: '' }),
-    stockManagement: Array(15).fill({ question: '', answer: 'yes', observation: '' }),
-    refrigerator: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    freezer: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    kitchen: Array(9).fill({ question: '', answer: 'yes', observation: '' }),
-    menu: Array(2).fill({ question: '', answer: 'yes', observation: '' }),
-    distribution: Array(9).fill({ question: '', answer: 'yes', observation: '' }),
-    pestControl: Array(6).fill({ question: '', answer: 'yes', observation: '' }),
-    waterPotability: Array(3).fill({ question: '', answer: 'yes', observation: '' }),
-    physicalStructure: Array(4).fill({ question: '', answer: 'yes', observation: '' }),
-    executors: Array(5).fill({ question: '', answer: 'yes', observation: '' }),
-    meals: [],
-    visitObjective: 'Verificacao de conformidade com boas praticas',
-    guidelines: 'Realizar treinamento com funcionarios',
-    overallScore: 78,
-    createdAt: new Date(),
-    createdBy: 'Carlos Oliveira',
-  },
-];
-
-const DEMO_EPIS: EPI[] = [
-  {
-    id: '1',
-    schoolId: '1',
-    schoolName: 'EMEI Profa. Angelina Maria de Almeida Tannus',
-    employeeName: 'Maria da Silva',
-    deliveryDate: new Date('2026-02-05'),
-    items: {
-      luvaMalhaAco: true,
-      luvaNitrilo: true,
-      botaPvcBranca: true,
-      calcadoSeguranca: true,
-      aventalPvc: true,
-      aventalTermico: false,
-      proterorAuricular: true,
-      respiradorPff: false,
-      luvaTermica: false,
-      touca: true,
-      oculosSeguranca: true,
-    },
-    signature: '',
-    createdAt: new Date(),
-    createdBy: 'Ana Costa',
-  },
-];
-
-const DEMO_SCHEDULES: Schedule[] = [
-  {
-    id: '1',
-    schoolId: '3',
-    schoolName: 'CEI Prof. Carmen Silvia Beltrame Martineli',
-    scheduledDate: new Date('2026-02-20'),
-    nutritionist: 'Ana Costa',
-    type: 'inspection',
-    description: 'Inspecao de rotina',
-    status: 'pending',
-    createdAt: new Date(),
-    createdBy: 'Admin',
-  },
-];
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 function normalizeSchools(raw: unknown): School[] {
   if (!Array.isArray(raw)) return [];
@@ -187,37 +64,6 @@ function normalizeInspections(raw: unknown): Inspection[] {
       createdAt: toDate(inspection.createdAt),
       createdBy: inspection.createdBy || 'Sistema',
     } as Inspection;
-  });
-}
-
-function normalizeEpis(raw: unknown): EPI[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((item, index) => {
-    const epi = item as Partial<EPI>;
-    return {
-      ...epi,
-      id: epi.id || `epi-imported-${index}`,
-      schoolId: epi.schoolId || '',
-      schoolName: epi.schoolName || '',
-      employeeName: epi.employeeName || '',
-      deliveryDate: toDate(epi.deliveryDate),
-      items: epi.items || {
-        luvaMalhaAco: false,
-        luvaNitrilo: false,
-        botaPvcBranca: false,
-        calcadoSeguranca: false,
-        aventalPvc: false,
-        aventalTermico: false,
-        proterorAuricular: false,
-        respiradorPff: false,
-        luvaTermica: false,
-        touca: false,
-        oculosSeguranca: false,
-      },
-      signature: epi.signature || '',
-      createdAt: toDate(epi.createdAt),
-      createdBy: epi.createdBy || 'Sistema',
-    } as EPI;
   });
 }
 
@@ -312,7 +158,6 @@ export const useSchools = () => {
 };
 
 export const useInspections = () => {
-  const { user } = useAuth();
   const orgId = useOrgId();
 
   const [inspections, setInspectionsState] = useState<Inspection[]>([]);
@@ -348,49 +193,21 @@ export const useInspections = () => {
     next.forEach((item) => void syncHybridDocument(orgId, 'inspections', item));
   };
 
-  return { inspections, loading, setInspections };
-};
-
-export const useEPIs = () => {
-  const { user } = useAuth();
-  const orgId = useOrgId();
-
-  const [epis, setEpisState] = useState<EPI[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!orgId) { setLoading(false); return; }
-    let mounted = true;
-
-    loadHybridCollection({
-      orgId,
-      collectionName: 'epis',
-      storageKey: 'pnae_epis',
-      normalize: normalizeEpis,
-      fallbackData: [],
-    })
-      .then((items) => {
-        if (mounted) setEpisState(items);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [orgId]);
-
-  const setEpis = (next: EPI[]) => {
-    setEpisState(next);
-    persistHybridSnapshot(`pnae_epis_${orgId}`, next);
-    void syncHybridCollectionSnapshot(orgId, 'epis', next);
+  const deleteInspection = async (id: string) => {
+    if (!orgId) throw new Error('Organização indisponível.');
+    // Delete only the selected document, after server confirmation.
+    await deleteDoc(doc(db, 'organizations', orgId, 'inspections', id));
+    setInspectionsState(current => {
+      const next = current.filter(item => item.id !== id);
+      persistHybridSnapshot(`pnae_inspections_${orgId}`, next);
+      return next;
+    });
   };
 
-  return { epis, loading, setEpis };
+  return { inspections, loading, setInspections, deleteInspection };
 };
 
 export const useSchedules = () => {
-  const { user } = useAuth();
   const orgId = useOrgId();
 
   const [schedules, setSchedulesState] = useState<Schedule[]>([]);

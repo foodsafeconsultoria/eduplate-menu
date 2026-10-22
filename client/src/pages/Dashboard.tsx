@@ -7,7 +7,6 @@ import { useProductionLogs } from '@/hooks/useProductionLogs';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useRestoIngestaRecords } from '@/hooks/useRestoIngestaRecords';
 import { useSchools, useInspections, useSchedules } from '@/hooks/useFirestore';
-import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useSpecialDiets } from '@/hooks/useSpecialDiets';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
@@ -83,7 +82,6 @@ export default function Dashboard() {
   const { schedules } = useSchedules();
   const { recipes } = useRecipes();
   const { menus } = useMenus();
-  const { tickets } = useMaintenanceTickets();
   const { specialDiets } = useSpecialDiets();
   const { productionLogs } = useProductionLogs();
   const { records: acceptabilityRecords } = useAcceptabilityRecords();
@@ -132,16 +130,12 @@ export default function Dashboard() {
   );
 
   const upcomingVisitsCount = useMemo(
-    () => schedules.filter((s) => s.status === 'pending' && !isSeen(`schedule:${s.id}`)).length,
+    () => schedules.filter((s) => s.status === 'pending' && new Date(s.scheduledDate) >= new Date(new Date().setHours(0, 0, 0, 0)) && !isSeen(`schedule:${s.id}`)).length,
     [schedules, isSeen],
   );
 
-  const maintenanceAlertCount = useMemo(
-    () => tickets.filter((t) => t.status === 'open' && t.priority === 'high' && !isSeen(`ticket:${t.id}`)).length,
-    [tickets, isSeen],
-  );
 
-  const totalAlerts = workflowAlertCount + upcomingVisitsCount + maintenanceAlertCount;
+  const totalAlerts = workflowAlertCount + upcomingVisitsCount;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -179,7 +173,7 @@ export default function Dashboard() {
           <KpiCard
             label="Aceitabilidade"
             value={averageAcceptance === null ? '—' : `${averageAcceptance.toFixed(1)}%`}
-            sub={averageAcceptance === null ? 'Sem registros' : 'Meta FNDE: 85%'}
+            sub={averageAcceptance === null ? 'Sem registros' : 'Média dos testes registrados'}
             tone={averageAcceptance === null ? 'default' : averageAcceptance >= 85 ? 'green' : 'red'}
           />
           <KpiCard
@@ -201,9 +195,6 @@ export default function Dashboard() {
               {upcomingVisitsCount > 0 && (
                 <AlertPill count={upcomingVisitsCount} label="Visitas pendentes" tone="blue" />
               )}
-              {maintenanceAlertCount > 0 && (
-                <AlertPill count={maintenanceAlertCount} label="Manutenção crítica" tone="red" />
-              )}
             </div>
           </div>
         )}
@@ -213,20 +204,20 @@ export default function Dashboard() {
 
           {/* Agricultura familiar */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Agricultura familiar</p>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Insumos da agricultura familiar</p>
             <div className="flex items-baseline gap-2 mb-3">
-              <span className={`text-3xl font-semibold ${familyFarmShare >= 45 ? 'text-green-600' : 'text-amber-600'}`}>
-                {familyFarmShare.toFixed(0)}%
+              <span className="text-3xl font-semibold text-gray-900">
+                {menus.length === 0 ? '—' : `${familyFarmShare.toFixed(0)}%`}
               </span>
-              <span className="text-sm text-gray-400">média</span>
+              <span className="text-sm text-gray-400">{menus.length === 0 ? 'Sem cardápios' : 'média por cardápio'}</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1 mb-2.5">
               <div
-                className={`h-1 rounded-full ${familyFarmShare >= 45 ? 'bg-green-500' : 'bg-amber-400'}`}
+                className="h-1 rounded-full bg-blue-500"
                 style={{ width: `${Math.min(familyFarmShare, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">Meta mínima: 45% (Resolução CD/FNDE nº 4/2026)</p>
+            <p className="text-xs text-gray-400">Participação por quantidade de insumos nos cardápios. Não representa o percentual financeiro de compras.</p>
           </div>
 
           {/* Conformidade das visitas */}

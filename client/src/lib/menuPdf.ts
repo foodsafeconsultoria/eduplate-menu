@@ -106,7 +106,9 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   const titleLines = doc.splitTextToSize(school?.name || 'Rede escolar - unidade não cadastrada', width - textX - 14);
   const location = [settings?.municipio, settings?.uf].filter(Boolean).join(' / ');
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-  const metaLines = doc.splitTextToSize(`${menu.title}\n${stages.join(', ')} | ${menu.referenceMonth || 'Referência não informada'}${location ? ` | ${location}` : ''}`, width - textX - 14);
+  const statusLabels = { draft: 'Rascunho', under_review: 'Em revisão', approved: 'Aprovado', published: 'Publicado' };
+  const status = statusLabels[menu.status] || 'Situação não informada';
+  const metaLines = doc.splitTextToSize(`${menu.title}\n${stages.join(', ')} | ${menu.referenceMonth || 'Referência não informada'}${location ? ` | ${location}` : ''} | ${status}`, width - textX - 14);
   const headerHeight = 20 + titleLines.length * 4 + metaLines.length * 3.5;
   const header = () => {
     doc.setFillColor(242, 248, 244);
@@ -128,7 +130,7 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
   };
   // Draw header on each page created by a table, including continuations.
   const decorated = new Set<number>();
-  const table = (head: string[], body: string[][], startY: number, bottom = 15) => {
+  const table = (head: string[], body: string[][], startY: number, bottom = 15, compact = false) => {
     const grid = head.length === 6;
     const dayWidth = (width - 20 - 27) / 5;
     const titleLines = new Map<string, string[]>();
@@ -136,13 +138,14 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
     autoTable(doc, {
       head: [head], body, startY, theme: 'grid',
       margin: { left: 10, right: 10, top: headerHeight + 8, bottom },
-      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.7, overflow: 'linebreak', valign: 'middle', lineColor: [210, 225, 214] },
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: compact ? 1 : 1.7, overflow: 'linebreak', valign: 'middle', lineColor: [210, 225, 214] },
       columnStyles: grid ? {
         0: { cellWidth: 27, fontStyle: 'bold' },
         ...Object.fromEntries([1, 2, 3, 4, 5].map(i => [i, { cellWidth: dayWidth, valign: 'top' as const }])),
       } : {},
       headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 251, 249] },
+      pageBreak: grid ? 'auto' : 'avoid',
       rowPageBreak: 'avoid',
       didParseCell: ({ cell, section, column }) => {
         if (!grid || section !== 'body' || column.index === 0) return;
@@ -213,9 +216,10 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
     ...days.map(day => {
       const slot = slots.find(s => s.dayLabel === day && s.mealLabel === meal);
       if (!slot || (!slot.nomeFantasia && !slot.composicao.length)) return 'Não planejado';
+      if (slot.mealCount === 0) return 'Sem produção prevista (0 porções)';
       const ingredients = isPlainFruitSlot(slot, context.recipes) ? '' : slotIngredients(slot, context.recipes);
       return [slot.nomeFantasia || slot.composicao.map(i => i.nome).join(', '),
-        ingredients ? `\nIngredientes: ${ingredients}` : '',
+        ingredients ? `Ingredientes: ${ingredients}` : '',
         slotCompositionIssues(slot, context.recipes).length ? 'Composição pendente de revisão.' : '',
         nursery ? `Consistência: ${slot.consistency?.trim() || 'não informada'}` : '',
       ].filter(Boolean).join('\n');
@@ -234,23 +238,27 @@ function renderSchool(doc: jsPDF, menu: Menu, school: School | undefined, fallba
     menu.attendanceMode === 'partial' ? 'Atendimento parcial: manhã OU tarde. As refeições compartilhadas são contabilizadas uma única vez nos valores por aluno.' : '',
     'Valores calculados a partir das porções e composições cadastradas. A RT deve validar as necessidades por faixa etária, período de atendimento e os cardápios adaptados.',
     'Referência: Resolução CD/FNDE nº 4/2026, arts. 17 e 18.', ...nutritionAssessment.alerts].filter(Boolean);
-  y = table(['Observações e revisão técnica'], notes.map(n => [n]), y);
+  y = table(['Observações e revisão técnica'], notes.map(n => [n]), y, 15, true);
   const signatureSpace = settings?.signatureDataUrl ? 17 : 9;
+  const name = settings?.nutritionistName?.trim() || 'Nome da RT não cadastrado';
+  const crn = settings?.nutritionistCrn?.trim() || 'não cadastrado';
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  const signerLines = doc.splitTextToSize(`${name} | CRN ${crn}`, width - 30);
+  // Reserve the actual signature height on the last table, keeping it with content.
+  const signatureBottom = 12 + 3 + signatureSpace + 8 + signerLines.length * 4;
   y = table(['Nutrientes por aluno / dia', 'Energia (kcal)', 'CHO (g)', 'PTN (g)', 'LIP (g)', 'Ca (mg)', 'Fe (mg)', 'Zn (mg)', 'Vit. A (µg)', 'Vit. C (mg)'],
-    days.map((day, i) => [dateLabels[i], ...totals[i].map(n => slots.some(s => s.dayLabel === day && s.composicao.length) ? n.toFixed(1) : '-')]), y, 34 + signatureSpace);
-  for (const group of nutritionAssessment.groups) {
+    days.map((day, i) => [dateLabels[i], ...totals[i].map(n => slots.some(s => s.dayLabel === day && s.composicao.length) ? n.toFixed(1) : '-')]), y, nutritionAssessment.groups.length ? 15 : signatureBottom);
+  for (let index = 0; index < nutritionAssessment.groups.length; index++) {
+    const group = nutritionAssessment.groups[index];
     y = table([group.label + ' — média por aluno/dia', 'Planejado', 'Referência', '% do mínimo', 'Revisão'], group.rows.map(row => [
       row.label, row.actual.toFixed(1) + ' ' + row.unit,
       row.min + (row.max == null ? '' : ' a ' + row.max) + ' ' + row.unit,
       row.review ? 'Conferir tabela' : row.percent.toFixed(1) + '%',
       row.status === 'review' ? 'RT/FNDE' : row.status === 'below' ? 'Abaixo' : row.status === 'above' ? 'Acima da faixa' : 'Dentro da referência',
-    ]), y, 34 + signatureSpace);
+    ]), y, index === nutritionAssessment.groups.length - 1 ? signatureBottom : 15);
   }
-  const name = settings?.nutritionistName?.trim() || 'Nome da RT não cadastrado';
-  const crn = settings?.nutritionistCrn?.trim() || 'não cadastrado';
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-  const signerLines = doc.splitTextToSize(`${name} | CRN ${crn}`, width - 30);
-  if (y + signatureSpace + 12 + signerLines.length * 4 > doc.internal.pageSize.getHeight() - 15) { doc.addPage(); header(); y = headerHeight + 10; }
+  if (y + signatureSpace + 8 + signerLines.length * 4 > doc.internal.pageSize.getHeight() - 12) { doc.addPage(); header(); y = headerHeight + 10; }
   let signed = false;
   if (settings?.signatureDataUrl) {
     try {

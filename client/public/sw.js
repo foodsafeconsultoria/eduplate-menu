@@ -4,7 +4,7 @@
  * Falls back to cached responses when offline.
  */
 
-const CACHE_NAME = 'eduplate-pnae-v13';
+const CACHE_NAME = 'eduplate-pnae-v14';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to pre-cache on install
@@ -13,7 +13,6 @@ const PRECACHE_ASSETS = [
   '/index.html',
   '/favicon.png',
   '/brasao-itai.png',
-  '/logo-nutricao.png',
   OFFLINE_URL,
 ];
 

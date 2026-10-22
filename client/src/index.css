@@ -198,3 +198,8 @@
     }
   }
 }
+/* Keep editor notifications above its persistent action bar. */
+body[data-menu-editor-active] [data-sonner-toaster] {
+  --offset-bottom: 88px !important;
+  --mobile-offset-bottom: 88px !important;
+}

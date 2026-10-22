@@ -10,11 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Download, Trash2, AlertCircle, Wrench, Trophy, Pencil, ClipboardCheck, CalendarDays, Loader2, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, Check } from 'lucide-react';
-import { Inspection, School, ChecklistItemData, MaintenanceTicket } from '@/types';
+import { Download, Trash2, AlertCircle, Trophy, Pencil, ClipboardCheck, CalendarDays, Loader2, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, Check } from 'lucide-react';
+import { Inspection, School, ChecklistItemData } from '@/types';
 import { checklistSections, sectionLabels } from '@/data/checklist';
 import { useSchools, useInspections } from '@/hooks/useFirestore';
-import { useMaintenanceTickets } from '@/hooks/useMaintenanceTickets';
 import { useAuth } from '@/contexts/AuthContext';
 
 function loadInspectionSigner(orgId?: string): { name: string; crn: string; municipality: string } {
@@ -778,14 +777,11 @@ export default function InspectionPage() {
   const { user } = useAuth();
   const orgId = user?.organizationId;
   const { schools } = useSchools();
-  const { inspections, setInspections } = useInspections();
-  const { addTicket: addMaintenanceTicket } = useMaintenanceTickets();
+  const { inspections, setInspections, deleteInspection } = useInspections();
   const { settings: orgSettings } = useOrgSettings();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('form');
-  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
   const [certificateDialogOpen, setCertificateDialogOpen] = useState(false);
-  const [selectedInspectionForMaintenance, setSelectedInspectionForMaintenance] = useState<Inspection | null>(null);
   const [selectedInspectionForCertificate, setSelectedInspectionForCertificate] = useState<Inspection | null>(null);
 
   // Editing state — when set, save updates the existing record instead of creating new
@@ -821,10 +817,6 @@ export default function InspectionPage() {
   const [guidelines, setGuidelines] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Maintenance form state
-  const [maintenanceEquipment, setMaintenanceEquipment] = useState('');
-  const [maintenanceDescription, setMaintenanceDescription] = useState('');
-  const [maintenancePriority, setMaintenancePriority] = useState<'low' | 'high'>('low');
 
 
 
@@ -971,38 +963,14 @@ export default function InspectionPage() {
     }
   };
 
-  const handleSaveMaintenance = async () => {
-    if (!maintenanceEquipment || !maintenanceDescription || !selectedInspectionForMaintenance) {
-      toast.error('Preencha todos os campos');
-      return;
-    }
-    try {
-      const newTicket: Omit<MaintenanceTicket, 'id'> = {
-        schoolId: selectedInspectionForMaintenance.schoolId,
-        schoolName: selectedInspectionForMaintenance.schoolName,
-        inspectionId: selectedInspectionForMaintenance.id,
-        equipment: maintenanceEquipment,
-        description: maintenanceDescription,
-        priority: maintenancePriority,
-        status: 'open',
-        createdAt: new Date(),
-        createdBy: 'Sistema'
-      };
-      addMaintenanceTicket(newTicket);
-      setMaintenanceEquipment(''); setMaintenanceDescription(''); setMaintenancePriority('low');
-      setMaintenanceDialogOpen(false);
-      toast.success('Ticket de manutenção criado com sucesso');
-    } catch (error) {
-      console.error(error);
-      toast.error('Erro ao criar ticket');
-    }
-  };
-
-  const handleDeleteInspection = (id: string) => {
+  const handleDeleteInspection = async (id: string) => {
     if (!window.confirm('Confirma a exclusão desta fiscalização?')) return;
-    const updated = inspections.filter(item => item.id !== id);
-    setInspections(updated);
-    toast.success('Fiscalização excluída');
+    try {
+      await deleteInspection(id);
+      toast.success('Fiscalização excluída');
+    } catch {
+      toast.error('Não foi possível excluir a fiscalização. Verifique a conexão e suas permissões.');
+    }
   };
 
   const handleEditInspection = (inspection: Inspection) => {
@@ -1371,48 +1339,6 @@ export default function InspectionPage() {
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { generateInspectionPDF(inspection, orgSettings?.logoDataUrl, { nutritionistName: orgSettings?.nutritionistName, nutritionistCrn: orgSettings?.nutritionistCrn, municipio: orgSettings?.municipio, uf: orgSettings?.uf }).catch(() => {}); }}>
                         <Download className="h-3.5 w-3.5" /> Baixar PDF
                       </Button>
-
-
-                      {/* Maintenance Dialog */}
-                      <Dialog open={maintenanceDialogOpen && selectedInspectionForMaintenance?.id === inspection.id}
-                        onOpenChange={open => { if (!open) setMaintenanceDialogOpen(false); }}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-1.5"
-                            onClick={() => { setSelectedInspectionForMaintenance(inspection); setMaintenanceDialogOpen(true); }}>
-                            <Wrench className="h-3.5 w-3.5" /> Manutenção
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Relatar Problema Estrutural</DialogTitle>
-                            <DialogDescription>Ticket de manutenção para {inspection.schoolName}</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="space-y-1.5">
-                              <label className="text-sm font-medium">Equipamento *</label>
-                              <Input placeholder="Ex: Fogão, Geladeira, Freezer" value={maintenanceEquipment} onChange={e => setMaintenanceEquipment(e.target.value)} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-sm font-medium">Descrição do Defeito *</label>
-                              <Textarea placeholder="Descreva o problema" value={maintenanceDescription} onChange={e => setMaintenanceDescription(e.target.value)} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-sm font-medium">Prioridade</label>
-                              <Select value={maintenancePriority} onValueChange={(v: any) => setMaintenancePriority(v)}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Baixa</SelectItem>
-                                  <SelectItem value="high">Alta</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex gap-3 justify-end">
-                              <Button variant="outline" onClick={() => setMaintenanceDialogOpen(false)}>Cancelar</Button>
-                              <Button onClick={handleSaveMaintenance} className="bg-accent hover:bg-accent/90 text-accent-foreground">Criar Ticket</Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
 
                       {/* Edit & Delete - correctly outside Dialog */}
                       <Button variant="ghost" size="sm" className="gap-1.5 text-primary hover:bg-primary/10"

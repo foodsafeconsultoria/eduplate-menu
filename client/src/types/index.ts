@@ -40,33 +40,6 @@ export interface School {
   updatedAt: Date;
 }
 
-// EPI - Equipamento de Proteção Individual
-export interface EPIItem {
-  luvaMalhaAco: boolean;
-  luvaNitrilo: boolean;
-  botaPvcBranca: boolean;
-  calcadoSeguranca: boolean;
-  aventalPvc: boolean;
-  aventalTermico: boolean;
-  proterorAuricular: boolean;
-  respiradorPff: boolean;
-  luvaTermica: boolean;
-  touca: boolean;
-  oculosSeguranca: boolean;
-}
-
-export interface EPI {
-  id: string;
-  schoolId: string;
-  schoolName: string;
-  employeeName: string;
-  deliveryDate: Date;
-  items: EPIItem;
-  signature: string; // Base64 da assinatura
-  createdAt: Date;
-  createdBy: string;
-}
-
 // Fiscalização/Inspeção - Checklist Item
 export interface ChecklistItemData {
   question: string;
@@ -199,22 +172,6 @@ export interface NutritionalAssessment {
   notes?: string;
   createdAt: Date;
   createdBy: string;
-}
-
-// Manutenção - Tickets
-export interface MaintenanceTicket {
-  id: string;
-  schoolId: string;
-  schoolName: string;
-  inspectionId?: string;
-  equipment: string;
-  description: string;
-  photo?: string;
-  priority: 'low' | 'high';
-  status: 'open' | 'in_progress' | 'resolved';
-  createdAt: Date;
-  createdBy: string;
-  resolvedAt?: Date;
 }
 
 // Gamificação - Certificado

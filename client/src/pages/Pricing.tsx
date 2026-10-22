@@ -43,7 +43,7 @@ const PLANS: Plan[] = [
       'Treinamentos com certificado por QR Code',
       'Dietas especiais por aluno, com etiquetas',
       'Documentos com alerta de vencimento',
-      'Relatório SIGPC/FNDE com um clique',
+      'Relatório gerencial para apoio à contabilidade',
       'Produção, sobras e testes de aceitabilidade',
       'Suporte prioritário',
     ],
@@ -70,7 +70,7 @@ const FAQS = [
   },
   {
     q: 'O sistema atende à legislação do PNAE (Lei 11.947/2009)?',
-    a: 'Sim. O EduPlate Menu foi desenvolvido especificamente para as exigências do PNAE: controle dos 45% da agricultura familiar (Resolução CD/FNDE nº 4/2026), relatórios compatíveis com o SIGPC/FNDE, fichas técnicas com valor nutricional e registros de aceitabilidade conforme as normas do CFN.',
+    a: 'O EduPlate Menu apoia a rotina do PNAE com cardápios, fichas técnicas, inspeções e registros. Os relatórios gerenciais apoiam a contabilidade; a validação técnica e a prestação de contas continuam sob responsabilidade da equipe. O app não garante conformidade integral nem realiza envio ao SIGPC.',
   },
   {
     q: 'Quantos usuários posso cadastrar?',
