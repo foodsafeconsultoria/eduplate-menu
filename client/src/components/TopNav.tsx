@@ -212,13 +212,11 @@ export default function TopNav() {
   const fiscalizacaoBadge = upcomingVisitsCount;
 
   const alimentacaoItems: DropdownItem[] = [
-    { label: 'Visão da alimentação', href: '/nutrition', icon: <Apple className="h-4 w-4" /> },
+    { label: 'Cardápios',        href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" />, badge: workflowAlertCount },
     { label: 'Registro diário', href: '/nutrition/daily-records', icon: <ClipboardCheck className="h-4 w-4" /> },
     { label: 'Alimentos',        href: '/nutrition/foods',         icon: <Apple className="h-4 w-4" /> },
-    { label: 'Cardápios',        href: '/nutrition/menus',         icon: <ClipboardMinus className="h-4 w-4" />, badge: workflowAlertCount },
     { label: 'Fichas Técnicas',  href: '/nutrition/recipes',       icon: <BookOpen className="h-4 w-4" /> },
     { label: 'Dietas Especiais', href: '/nutrition/special-diets', icon: <ShieldAlert className="h-4 w-4" /> },
-    { label: 'Publicações', href: '/nutrition/publications', icon: <BookOpen className="h-4 w-4" /> },
     { label: 'Lista de compras', href: '/nutrition/shopping-list', icon: <ShoppingCart className="h-4 w-4" /> },
     { label: 'Produção e sobras', href: '/nutrition/production',    icon: <Factory className="h-4 w-4" /> },
     { label: 'Relatório Gerencial', href: '/nutrition/reports',    icon: <FileBarChart2 className="h-4 w-4" /> },

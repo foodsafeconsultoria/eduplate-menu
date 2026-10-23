@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch, useLocation } from "wouter";
+import { Redirect, Route, Switch, useLocation } from "wouter";
 import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import TopNav from "./components/TopNav";
@@ -42,12 +42,10 @@ const DailyRecords = lazy(() => import('@/pages/nutrition/DailyRecords'));
 const Foods        = lazy(() => import('@/pages/nutrition/Foods'));
 const GeneralReport = lazy(() => import('@/pages/nutrition/GeneralReport'));
 const Menus        = lazy(() => import('@/pages/nutrition/Menus'));
-const NutritionHub = lazy(() => import('@/pages/nutrition/NutritionHub'));
 const NutritionalAssessment = lazy(() => import('@/pages/nutrition/NutritionalAssessment'));
 const Production   = lazy(() => import('@/pages/nutrition/Production'));
 const Recipes      = lazy(() => import('@/pages/nutrition/Recipes'));
 const SpecialDiets       = lazy(() => import('@/pages/nutrition/SpecialDiets'));
-const MenuPublications   = lazy(() => import('@/pages/nutrition/MenuPublications'));
 const ShoppingList       = lazy(() => import('@/pages/nutrition/ShoppingList'));
 
 // ── Título da aba por rota (SEO + UX) ─────────────────────────────────────────
@@ -166,7 +164,7 @@ function Router() {
               <Suspense fallback={<PageLoader />}>
                 <Switch>
                   <Route path="/" component={Dashboard} />
-                  <Route path="/nutrition" component={NutritionHub} />
+                  <Route path="/nutrition"><Redirect to="/nutrition/menus" replace /></Route>
                   <Route path="/nutrition/foods" component={Foods} />
                   <Route path="/nutrition/recipes" component={Recipes} />
                   <Route path="/nutrition/menus" component={Menus} />
@@ -176,7 +174,7 @@ function Router() {
                   <Route path="/nutrition/reports" component={GeneralReport} />
                   <Route path="/nutrition/sigpc" component={GeneralReport} />
                   <Route path="/nutrition/assessment" component={NutritionalAssessment} />
-                  <Route path="/nutrition/publications" component={MenuPublications} />
+                  <Route path="/nutrition/publications"><Redirect to="/nutrition/menus" replace /></Route>
                   <Route path="/nutrition/shopping-list" component={ShoppingList} />
                   <Route path="/inspection" component={Inspection} />
                   <Route path="/schedule" component={Schedule} />

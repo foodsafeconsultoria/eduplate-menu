@@ -1,63 +1,67 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { activateWaitingWorker, watchWaitingWorker } from '@/lib/serviceWorkerUpdates';
 
 export function useServiceWorker() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [dismissedWorker, setDismissedWorker] = useState<ServiceWorker | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const applying = useRef(false);
 
   useEffect(() => {
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
-        .then((reg) => {
-          setRegistration(reg);
-
-          // Detect when a new version is waiting
-          if (reg.waiting) {
-            setUpdateAvailable(true);
-          }
-
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (!newWorker) return;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setUpdateAvailable(true);
-              }
-            });
-          });
+    let disposed = false;
+    let stopWatching: (() => void) | undefined;
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        .then((registration) => {
+          if (disposed) return;
+          stopWatching = watchWaitingWorker(registration, setWaitingWorker);
         })
-        .catch((err) => {
-          console.warn('[SW] Registration failed:', err);
-        });
-
-      // Listen for messages from SW
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data?.type === 'ONLINE') {
-          setIsOnline(true);
-        }
-      });
+        .catch((error) => console.warn('[SW] Registration failed:', error));
     }
-
-    // Browser online/offline events
-    const handleOnline  = () => setIsOnline(true);
+    const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online',  handleOnline);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
-      window.removeEventListener('online',  handleOnline);
+      disposed = true;
+      stopWatching?.();
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  const applyUpdate = () => {
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
+  const applyUpdate = async () => {
+    if (applying.current || !waitingWorker) return;
+    if (waitingWorker.state !== 'installed') {
+      setWaitingWorker(null);
+      return;
+    }
+    applying.current = true;
+    setIsUpdating(true);
+    setUpdateError('');
+    try {
+      await activateWaitingWorker(waitingWorker, navigator.serviceWorker, () => window.location.reload());
+    } catch {
+      setUpdateError('Não foi possível atualizar. Tente novamente mais tarde.');
+    } finally {
+      applying.current = false;
+      setIsUpdating(false);
     }
   };
 
-  return { isOnline, updateAvailable, applyUpdate };
+  const dismissUpdate = () => {
+    setDismissedWorker(waitingWorker);
+    setUpdateError('');
+  };
+
+  return {
+    isOnline,
+    updateAvailable: !!waitingWorker && waitingWorker !== dismissedWorker,
+    isUpdating,
+    updateError,
+    applyUpdate,
+    dismissUpdate,
+  };
 }
